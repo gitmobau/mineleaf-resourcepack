@@ -39,7 +39,8 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
 - Las rutas de los scripts se pueden cambiar con variables de entorno (`AURORA_REF`, `AURORA_RP`, `AURORA_PREVIEWS`).
   Sin variables, usan las rutas de siempre (`~/ref63`, `~/mnt/.minecraft/resourcepacks`).
 - Las previews ya no se meten en la carpeta del pack, van a `aurora/previews/`.
-- `ref63/` (assets de Mojang) NO se sube al repo. Hay que tenerla aparte (zip de traspaso o jar).
+- `ref63/` (assets de Mojang) NO se sube al repo. `python3 aurora/scripts/fetch_ref.py ~/ref63` la baja de
+  misode/mcmeta (tag `26.3-assets`, github sí es accesible desde la nube). Comprobado: idéntica a la del zip.
 - En la nube no hay acceso a los servidores de Mojang (piston-meta y libraries dan 403), así que
   no se puede arrancar el cliente. La validación es solo estática (`validate.py`).
 
