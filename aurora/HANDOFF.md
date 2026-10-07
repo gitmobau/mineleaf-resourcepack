@@ -54,6 +54,15 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   `OIT_WAVELET_RANK` y `OIT_COEFF_ATTACHMENT_COUNT`. El validador usa 8, 3 y 2, y el
   `rendertype_lines` vanilla compila con esa misma configuración (sirve de control).
 
+## Primera prueba en el juego (capturas del usuario, 2026-10-07)
+Funcionan: inventario (cielo nocturno, gato dormido, botón gato), cofre grande (gato asomado), horno,
+hotbar animada, selección, barra de XP, aura de encantamiento en la espada, iconos de herramientas y armaduras,
+y la armadura de diamante puesta.
+El usuario usa además algún mod o pack que pone la GUI en 3D inclinada y cambia el libro de recetas (verde
+y beige) y el inventario creativo (oscuro). Esas dos pantallas no las tocaba Aurora, por eso salía lo del otro pack.
+Ahora las cubre `extra.py`. Para que se vean, Aurora tiene que estar por encima de ese pack.
+Queda por ver en el juego: la túnica de netherita y la capa, el borde de bloque, y los nuevos libro de recetas, creativo y HUD.
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar ambos packs
   (Aurora Outline encima de Aurora Pack), comprobar capa, aura, borde y menús con capturas.
