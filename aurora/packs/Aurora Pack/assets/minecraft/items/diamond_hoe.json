@@ -1,0 +1,26 @@
+{
+  "model": {
+    "type": "minecraft:condition",
+    "property": "minecraft:has_component",
+    "component": "minecraft:enchantments",
+    "ignore_default": true,
+    "on_true": {
+      "type": "minecraft:composite",
+      "models": [
+        {
+          "type": "minecraft:model",
+          "model": "minecraft:item/diamond_hoe"
+        },
+        {
+          "type": "minecraft:model",
+          "model": "minecraft:item/aurora/aura_diamond_hoe"
+        }
+      ]
+    },
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "minecraft:item/diamond_hoe"
+    }
+  },
+  "oversized_in_gui": true
+}
