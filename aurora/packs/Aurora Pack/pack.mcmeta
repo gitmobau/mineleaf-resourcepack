@@ -1,0 +1,17 @@
+{
+  "pack": {
+    "description": [
+      "",
+      {
+        "text": "Aurora ",
+        "color": "#B9B9F8"
+      },
+      {
+        "text": "· pastel HUD, agua y herramientas",
+        "color": "#F8B0EA"
+      }
+    ],
+    "min_format": 84,
+    "max_format": 97
+  }
+}

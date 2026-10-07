@@ -1,0 +1,73 @@
+# Aurora Pack — traspaso de contexto (para continuar en una sesión nueva)
+
+## Qué es
+Resource pack temático "Aurora" (pastel iridiscente: cian→lavanda→rosa→melocotón→menta) para
+Minecraft Java **26.3** (resource pack format **97.1**; pack.mcmeta usa min_format 84 / max_format 97).
+Inspirado en la capa Aurora y la skin del usuario (skin_aurora_v2.png).
+
+## Dónde está todo (en el PC del usuario)
+- Packs instalados: `%APPDATA%\.minecraft\resourcepacks\Aurora Pack\` y `...\Aurora Outline\`
+- Zips: `%APPDATA%\.minecraft\Aurora_export\Aurora Pack v3.zip`, `Aurora Outline.zip`
+- Scripts generadores: `Aurora_export\scripts\` (Python + Pillow)
+  - `gen.py`   v1: HUD, agua, crosshair, herramientas (base)
+  - `magic.py` "Marco mágico": menús (inventario, crafteo, hornos, cofres, shulker) + sprites animados
+  - `gear.py`  herramientas animadas, aura de encantamiento, armaduras, túnica galáctica + capa
+  - `outline_shaders/` rendertype_lines.vsh/.fsh (borde de bloque neón Aurora)
+- Referencias vanilla: extraer de `versions\26.3\26.3.jar` (el jar NO está ofuscado en 26.x).
+  Los scripts esperan las texturas vanilla en `~/ref63/assets/minecraft/...`.
+
+## Decisiones técnicas ya verificadas en el jar 26.3
+- Fondos de contenedor (`textures/gui/container/*.png`) NO se pueden animar; `position_tex_color`
+  (pipeline gui_textured) no tiene uniform Globals/GameTime → no forzar animación por shader.
+- SÍ animables (mcmeta): sprites GUI (hotbar, hotbar_selection, slot_highlight_back/front,
+  recipe_book/button, furnace lit/burn_progress, xp bar) y texturas de item/bloque.
+- Sprites no cuadrados necesitan `"width"/"height"` en la animación (p.ej. hotbar_selection 24x23).
+- Borde de bloque: core shader `rendertype_lines` (vsh+fsh comparten id). Outline vanilla = negro alpha 0.4.
+  Compila en todas las variantes OIT (validado con glslangValidator).
+- Aura de encantamiento: `items/*.json` con condition `has_component` enchantments,
+  `"ignore_default": true`, `composite` [modelo base, plano 24x24 animado], `"oversized_in_gui": true`,
+  elemento con `light_emission: 15`.
+- Capa 3D sin mods: `equipment/netherite.json` + capa `"wings"` → `entity/equipment/wings/aurora_cloak.png`
+  (WingsLayer no comprueba GLIDER).
+- Armadura puesta no se anima (texturas de entidad fuera de atlas). Geometría extra → necesita mods
+  Entity Model Features + Entity Texture Features (Fabric).
+- Detección de casillas: borde 55 arriba/izq (run de 17/25), relleno 139, blanco abajo/der (18 y 26 px).
+
+## Repositorio (desde la sesión del 2026-10-07)
+Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aurora/README.md`).
+- `python3 aurora/scripts/build.py --ref ~/ref63` regenera, valida y crea `aurora/dist/*.zip`.
+- Las rutas de los scripts se pueden cambiar con variables de entorno (`AURORA_REF`, `AURORA_RP`, `AURORA_PREVIEWS`).
+  Sin variables, usan las rutas de siempre (`~/ref63`, `~/mnt/.minecraft/resourcepacks`).
+- Las previews ya no se meten en la carpeta del pack, van a `aurora/previews/`.
+- `ref63/` (assets de Mojang) NO se sube al repo. `python3 aurora/scripts/fetch_ref.py ~/ref63` la baja de
+  misode/mcmeta (tag `26.3-assets`, github sí es accesible desde la nube). Comprobado: idéntica a la del zip.
+- En la nube no hay acceso a los servidores de Mojang (piston-meta y libraries dan 403), así que
+  no se puede arrancar el cliente. La validación es solo estática (`validate.py`).
+
+### Cambios de esta sesión
+- `gen.py` leía `~/ref` en vez de `~/ref63` y escribía `max_format` 99. Corregido a `ref63` y 97.
+- Comprobado que `gen → magic → gear` reproduce exactamente, píxel a píxel, el pack que había.
+- Nuevo `other_worn()` en `gear.py`: la armadura de diamante y la de netherita en `humanoid_baby`
+  (los bebés usan la capa `humanoid_baby` en la 26.3), `horse_body` y `nautilus_body`, con un
+  recoloreado que no depende del layout de la textura.
+- Nuevo `validate.py`. Detalle para compilar los shaders: el juego inyecta `OIT`, `OIT_COEFF_COUNT`,
+  `OIT_WAVELET_RANK` y `OIT_COEFF_ATTACHMENT_COUNT`. El validador usa 8, 3 y 2, y el
+  `rendertype_lines` vanilla compila con esa misma configuración (sirve de control).
+
+## Estado / pendiente
+- Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar ambos packs
+  (Aurora Outline encima de Aurora Pack), comprobar capa, aura, borde y menús con capturas.
+- Ideas pendientes ofrecidas: versión EMF/ETF de la túnica con vuelo 3D; ajustar intensidad/velocidad.
+- Limpieza en el PC: sobra el archivo temporal `Aurora_export\ziJhG1Z5`. Las previews antiguas
+  (`preview*.png`, `anim_*.gif`) que hay dentro de la carpeta instalada `Aurora Pack` se pueden borrar.
+
+
+## Cómo usar este paquete en una sesión en la nube (sin acceso al PC)
+1. Descomprime `Aurora_handoff.zip` en el HOME de la sesión (`unzip Aurora_handoff.zip -d ~`).
+   Así quedan exactamente las rutas que usan los scripts:
+   - `~/ref63/assets/minecraft/...`  (texturas/shaders vanilla 26.3 de referencia)
+   - `~/mnt/.minecraft/resourcepacks/Aurora Pack/` y `Aurora Outline/` (packs actuales)
+   - `~/work/*.py` (scripts)
+2. `pip install pillow` y ejecuta p.ej. `cd ~/work && python3 gear.py`.
+3. Para devolver el resultado: comprimir `~/mnt/.minecraft/resourcepacks/Aurora Pack` en .zip y dárselo al
+   usuario, que lo copia a `%APPDATA%\.minecraft\resourcepacks`.

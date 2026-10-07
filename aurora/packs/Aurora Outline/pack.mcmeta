@@ -1,0 +1,20 @@
+{
+  "pack": {
+    "description": [
+      "",
+      {
+        "text": "Aurora Outline ",
+        "color": "#B9B9F8"
+      },
+      {
+        "text": "· recuadro de bloque pastel",
+        "color": "#F8B0EA"
+      }
+    ],
+    "min_format": [
+      97,
+      1
+    ],
+    "max_format": 97
+  }
+}

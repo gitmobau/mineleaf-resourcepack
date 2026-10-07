@@ -1,0 +1,43 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "aura": "minecraft:item/aurora/aura_diamond_sword",
+    "particle": "minecraft:item/aurora/aura_diamond_sword"
+  },
+  "elements": [
+    {
+      "from": [
+        -4,
+        -4,
+        8
+      ],
+      "to": [
+        20,
+        20,
+        8
+      ],
+      "shade": false,
+      "light_emission": 15,
+      "faces": {
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#aura"
+        },
+        "north": {
+          "uv": [
+            16,
+            0,
+            0,
+            16
+          ],
+          "texture": "#aura"
+        }
+      }
+    }
+  ]
+}
