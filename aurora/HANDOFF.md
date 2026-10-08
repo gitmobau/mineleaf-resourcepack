@@ -92,6 +92,13 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   y separadores de menús, todos los widgets (mismos nine-slice, color solo según luminancia), tooltips y logo.
 - No tocados a propósito: panoramas del título, logo de Mojang Studios, imágenes de Realms, toasts y barras de jefe.
 
+### Barras de jefe y toasts (sesión del 2026-10-08, 5ª parte)
+- Aurora Pack (`screens.py`): los 7 colores de barra en pastel (el progreso animado 16×2 ticks, 182×5 por frame) y toasts.
+  Los toasts de recetas y tutorial siguen claros (el juego escribe en morado/negro); progreso, sistema y "sonando ahora"
+  oscuros (texto blanco/amarillo).
+- Aurora HUD XL (`hud_xl.py`): fondo de barra de jefe 182×5 → 198×11 (gemas dentro del margen, el progreso tapa el resto)
+  y toast de progreso 160×32 → 172×32 (solo hacia la izquierda: entran por la derecha y se apilan sin hueco).
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
   (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar capa, aura, borde, menús y HUD XL con capturas.

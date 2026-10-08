@@ -278,6 +278,54 @@ def offhand():
     save(right, H + 'hotbar_offhand_right.png', N, W, Hh, 3)
     return left, right, W, Hh
 
+# ------------------------------------------------------------------ boss bar backgrounds (182x5 -> 198x11) + advancement toast
+BOSS_PADS = (8, 3, 8, 3)
+BOSS_GEM = {'pink': (255, 150, 210), 'blue': (120, 200, 255), 'red': (255, 130, 140), 'green': (150, 240, 170),
+            'yellow': (255, 230, 130), 'purple': (190, 150, 255), 'white': (236, 238, 255)}
+
+def save_static(im, rel):
+    p = TX + rel
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    im.save(p, optimize=True)
+
+def bossbars():
+    """Aurora Pack's background in the middle, a gem cap with two small shards at each end"""
+    l, t, r, b = BOSS_PADS
+    for col, gc in BOSS_GEM.items():
+        core = Image.open(AURORA + 'gui/sprites/boss_bar/%s_background.png' % col).convert('RGBA')
+        W, Hh = 182 + l + r, 5 + t + b
+        im = Image.new('RGBA', (W, Hh)); im.alpha_composite(core, (l, t))
+        for side in (0, 1):                                    # everything stays inside the 8 px pad (the bar covers the rest)
+            layer = Image.new('RGBA', (W, Hh))
+            cx, cy = 4, Hh // 2
+            crystal(layer, [(cx - 1, cy - 2), (cx + 2, 0), (cx + 3, cy - 2)], 0.0, 0.1, 0.8)
+            crystal(layer, [(cx - 1, cy + 2), (cx + 2, Hh - 1), (cx + 3, cy + 2)], 0.0, 0.5, 0.8)
+            for dy in range(-3, 4):                            # diamond gem in the bar's colour
+                for dx in range(-3, 4):
+                    d = abs(dx) + abs(dy)
+                    if d > 3: continue
+                    c = OUT if d == 3 else mix(gc, WHITE, 0.55 if dx < 0 and dy < 0 else 0.1) if dy < 1 else mix(gc, OUT, 0.2)
+                    put(layer, cx + dx, cy + dy, C(c))
+            put(layer, cx - 1, cy - 1, C(WHITE))
+            im.alpha_composite(layer if side == 0 else layer.transpose(Image.FLIP_LEFT_RIGHT))
+        markers(im, BOSS_PADS, Hh, 1)
+        save_static(im, 'gui/sprites/boss_bar/%s_background.png' % col)
+
+TOAST_PADS = (12, 0, 0, 0)
+def advancement_toast():
+    """Aurora Pack's advancement toast plus a crystal wing sticking out on the left (toasts slide in from the right)"""
+    core = Image.open(AURORA + 'gui/sprites/toast/advancement.png').convert('RGBA')
+    l = TOAST_PADS[0]; W, Hh = 160 + l, 32
+    im = Image.new('RGBA', (W, Hh)); im.alpha_composite(core, (l, 0))
+    layer = Image.new('RGBA', (W, Hh))
+    for k, (ty, tx) in enumerate(((3, 1), (11, 0), (20, 1), (28, 3))):
+        crystal(layer, [(l + 2, Hh // 2 - 6 + k * 3), (tx, ty), (l + 2, Hh // 2 - 2 + k * 3)], 0.0, k / 4, 0.9)
+    halo(layer, 0.0)
+    im.alpha_composite(layer, (0, 0)); im.alpha_composite(core.crop((0, 0, 3, 32)), (l, 0))   # keep the rim on top
+    star(im, 4, 16, 1.0, (255, 236, 160))
+    markers(im, TOAST_PADS, Hh, 1)
+    save_static(im, 'gui/sprites/toast/advancement.png')
+
 def pack_icon(hb, W, Hh):
     icon = Image.new('RGBA', (128, 128))
     for y in range(128):
@@ -361,7 +409,7 @@ def previews():
 if __name__ == '__main__':
     import shutil
     shutil.rmtree(TX, ignore_errors=True)     # textures are 100% generated; shaders + pack.mcmeta are hand-written
-    hb, W, Hh = hotbar(); selection(); offhand()
+    hb, W, Hh = hotbar(); selection(); offhand(); bossbars(); advancement_toast()
     pack_icon(hb, W, Hh)
     previews()
     print('ok')

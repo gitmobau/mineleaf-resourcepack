@@ -177,6 +177,84 @@ def logo():
                 o.putpixel((x, y), C(c, p[3]))
         save(o, rel)
 
+# ------------------------------------------------------------------ boss bars
+BOSS = {'pink': [(255, 150, 210), (255, 190, 230), (240, 150, 255)], 'blue': [(120, 200, 255), (150, 225, 255), (170, 180, 255)],
+        'red': [(255, 130, 140), (255, 170, 150), (255, 120, 185)], 'green': [(150, 240, 170), (195, 250, 160), (120, 230, 205)],
+        'yellow': [(255, 230, 130), (255, 246, 175), (255, 205, 140)], 'purple': [(190, 150, 255), (222, 170, 255), (160, 140, 255)],
+        'white': [(236, 238, 255), (255, 255, 255), (222, 228, 250)]}
+BN, BFT = 16, 2
+
+def bossbars():
+    H = 'gui/sprites/boss_bar/'
+    for col, pal in BOSS.items():
+        v = ref(H + col + '_background.png'); o = Image.new('RGBA', v.size)
+        for y in range(v.height):
+            for x in range(v.width):
+                p = v.getpixel((x, y)); t = max(p[:3]) / 73
+                base = cyc(x / 182, pal)
+                o.putpixel((x, y), C(grad([(20, 12, 36), mix(base, (20, 12, 36), 0.72), mix(base, (20, 12, 36), 0.5)], t), p[3]))
+        save(o, H + col + '_background.png')
+        v = ref(H + col + '_progress.png'); st = Image.new('RGBA', (182, 5 * BN))
+        for f in range(BN):
+            for y in range(5):
+                for x in range(182):
+                    p = v.getpixel((x, y))
+                    if not p[3]: continue
+                    t = max(p[:3]) / 236
+                    base = cyc(x / 182 * 0.8 - f / BN, pal)
+                    c = grad([mix(base, OUT, 0.55), base, mix(base, WHITE, 0.6)], t)
+                    d = abs((x - f * 182 / BN * 2) % 364 - 6)
+                    if d < 4: c = mix(c, WHITE, 0.6 * (1 - d / 4))            # shine running along the bar
+                    st.putpixel((x, f * 5 + y), C(c, p[3]))
+        p_ = TX + H + col + '_progress.png'; os.makedirs(os.path.dirname(p_), exist_ok=True); st.save(p_, optimize=True)
+        json.dump({"animation": {"frametime": BFT, "interpolate": False, "width": 182, "height": 5}}, open(p_ + '.mcmeta', 'w'), indent=2)
+    for n in (6, 10, 12, 20):
+        for part in ('background', 'progress'):
+            v = ref(H + 'notched_%d_%s.png' % (n, part)); o = Image.new('RGBA', v.size)
+            for y in range(v.height):
+                for x in range(v.width):
+                    p = v.getpixel((x, y))
+                    if p[3]: o.putpixel((x, y), C((40, 20, 72), min(255, p[3] * 1.4)))
+            save(o, H + 'notched_%d_%s.png' % (n, part))
+
+# ------------------------------------------------------------------ toasts
+DARK = [(14, 8, 30), (34, 22, 64), (62, 44, 110), (150, 130, 220), WHITE]          # text on top is white/yellow
+LIGHT = [(110, 60, 130), (200, 160, 230), (236, 224, 250), (250, 244, 255), WHITE]  # text on top is dark purple/black
+
+def toast_panel(w, h, dark):
+    """static toast background drawn from scratch: rounded panel, aurora rim, sparkles"""
+    o = Image.new('RGBA', (w, h))
+    for y in range(h):
+        for x in range(w):
+            if (x in (0, w - 1) and y in (0, h - 1)): continue
+            e = min(x, y, w - 1 - x, h - 1 - y)
+            if e == 0: c = OUT
+            elif e == 1: c = cyc(x / w * 0.9)
+            elif e == 2: c = mix(cyc(x / w * 0.9 + 0.05), WHITE, 0.45)
+            else: c = mix((30, 20, 60), (48, 30, 88), y / h) if dark else mix((252, 246, 255), (236, 224, 250), y / h)
+            o.putpixel((x, y), C(c))
+    for (x, y) in ((w - 12, 6), (w - 22, h - 8), (w - 6, h - 12)):
+        for dx, dy, a in ((0, 0, 1), (1, 0, .5), (-1, 0, .5), (0, 1, .5), (0, -1, .5)):
+            o.putpixel((x + dx, y + dy), C(mix(o.getpixel((x + dx, y + dy))[:3], WHITE if dark else (255, 160, 210), a)))
+    return o
+
+def toasts():
+    T = 'gui/sprites/toast/'
+    save(toast_panel(160, 32, True), T + 'advancement.png')
+    save(toast_panel(160, 32, False), T + 'recipe.png')
+    ramp_recolor(T + 'now_playing.png', DARK)          # nine-slice: colour only from luminance
+    ramp_recolor(T + 'system.png', DARK)
+    ramp_recolor(T + 'tutorial.png', LIGHT)
+    for icon in ('mouse', 'movement_keys', 'right_click'):              # grey tutorial icons; block/item icons stay
+        v = ref(T + icon + '.png'); o = Image.new('RGBA', v.size)
+        for y in range(v.height):
+            for x in range(v.width):
+                p = v.getpixel((x, y))
+                if not p[3]: continue
+                grey = max(p[:3]) - min(p[:3]) < 20
+                o.putpixel((x, y), C(grad(NORMAL, lum(p)) if grey else mix(p[:3], (255, 150, 210), 0.5), p[3]))
+        save(o, T + icon + '.png')
+
 # ------------------------------------------------------------------ preview (fake options screen, book, signs, logo)
 def nine(rel, w, h):
     """draw a nine-slice sprite at w x h (stretching the middle is enough for a preview)"""
@@ -240,7 +318,7 @@ def preview(path):
 
 if __name__ == '__main__':
     print('widgets', widgets())
-    tooltip(); backgrounds(); book(); logo()
+    tooltip(); backgrounds(); book(); logo(); bossbars(); toasts()
     print('signs', signs())
     preview(os.environ.get('AURORA_PREVIEWS', RP + '/Aurora Pack') + '/pantallas.png')
     print('ok')
