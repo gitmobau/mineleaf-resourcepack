@@ -8,7 +8,7 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
 | `dist/` | **Los zips listos para instalar**: `Aurora Pack.zip`, `Aurora Outline.zip` y `Aurora HUD XL.zip` |
 | `packs/Aurora Pack/` | Pack principal. Se genera entero con los scripts (no editar a mano) |
 | `packs/Aurora Outline/` | Borde de bloque neón (core shader `rendertype_lines`). Escrito a mano |
-| `packs/Aurora HUD XL/` | Opcional: marcos del HUD más grandes que sobresalen (hotbar, selección, mano secundaria). Texturas generadas por `hud_xl.py` + core shader `position_tex_color` escrito a mano |
+| `packs/Aurora HUD XL/` | Opcional: marcos del HUD y menús temáticos que sobresalen de su tamaño vanilla. Texturas generadas por `hud_xl.py` y `menus_xl.py` + core shader `position_tex_color` escrito a mano |
 | `scripts/` | Generadores en Python + Pillow, validador y `build.py` |
 | `previews/` | Capturas y GIFs para ver el resultado sin abrir el juego |
 | `HANDOFF.md` | Contexto técnico completo, decisiones verificadas y pendientes |
@@ -30,19 +30,35 @@ No están en el repo porque son assets de Mojang. Para conseguirlas:
 `ref63/` del zip de traspaso y genera exactamente los mismos zips. También vale el
 `versions/26.3/26.3.jar`.
 
-`build.py` borra y regenera `packs/Aurora Pack`, ejecuta `gen.py → magic.py → gear.py` (en ese
-orden, porque los últimos sobrescriben a los primeros), luego `hud_xl.py`, pasa `validate.py` y crea los zips.
+`build.py` borra y regenera `packs/Aurora Pack`, ejecuta `gen.py → magic.py → gear.py → icons.py` (en ese
+orden, porque los últimos sobrescriben a los primeros), luego `hud_xl.py → menus_xl.py`, pasa `validate.py` y crea los zips.
 La salida es determinista: con la misma entrada salen los mismos bytes.
 
 ### Qué hace cada script
 - `gen.py`: base v1 (agua, mira, fondo de la barra de XP, indicadores de ataque, `pack.png` y `pack.mcmeta`).
+- `icons.py`: corazones con la paleta Aurora (cada estado con sus colores: veneno, wither, congelado, absorción, montura, hardcore) y la comida convertida en estrellas, todo animado y sincronizado.
 - `magic.py`: "Marco mágico". Menús (inventario, mesa de crafteo, hornos, cofre grande y shulker) y sprites animados (hotbar, selección, casilla resaltada, botón del libro de recetas, fuego y flecha del horno, XP).
 - `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (túnica galáctica + capa 3D), también puestas en bebés, caballos y nautilus.
 - `hud_xl.py`: texturas de Aurora HUD XL (hotbar con alas de cristal, selección con corona y halo, mano secundaria con aguja) y previsualización del HUD en `previews/`.
+- `menus_xl.py`: menús temáticos de Aurora HUD XL (ver abajo), con una emulación del shader que comprueba que cada pantalla sale al píxel y genera `previews/menus_xl.png`.
 - `validate.py`: validación estática contra la 26.3. Revisa JSON, tamaños y frames de las animaciones, nine-slice, referencias de modelos y texturas, definiciones de items, capas de equipamiento, compilación de los shaders en las 5 variantes OIT con `glslangValidator` y que las salidas del vsh coincidan con las entradas del fsh.
 - `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta.
 
 Recursos externos útiles (espejos de assets, esquemas, shaders, EMF/ETF y pixel art): ver `RECURSOS.md`.
+
+## Aurora HUD XL: menús temáticos
+| Pantalla | Estética |
+|---|---|
+| Inventario | Observatorio estelar: lunas en las esquinas, rosa de los vientos, cielo nocturno y ventana de aurora |
+| Mesa de crafteo | Taller del fabricador: engranajes de latón, martillo y llave cruzados, fondo de plano |
+| Horno | Infierno celestial: llamas pastel con núcleo dorado, halo, alas de ángel y brasas |
+| Alto horno | Forja de supernova: estallido estelar, pernos, rejillas de plasma y grietas brillantes |
+| Ahumador | Ahumador de nubes: nubes esponjosas, bocanadas de humo, luna y cielo pastel |
+| Cofre (todos los tamaños) | Bóveda del tesoro: candado, gemas, montones de monedas y terciopelo |
+| Caja de shulker | Caparazón del End: cúpula de concha, shulker asomándose, flores coral y vacío estrellado |
+
+Los títulos de los menús los pinta el juego en gris oscuro (no se puede cambiar con un resource pack), así que
+cada tema pone una placa clara debajo de cada título.
 
 ## Aurora HUD XL: cómo sobresalen los marcos
 El juego siempre mete un sprite de la GUI en su rectángulo fijo (la hotbar ocupa 182×22 pase lo que pase), así que una
@@ -55,5 +71,9 @@ textura más grande solo se vería aplastada. Para que sobresalga:
   arriba-dcha). Así un sprite normal pegado a uno XL en el atlas nunca lee el marcador del vecino.
 - Cuánto sobresale cada uno: hotbar 12 px a los lados y 18 hacia arriba (las alas suben junto a la XP y los corazones),
   selección 4 a los lados y 2 arriba, mano secundaria 5 hacia fuera y 18 arriba. Nada sobresale por abajo (borde de pantalla).
+- Los fondos de menú no son sprites del atlas: el juego recorta siempre una ventana fija de 176×N de una textura
+  de 256×256. Por eso el dibujo grande empieza en (0,0) de la textura y, junto a cada marcador, hay un segundo texel
+  (du, dv, 168, esquina) que dice cuánto se desplaza la UV de esa esquina. El cofre se dibuja en dos trozos (filas +
+  inventario) y su textura lleva marcadores para 1 a 6 filas. El `.fsh` sustituye los texels marcadores por el de al lado.
 - `validate.py` acepta un sprite de la GUI más grande que el vanilla solo si sus marcadores son coherentes en todos los
   frames, el tamaño es vanilla + márgenes, no usa nine-slice y el pack trae el shader.

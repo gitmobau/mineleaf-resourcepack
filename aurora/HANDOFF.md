@@ -63,6 +63,17 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
 - `position_tex_color` se usa al arrancar, así que no puede llevar `#include` (el validador lo comprueba).
 - Simulación del shader sobre un atlas con vecinos pegados por todos los lados: los sprites XL crecen exactos y el resto no se mueve.
 
+### Corazones, estrellas y menús XL (sesión del 2026-10-08, 2ª parte)
+- `icons.py` (Aurora Pack): corazones Aurora animados (8 frames × 4 ticks, todos iguales para ir sincronizados) y comida = estrellas.
+- `menus_xl.py` (Aurora HUD XL): 7 menús temáticos que sobresalen 14 px a los lados, 20-22 arriba y 10-12 abajo.
+- Supuestos NO verificados en el jar, además del orden de vértices:
+  - los fondos se dibujan con `blit(GUI_TEXTURED, tex, x, y, 0, 0, 176, h, 256, 256)` por `position_tex_color`;
+  - el cofre hace dos blits: filas (v 0..rows·18+17) e inventario (v 126..222), dibujado justo debajo;
+  - el título y la etiqueta del inventario van donde siempre (placas en `SCREENS` de `menus_xl.py`).
+- El shader ya no se limita a la franja inferior de la pantalla (los menús están en medio); la esquina por
+  `gl_VertexIndex` evita leer marcadores de sprites vecinos (simulado con vecinos pegados por todos los lados).
+- Si Aurora HUD XL está desactivado se ven los menús pastel normales de Aurora Pack.
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
   (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar capa, aura, borde, menús y HUD XL con capturas.

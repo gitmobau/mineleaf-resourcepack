@@ -24,7 +24,7 @@ def exists_tex(pack, path):
     return os.path.exists('%s/assets/%s/textures/%s.png' % (pack, ns, p)) or \
         (ns == 'minecraft' and os.path.exists(REF + 'textures/%s.png' % p))
 
-MARK = 167   # Aurora HUD XL corner markers, see hud_xl.py / position_tex_color.vsh
+MARK, SHIFT = 167, 168   # Aurora HUD XL corner markers, see hud_xl.py / menus_xl.py / position_tex_color.vsh
 
 def oversize_pads(im, fw, fh):
     """(left, top, right, bottom) if every frame carries consistent corner markers, else None"""
@@ -105,6 +105,18 @@ for pack in PACKS:
             err('%s: container background must stay 256x256' % rel)
         if rel.startswith('gui/container/') and a is not None:
             err('%s: container backgrounds cannot animate' % rel)
+        if rel.startswith('gui/container/') and im.convert('RGBA').getpixel((0, 0))[2:] == (MARK, 1):
+            # Aurora HUD XL background: every corner marker needs its shift texel and sits on a blit corner column
+            px = im.convert('RGBA').load()
+            for y in range(h):
+                for x in (0, 175):
+                    q = px[x, y]
+                    if q[2] != MARK or not 1 <= q[3] <= 4: continue
+                    if (x == 0) != (q[3] in (1, 3)): err('%s: marker role %d at x=%d' % (rel, q[3], x))
+                    s_ = px[x + (1 if x == 0 else -1), y]
+                    if s_[2] != SHIFT or s_[3] != q[3]: err('%s: marker at %d,%d without shift texel' % (rel, x, y))
+            if not os.path.exists(A + 'shaders/core/position_tex_color.vsh'):
+                err('%s: oversized background needs shaders/core/position_tex_color.vsh in the same pack' % rel)
     # ---- models
     for mj in glob.glob(A + 'models/**/*.json', recursive=True):
         m = json.load(open(mj)); rel = os.path.relpath(mj, A)

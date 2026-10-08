@@ -334,8 +334,11 @@ def hud_scene(xl, tick, survival=True, gw=300, gh=110):
         bg = Image.open(AURORA + H + 'experience_bar_background.png').convert('RGBA')
         pr = frame_of(Image.open(AURORA + H + 'experience_bar_progress.png').convert('RGBA'), 5, tick // 2)
         sc.alpha_composite(bg, (cx - 91, h - 29)); sc.alpha_composite(pr.crop((0, 0, 120, 5)), (cx - 91, h - 29))
-        heart = ref(H + 'heart/full.png'); cont = ref(H + 'heart/container.png')
-        food = ref(H + 'food_full.png'); fcont = ref(H + 'food_empty.png'); arm = ref(H + 'armor_full.png')
+        def icon(rel):        # Aurora Pack's (animated) icon if there is one, else vanilla
+            p = AURORA + H + rel
+            return frame_of(Image.open(p).convert('RGBA'), 9, tick // 4) if os.path.exists(p) else ref(H + rel)
+        heart = icon('heart/full.png'); cont = icon('heart/container.png')
+        food = icon('food_full.png'); fcont = icon('food_empty.png'); arm = icon('armor_full.png')
         for i in range(10):
             sc.alpha_composite(cont, (cx - 91 + i * 8, h - 39)); sc.alpha_composite(heart, (cx - 91 + i * 8, h - 39))
             sc.alpha_composite(fcont, (cx + 91 - 9 - i * 8, h - 39)); sc.alpha_composite(food, (cx + 91 - 9 - i * 8, h - 39))
