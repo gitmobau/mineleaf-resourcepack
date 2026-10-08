@@ -21,6 +21,12 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
    [aurora-mod](https://github.com/gitmobau/mineleaf-resourcepack/actions/workflows/aurora-mod.yml)
    y ponlo en `%APPDATA%\.minecraft\mods` (necesita Fabric Loader y Fabric API para la 26.3).
 
+## Armadura 3D (opcional)
+Aurora no trae modelos 3D de armadura: los generados por código quedaban mal. Para armadura 3D se usa un pack ya hecho:
+[Glowing 3D Armor](https://modrinth.com/project/WkLr6o3M), que lista soporte para 26.3. Hay que usar su subpack
+**solo armadura**, para conservar las herramientas Aurora con su aura. Orden de arriba a abajo: Aurora Outline, Glowing 3D Armor,
+Aurora Pack. Con él, quita **Aurora Glow**: sus mapas de brillo son para las texturas de armadura de Aurora.
+
 ## Regenerar
 ```bash
 pip install pillow
