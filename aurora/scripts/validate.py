@@ -155,7 +155,7 @@ for pack in PACKS:
                     with tempfile.NamedTemporaryFile('w', suffix='.' + ('vert' if f.endswith('vsh') else 'frag'), delete=False) as t:
                         t.write('\n'.join(lines))
                     r = subprocess.run([gv, '--target-env', 'vulkan1.2', '--auto-map-locations', '--auto-map-bindings', t.name],
-                                       capture_output=True, text=True)
+                                       capture_output=True, text=True, cwd=tempfile.gettempdir())  # .spv output goes there
                     os.unlink(t.name)
                     if r.returncode: err('shader %s %s:\n%s' % (f, defs, r.stdout[-800:]))
             # vsh outputs must match fsh inputs

@@ -256,7 +256,7 @@ icon.save(PACK + '/pack.png', optimize=True)
 with open(PACK + '/pack.mcmeta', 'w') as f:
     json.dump({"pack": {
         "description": ["", {"text": "Aurora ", "color": "#B9B9F8"},
-                        {"text": "· pastel HUD, agua y herramientas", "color": "#F8B0EA"}],
+                        {"text": "· menús, HUD, agua, herramientas y armaduras", "color": "#F8B0EA"}],
         "min_format": 84,
         "max_format": 97
     }}, f, indent=2, ensure_ascii=False)

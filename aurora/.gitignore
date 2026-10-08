@@ -1,3 +1,5 @@
 # Assets vanilla de Mojang: no se suben (ver aurora/README.md)
 ref63/
 __pycache__/
+# Hojas de previsualización que regenera build.py (solo se versionan los GIF)
+previews/*.png
