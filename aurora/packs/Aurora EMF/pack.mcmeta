@@ -1,0 +1,17 @@
+{
+  "pack": {
+    "description": [
+      "",
+      {
+        "text": "Aurora EMF ",
+        "color": "#B9B9F8"
+      },
+      {
+        "text": "· túnica 3D y brillo · requiere EMF + ETF",
+        "color": "#F8B0EA"
+      }
+    ],
+    "min_format": 84,
+    "max_format": 97
+  }
+}
