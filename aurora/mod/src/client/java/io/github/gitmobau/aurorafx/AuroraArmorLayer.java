@@ -18,7 +18,6 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -95,7 +94,8 @@ public class AuroraArmorLayer<S extends HumanoidRenderState, M extends HumanoidM
 		// Pulso suave + ciclo de color por la paleta (un ciclo completo cada ~25 s a velocidad 1).
 		float pulse = 0.72F + 0.28F * (float) Math.sin(t * 0.07F);
 		int color = AuroraPalette.argbScaled(AuroraPalette.cyc(t * 0.002F, AuroraPalette.VIVID), cfg.overlayIntensity * pulse);
-		int light = cfg.overlayGlow ? LightCoordsUtil.FULL_BRIGHT : lightCoords;
+		// El pipeline energy_swirl es EMISSIVE (no aplica el lightmap): el brillo se ve igual de día y de noche.
+		int light = lightCoords;
 
 		// Igual que EnergySwirlLayer: un RenderType nuevo por frame con el desplazamiento de UV.
 		RenderType renderType = RenderTypes.energySwirl(TEXTURE, u, v);

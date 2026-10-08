@@ -25,8 +25,6 @@ public final class AuroraConfig {
 	public boolean armorOverlay = true;
 	/** También en mobs (zombis, esqueletos, piglins, soportes de armadura...), no solo en jugadores. */
 	public boolean overlayOnMobs = true;
-	/** Brilla en la oscuridad (luz máxima) en vez de usar la luz del sitio. */
-	public boolean overlayGlow = true;
 	/** Intensidad del brillo, 0..1. */
 	public float overlayIntensity = 0.55F;
 	/** Velocidad de desplazamiento y cambio de color, 0..5 (1 = normal). */

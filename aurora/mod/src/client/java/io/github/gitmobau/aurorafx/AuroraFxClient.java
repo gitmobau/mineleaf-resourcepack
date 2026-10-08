@@ -19,6 +19,7 @@ public class AuroraFxClient implements ClientModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public void onInitializeClient() {
 		AuroraConfig.load();
 
