@@ -145,7 +145,7 @@ def figure(mat, cloak=False):
     return q
 
 def showcase_armor():
-    sets = [('diamond', 'Diamante: cristal', False), ('netherite', 'Netherita: noche aurora + capa', True),
+    sets = [('diamond', 'Diamante: cristal', False), ('netherite', 'Netherita: túnica galáctica + capa', True),
             ('iron', 'Hierro: piedra lunar', False), ('gold', 'Oro: oro rosa', False)]
     W, H = 300, 420
     sheet = Image.new('RGBA', (len(sets) * (2 * W) + 20, H + 70), BG)
