@@ -16,7 +16,7 @@ def C(c, a=255): return tuple(int(max(0, min(255, round(v)))) for v in c[:3]) + 
 def cyc(t): return cycle(t, VIVID)
 RES = 2
 
-MAT = dict(out=(10, 6, 26), lo=(30, 20, 70), hi=(98, 72, 166), spec=(214, 206, 255),
+MAT = dict(out=(18, 10, 40), lo=(30, 20, 70), hi=(98, 72, 166), spec=(214, 206, 255),
            cloth_lo=(150, 110, 220), cloth_hi=(250, 190, 235), gem=((110, 235, 255), (255, 130, 220)))
 
 def plate(w, h, face, kind, seed):
@@ -35,9 +35,10 @@ def plate(w, h, face, kind, seed):
                 if j >= h - 2: c = cyc(i / w * 0.6)
             else:
                 c = mix(MAT['lo'], MAT['hi'], max(0, min(1, f)))
-                d = (i - j * 0.8) / max(1, w)                       # diagonal metal sheen
-                if 0.15 < d % 1.0 < 0.27 and face not in ('down',):
-                    c = mix(c, MAT['spec'], 0.55)
+                d = (i + j * 0.9) / max(1, w + h * 0.9)             # one soft diagonal sheen per face
+                k = max(0, 1 - abs(d - 0.32) / 0.09)
+                if face not in ('down',):
+                    c = mix(c, MAT['spec'], 0.5 * k)
             # bevel + outline (every plate edge gets the crisp dark line)
             if i == 0 or j == 0 or i == w - 1 or j == h - 1:
                 c = MAT['out']
@@ -92,23 +93,33 @@ def visor(im, rects):
     for i in range(2, fw - 2):                                 # aurora glow behind the eyes
         im.putpixel((x0 + i, y0 + int(fh * 0.38) + 1), C(cyc(i / fw * 0.4 + 0.1)))
 
+def star(im, rects):
+    x0, y0, fw, fh = rects['north']
+    cx, cy = x0 + fw // 2, y0 + fh // 3
+    for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (2, 0), (-2, 0), (0, 2), (0, -2)):
+        im.putpixel((cx + dx, cy + dy), C(WHITE if (dx, dy) == (0, 0) else mix(WHITE, cyc(0.5), 0.5)))
+
 def build():
     A = Atlas()
     m = {}
     m['head'] = [cube(A, (-5, -9, -5), (10, 9.5, 10), extra=visor, seed=1),
                  cube(A, (-0.75, -12.5, -4.5), (1.5, 4, 10), 'trim', seed=2),              # crest
-                 cube(A, (-5.8, -7.5, -5.8), (11.6, 1.5, 1.2), 'trim', extra=gem_at(0.5, 0.5, 1), seed=3)]
-    m['body'] = [cube(A, (-5, -0.5, -3), (10, 9.5, 6), seed=4),
+                 cube(A, (-5.8, -7.5, -5.8), (11.6, 1.5, 1.2), 'trim', extra=gem_at(0.5, 0.5, 1), seed=3),
+                 cube(A, (-0.6, -11.5, 5), (1.2, 1.5, 2.5), 'cloth', seed=15),                       # plume tail
+                 cube(A, (-0.6, -10.5, 7), (1.2, 1.5, 2), 'cloth', seed=16),
+                 cube(A, (-0.6, -9.2, 8.5), (1.2, 2, 1.5), 'cloth', seed=17)]
+    m['body'] = [cube(A, (-4.8, -0.3, -2.8), (9.6, 9, 5.6), seed=4),
                  cube(A, (-4, 0.5, -4), (8, 6.5, 1.2), 'trim', extra=gem_at(0.5, 0.4, 2), seed=5),  # breastplate
                  cube(A, (-5.3, 8.5, -3.3), (10.6, 2, 6.6), 'trim', seed=6),                         # belt
-                 cube(A, (-2.5, 10.5, -3.6), (5, 7, 1), 'cloth', seed=7),                            # tabard
-                 cube(A, (-2.5, 10.5, 2.6), (5, 7, 1), 'cloth', seed=8)]
+                 cube(A, (-2.5, 10.5, -3.6), (5, 8, 1), 'cloth', extra=star, seed=7),                # tabard
+                 cube(A, (-2.5, 10.5, 2.6), (5, 8, 1), 'cloth', seed=8)]
     for side, sx in (('right_arm', 1), ('left_arm', -1)):
         def X(x0, w): return (x0, w) if sx == 1 else (-x0 - w + (0 if True else 0), w)
         a0, aw = X(-3.6, 4.6); p0, pw = X(-4.8, 6.6); q0, qw = X(-4.4, 5.8)
         m[side] = [cube(A, (a0 if sx == 1 else -1.0, -2.4, -2.6), (4.6, 10, 5.2), seed=9),
                    cube(A, (p0 if sx == 1 else -1.8, -4, -3.6), (6.6, 2.6, 7.2), 'trim', seed=10),   # pauldron
-                   cube(A, (q0 if sx == 1 else -1.4, -1.8, -3.2), (5.8, 2.2, 6.4), seed=11)]
+                   cube(A, (q0 if sx == 1 else -1.4, -1.8, -3.2), (5.8, 2.2, 6.4), seed=11),
+                   cube(A, (-3.7 if sx == 1 else -1.3, 6.5, -2.7), (5, 2.5, 5.4), 'trim', seed=18)]   # gauntlet cuff
     for side in ('right_leg', 'left_leg'):
         m[side] = [cube(A, (-2.6, -0.4, -2.6), (5.2, 12.6, 5.2), seed=12),
                    cube(A, (-2.9, 3.6, -3.6), (5.8, 3, 1.4), 'trim', seed=13),                    # knee
