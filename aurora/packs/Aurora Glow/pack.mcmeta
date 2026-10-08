@@ -1,0 +1,17 @@
+{
+  "pack": {
+    "description": [
+      "",
+      {
+        "text": "Aurora Glow ",
+        "color": "#B9B9F8"
+      },
+      {
+        "text": "· la armadura brilla en la oscuridad · requiere ETF",
+        "color": "#F8B0EA"
+      }
+    ],
+    "min_format": 84,
+    "max_format": 97
+  }
+}

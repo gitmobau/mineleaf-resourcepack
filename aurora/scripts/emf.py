@@ -20,7 +20,10 @@ from gear import galaxy_px, trim, mix, C, cyc, hsv, box_faces, VIVID, P, WHITE  
 RP = os.environ.get('AURORA_RP', os.path.join(ROOT, 'packs'))
 PREVIEWS = os.environ.get('AURORA_PREVIEWS', os.path.join(ROOT, 'previews'))
 MAIN = os.path.join(RP, 'Aurora Pack')
-OUT = os.path.join(RP, 'Aurora EMF')
+OUT = os.path.join(RP, 'Aurora Glow')
+# The procedural 3D robe (skirt panels, bell sleeves, hood point) was rejected after review: it looked
+# blocky and cheap. Only the ETF glow maps ship now. Set True to regenerate the experimental geometry.
+GEOMETRY = False
 MC = 'assets/minecraft/'
 EQ = 'textures/entity/equipment/'
 FLARE_TEX = EQ + 'humanoid/aurora_robe_flare'          # texture of the sleeve + hood boxes (64x32)
@@ -486,6 +489,31 @@ def robe_scene(pose, tops, hum, leg, flare, wr=STD):
     return sc
 
 # ================================================================== build
+def glow_only(hum, leg):
+    """ETF emissive maps for the robe trims, cloak hem and diamond armor; no custom models"""
+    glow = {'hum': emissive_by_colour(hum), 'leg': emissive_by_colour(leg)}
+    save_png(glow['hum'], EQ + 'humanoid/netherite_e')
+    save_png(glow['leg'], EQ + 'humanoid_leggings/netherite_e')
+    cloak = main_tex(EQ + 'wings/aurora_cloak')
+    glow['cloak'] = emissive_by_colour(cloak, star_alpha=200)
+    save_png(glow['cloak'], EQ + 'wings/aurora_cloak_e')
+    for layer in ('humanoid', 'humanoid_leggings'):
+        glow['dia_' + layer] = emissive_diamond(main_tex(EQ + layer + '/diamond'))
+        save_png(glow['dia_' + layer], EQ + layer + '/diamond_e')
+    save_json({"pack": {
+        "description": ["", {"text": "Aurora Glow ", "color": "#B9B9F8"},
+                        {"text": "· la armadura brilla en la oscuridad · requiere ETF", "color": "#F8B0EA"}],
+        "min_format": 84, "max_format": 97}}, 'pack.mcmeta')
+    icon = Image.new('RGBA', (128, 128))
+    for y in range(128):
+        for x in range(128):
+            c = mix((14, 10, 30), cyc((x + y) / 256 + 0.05 * math.sin(x / 9)), 0.25 * (1 - y / 128))
+            icon.putpixel((x, y), C(c))
+    g = glow['hum'].crop((16, 16, 40, 32)).resize((96, 64), Image.NEAREST)
+    icon.alpha_composite(g, (16, 32))
+    icon.save(os.path.join(OUT, 'pack.png'), optimize=True)
+    return {}
+
 def build():
     shutil.rmtree(OUT, ignore_errors=True)
     os.makedirs(OUT)
@@ -493,6 +521,8 @@ def build():
     # --- textures
     hum = main_tex(EQ + 'humanoid/netherite')
     leg_main = main_tex(EQ + 'humanoid_leggings/netherite')
+    if not GEOMETRY:
+        return glow_only(hum, leg_main)
     if leg_main.crop((0, 0, 64, 16)).getbbox() is not None:
         sys.exit('humanoid_leggings/netherite.png ya usa la banda superior: mueve SKIRT_F/SKIRT_P')
     lp = Painter(leg_main)
@@ -662,7 +692,7 @@ if __name__ == '__main__':
     n_files = sum(len(f) for _, _, f in os.walk(OUT))
     for e in errs:
         print('ERROR', e)
-    print('Aurora EMF: %d archivos, %d modelos, %d errores' % (n_files, len(jems), len(errs)))
+    print('Aurora Glow: %d archivos, %d modelos, %d errores' % (n_files, len(jems), len(errs)))
     if errs:
         sys.exit(1)
     print('ok')

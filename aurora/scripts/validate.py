@@ -7,7 +7,7 @@ from PIL import Image
 HOME = os.path.expanduser('~')
 REF = os.environ.get('AURORA_REF', HOME + '/ref63') + '/assets/minecraft/'
 RP = os.environ.get('AURORA_RP', HOME + '/mnt/.minecraft/resourcepacks') + '/'
-PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora EMF']
+PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora Glow']
 errors, warns = [], []
 # every model id referenced by a vanilla item definition is known to exist in the jar
 VANILLA_MODELS = set(re.findall(r'"model": "(minecraft:[^"]+)"',

@@ -18,13 +18,13 @@ env = dict(os.environ, AURORA_REF=os.path.abspath(args.ref), AURORA_RP=PACKS,
            AURORA_PREVIEWS=os.path.join(ROOT, 'previews'))
 # Aurora Pack is 100% generated: start clean so nothing stale survives.
 shutil.rmtree(os.path.join(PACKS, 'Aurora Pack'), ignore_errors=True)
-for script in ('gen.py', 'magic.py', 'gear.py', 'extra.py', 'menus.py', 'polish.py', 'emf.py', 'validate.py'):   # order matters: later ones overwrite
+for script in ('gen.py', 'magic.py', 'gear.py', 'extra.py', 'menus.py', 'polish.py', 'emf.py', 'showcase.py', 'validate.py'):   # order matters: later ones overwrite
     print('==>', script)
     subprocess.run([sys.executable, '-I', os.path.join(HERE, script)], env=env, cwd=HERE, check=True)
 
 if not args.no_zip:
     dist = os.path.join(ROOT, 'dist'); os.makedirs(dist, exist_ok=True)
-    for name in ('Aurora Pack', 'Aurora Outline', 'Aurora EMF'):
+    for name in ('Aurora Pack', 'Aurora Outline', 'Aurora Glow'):
         src = os.path.join(PACKS, name); out = os.path.join(dist, name + '.zip')
         with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
             for base, dirs, files in sorted(os.walk(src)):

@@ -275,11 +275,13 @@ def build_container(name, w, h, cut_safe=False, cats=(), excl=(), stars=True, se
             cw = max(p[0] for p in comp) - min(p[0] for p in comp) + 1
             ch = max(p[1] for p in comp) - min(p[1] for p in comp) + 1
             big = len(comp) >= 200 and len(comp) / (cw * ch) > 0.3   # dense area, not a thin frame
-            if big and lum < 0.4:
+            grey = sum(1 for p in comp if len(set(v.getpixel(p)[:3])) == 1) / len(comp)
+            skyish = big and (lum < 0.4 or grey < 0.5)                  # dark or coloured art panels
+            if skyish:
                 night_sky(img, comp, seed + len(comp))
             for (x, y) in comp:
                 used[x][y] = True
-                if big and lum < 0.4:
+                if skyish:
                     continue
                 p = v.getpixel((x, y)); l = (p[0] + p[1] + p[2]) / 765
                 if big and p[0] == p[1] == p[2]:

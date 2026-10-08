@@ -76,6 +76,13 @@ Queda por ver en el juego: la túnica de netherita y la capa, el borde de bloque
 - `palette.py`: `cyc()` interpola en OKLab.
 - Armadura de diamante puesta: rampa por rangos de tono (`crystal_worn`), con más contraste que antes, que se veía lavada en el juego.
 
+## Túnica 3D EMF descartada (2026-10-08)
+Al usuario le pareció muy mala (paneles de 1 px y bloques sueltos, aspecto tosco) y se ha retirado. El add-on ahora
+es "Aurora Glow" y solo lleva los mapas emisivos de ETF. El código sigue en `emf.py` (`GEOMETRY = False`).
+Un modelo 3D que quede bien tiene que hacerse a mano en Blockbench, o salir de un pack 3D cuya licencia permita
+adaptarlo. No se puede copiar el trabajo de otro pack sin permiso.
+`showcase.py` genera vistas previas de todo; el render 3D de la armadura usa el mapeo UV exacto de ModelPart.Cube.
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar ambos packs
   (Aurora Outline encima de Aurora Pack), comprobar capa, aura, borde y menús con capturas.
