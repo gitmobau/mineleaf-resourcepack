@@ -1,6 +1,8 @@
 # Aurora gear: animated tools, enchantment aura, diamond crystal armor, netherite galactic robe + 3D cloak.
-import os, math, json, random, colorsys
+import os, sys, math, json, random, colorsys
 from PIL import Image
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from palette import cycle
 
 HOME = os.path.expanduser('~')
 # Paths can be overridden by build.py (AURORA_REF = folder holding assets/minecraft of vanilla 26.3,
@@ -19,9 +21,7 @@ WHITE = (255, 255, 255)
 OUT = (52, 36, 98)
 
 def cyc(t, pal=P):
-    t = (t % 1.0) * len(pal); i = int(t) % len(pal); f = t - int(t)
-    a = pal[i]; b = pal[(i + 1) % len(pal)]
-    return tuple(a[k] + (b[k] - a[k]) * f for k in range(3))
+    return cycle(t, pal)
 
 def mix(a, b, f):
     return tuple(a[k] + (b[k] - a[k]) * f for k in range(3))
@@ -196,37 +196,41 @@ def aura_model(name):
         }]
     }
 
+def finish_tool(n, recolor):
+    """animated icon (+ in-hand variant), enchantment aura and item definition for one tool"""
+    base, head = recolor(n)
+    strip, meta = animate(base, head, seed=len(n) * 7)
+    save_tex(strip, 'item/%s.png' % n, meta)
+    if os.path.exists(REF + 'textures/item/%s_in_hand.png' % n):
+        b2, h2 = recolor(n + '_in_hand')
+        s2, m2 = animate(b2, h2, seed=7)
+        save_tex(s2, 'item/%s_in_hand.png' % n, m2)
+    au, am = aura(base)
+    save_tex(au, 'item/aurora/aura_%s.png' % n, am)
+    save_json(aura_model(n), 'models/item/aurora/aura_%s.json' % n)
+    vanilla = json.load(open(REF + 'items/%s.json' % n))
+    aura_ref = {"type": "minecraft:model", "model": "minecraft:item/aurora/aura_" + n}
+    vm = vanilla["model"]
+    if vm.get("type") == "minecraft:select":      # spear: aura only for the icon/ground model
+        on_true = json.loads(json.dumps(vm))
+        for case in on_true["cases"]:
+            case["model"] = {"type": "minecraft:composite", "models": [case["model"], aura_ref]}
+    else:
+        on_true = {"type": "minecraft:composite", "models": [vm, aura_ref]}
+    new = dict(vanilla)
+    new["model"] = {"type": "minecraft:condition", "property": "minecraft:has_component",
+                    "component": "minecraft:enchantments", "ignore_default": True,
+                    "on_true": on_true, "on_false": vm}
+    new["oversized_in_gui"] = True
+    save_json(new, 'items/%s.json' % n)
+    return strip, au, base.size
+
 def tools():
     out = {}
     for mat in ('diamond', 'netherite'):
         for t in TOOLS:
             n = '%s_%s' % (mat, t)
-            base, head = recolor_tool(n, mat)
-            strip, meta = animate(base, head, seed=len(n) * 7)
-            save_tex(strip, 'item/%s.png' % n, meta)
-            if os.path.exists(REF + 'textures/item/%s_in_hand.png' % n):
-                b2, h2 = recolor_tool(n + '_in_hand', mat)
-                s2, m2 = animate(b2, h2, seed=7)
-                save_tex(s2, 'item/%s_in_hand.png' % n, m2)
-            au, am = aura(base)
-            save_tex(au, 'item/aurora/aura_%s.png' % n, am)
-            save_json(aura_model(n), 'models/item/aurora/aura_%s.json' % n)
-            vanilla = json.load(open(REF + 'items/%s.json' % n))
-            aura_ref = {"type": "minecraft:model", "model": "minecraft:item/aurora/aura_" + n}
-            vm = vanilla["model"]
-            if vm.get("type") == "minecraft:select":      # spear: aura only for the icon/ground model
-                on_true = json.loads(json.dumps(vm))
-                for case in on_true["cases"]:
-                    case["model"] = {"type": "minecraft:composite", "models": [case["model"], aura_ref]}
-            else:
-                on_true = {"type": "minecraft:composite", "models": [vm, aura_ref]}
-            new = dict(vanilla)
-            new["model"] = {"type": "minecraft:condition", "property": "minecraft:has_component",
-                            "component": "minecraft:enchantments", "ignore_default": True,
-                            "on_true": on_true, "on_false": vm}
-            new["oversized_in_gui"] = True
-            save_json(new, 'items/%s.json' % n)
-            out[n] = (strip, au, base.size)
+            out[n] = finish_tool(n, lambda name, mat=mat: recolor_tool(name, mat))
     return out
 
 # ------------------------------------------------------------------ glint
@@ -415,15 +419,31 @@ def galaxy_robe():
     save_json(eq, 'equipment/netherite.json')
     return hum, leg, cloak
 
+def crystal_worn(im):
+    """worn diamond armor: rank the vanilla shades so the crystal keeps real contrast on the body"""
+    W, H = im.size
+    lv = lambda p: round(0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2])
+    levels = sorted({lv(p) for p in im.getdata() if p[3]})
+    rank = {l: i / max(1, len(levels) - 1) for i, l in enumerate(levels)}
+    stops = [(52, 36, 112), (118, 98, 200), None, (232, 226, 254), (255, 255, 255)]
+    POS = [0.0, 0.12, 0.42, 0.85, 1.0]   # most vanilla shades land on the aurora colour
+    o = Image.new('RGBA', im.size)
+    for y in range(H):
+        for x in range(W):
+            p = im.getpixel((x, y))
+            if not p[3]:
+                continue
+            t = (x * 0.6 + y) / W * 0.6
+            sts = [c if c else cyc(t) for c in stops]
+            r = rank[lv(p)]
+            i = max(k for k in range(len(POS) - 1) if POS[k] <= r)
+            o.putpixel((x, y), C(mix(sts[i], sts[i + 1], (r - POS[i]) / (POS[i + 1] - POS[i])), p[3]))
+    return o
+
 def diamond_worn():
     out = []
     for layer in ('humanoid', 'humanoid_leggings'):
-        im = ref('entity/equipment/%s/diamond.png' % layer); o = Image.new('RGBA', im.size)
-        for y in range(im.height):
-            for x in range(im.width):
-                p = im.getpixel((x, y))
-                if p[3]:
-                    o.putpixel((x, y), C(crystal_px(p, (x * 0.6 + y) / 64 * 0.6), p[3]))
+        o = crystal_worn(ref('entity/equipment/%s/diamond.png' % layer))
         save_tex(o, 'entity/equipment/%s/diamond.png' % layer); out.append(o)
     return out
 
@@ -436,6 +456,9 @@ def other_worn():
             if not os.path.exists(REF + 'textures/' + rel):
                 continue
             im = ref(rel); o = Image.new('RGBA', im.size); W, H = im.size
+            if mat == 'diamond':
+                save_tex(crystal_worn(im), rel); out[(layer, mat)] = None
+                continue
             vs = [hsv(im.getpixel((x, y)))[2] for y in range(H) for x in range(W) if im.getpixel((x, y))[3]]
             vmean = sum(vs) / max(1, len(vs))
             for y in range(H):

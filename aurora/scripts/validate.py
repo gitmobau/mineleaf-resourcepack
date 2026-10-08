@@ -78,8 +78,8 @@ for pack in PACKS:
         g = meta.get('gui', {}).get('scaling')
         if g and g.get('type') == 'nine_slice' and (g['width'], g['height']) != (fw, fh):
             warn('%s: nine_slice %sx%s vs frame %dx%d' % (rel, g['width'], g['height'], fw, fh))
-        if rel.startswith('gui/container/') and (w, h) != (256, 256):
-            err('%s: container background must stay 256x256' % rel)
+        if rel.startswith('gui/container/') and os.path.exists(refpng) and (w, h) != Image.open(refpng).size:
+            err('%s: container background must keep the vanilla size' % rel)
         if rel.startswith('gui/container/') and a is not None:
             err('%s: container backgrounds cannot animate' % rel)
     # ---- models

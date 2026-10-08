@@ -1,0 +1,44 @@
+# Compila el mod cliente Aurora FX (aurora/mod) y sube el .jar como artefacto "aurora-fx".
+# Basado en .github/workflows/build.yml de FabricMC/fabric-example-mod (rama 26.3):
+# mismas versiones de las actions, JDK 25 de Microsoft y ./gradlew build.
+name: aurora-mod
+
+on:
+  push:
+    paths:
+      - 'aurora/mod/**'
+      - '.github/workflows/aurora-mod.yml'
+  pull_request:
+    paths:
+      - 'aurora/mod/**'
+      - '.github/workflows/aurora-mod.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: aurora/mod
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+      - name: validate gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+      - name: setup gradle (cache)
+        uses: gradle/actions/setup-gradle@v6
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
+      - name: build
+        run: ./gradlew build --stacktrace
+      - name: capture build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: aurora-fx
+          path: aurora/mod/build/libs/*.jar
+          if-no-files-found: error

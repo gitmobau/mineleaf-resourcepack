@@ -1,0 +1,48 @@
+// Basado en FabricMC/fabric-example-mod, rama 26.3. En 26.x el juego no está ofuscado:
+// no hay bloque `mappings` y las dependencias de mods van en `implementation`.
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+repositories {
+	// Loom añade solo los repositorios de Minecraft y Fabric.
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"aurora_fx" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+dependencies {
+	// To change the versions see the gradle.properties file
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// Fabric API: usamos fabric-rendering-v1 (capas de render, ArmorRenderer, ModelLayerRegistry)
+	// y fabric-lifecycle-events-v1 (ClientTickEvents).
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}

@@ -1,0 +1,26 @@
+{
+	"schemaVersion": 1,
+	"id": "aurora_fx",
+	"version": "${version}",
+	"name": "Aurora FX",
+	"description": "Efectos del tema Aurora que un resource pack no puede hacer: brillo de aurora animado sobre la armadura de netherita puesta y estela de destellos pastel. Solo cliente.",
+	"authors": [
+		"gitmobau"
+	],
+	"contact": {
+		"sources": "https://github.com/gitmobau/mineleaf-resourcepack"
+	},
+	"icon": "assets/aurora_fx/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"io.github.gitmobau.aurorafx.AuroraFxClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

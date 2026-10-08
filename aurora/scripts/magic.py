@@ -1,6 +1,8 @@
 # Aurora "Marco magico" redesign: containers (static, detailed) + animated GUI sprites.
-import os, math, json, random
+import os, sys, math, json, random
 from PIL import Image
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from palette import cycle
 
 HOME = os.path.expanduser('~')
 # Paths can be overridden by build.py (AURORA_REF = folder holding assets/minecraft of vanilla 26.3,
@@ -19,9 +21,7 @@ WHITE = (255, 255, 255)
 PEARL = (250, 248, 255)
 
 def cyc(t, pal=VIVID):
-    t = (t % 1.0) * len(pal); i = int(t) % len(pal); f = t - int(t)
-    a = pal[i]; b = pal[(i + 1) % len(pal)]
-    return tuple(a[k] + (b[k] - a[k]) * f for k in range(3))
+    return cycle(t, pal)
 
 def mix(a, b, f):
     return tuple(a[k] + (b[k] - a[k]) * f for k in range(3))
@@ -121,7 +121,32 @@ def gem(img, cx, cy, r=3):
             img.putpixel((cx + dx, cy + dy), C(c))
     img.putpixel((cx - 1, cy - 1), C(WHITE))
 
+def night_sky(img, pts, seed=1):
+    """aurora night sky over the given pixels (same look as the inventory player window)"""
+    if not pts:
+        return
+    bx0 = min(p[0] for p in pts); bx1 = max(p[0] for p in pts)
+    by0 = min(p[1] for p in pts); by1 = max(p[1] for p in pts)
+    rnd = random.Random(seed)
+    for (x, y) in pts:
+        u = (x - bx0) / max(1, bx1 - bx0); vv = (y - by0) / max(1, by1 - by0)
+        c = mix((22, 14, 58), (92, 58, 150), vv)
+        for k, (amp, off, th) in enumerate(((5, 0.25, 4.5), (4, 0.42, 3.5))):
+            cy = by0 + (by1 - by0) * off + amp * math.sin(u * 6.3 + k * 2)
+            d = abs(y - cy)
+            if d < th:
+                c = mix(c, cyc(u * 0.6 + k * 0.3), (1 - d / th) * 0.55)
+        img.putpixel((x, y), C(c))
+    pset = set(pts)
+    for _ in range(len(pts) // 90):
+        x, y = rnd.choice(pts)
+        if (x, y) in pset:
+            img.putpixel((x, y), C(mix(WHITE, cyc(rnd.random()), 0.3)))
+
 # ------------------------------------------------------------------ containers
+SLOT_GREYS = {55: (150, 128, 214), 85: (130, 108, 196), 115: (196, 182, 240), 139: (230, 221, 251),
+              173: (240, 234, 254), 255: (255, 255, 255)}
+
 def is_rgb(p, v):
     return p[3] == 255 and p[0] == v and p[1] == v and p[2] == v
 
@@ -152,7 +177,7 @@ def find_slots(v, w, h):
 
 def build_container(name, w, h, cut_safe=False, cats=(), excl=(), stars=True, seed=1):
     v = ref('gui/container/%s.png' % name)
-    img = Image.new('RGBA', (256, 256), (0, 0, 0, 0))
+    img = Image.new('RGBA', v.size, (0, 0, 0, 0))   # villager.png is 512x256
     slots = find_slots(v, w, h)
     used = [[False] * h for _ in range(w)]
     # --- panel fill + frame
@@ -230,18 +255,39 @@ def build_container(name, w, h, cut_safe=False, cats=(), excl=(), stars=True, se
                 img.putpixel((x, y), C(c))
         if big:
             sparkle(img, sx + s - 3, sy + 2, 0.4, big=False)
-    # --- remaining vanilla decorations (arrows, flame icons, labels art): aurora
-    for y in range(h):
-        for x in range(w):
-            if used[x][y]:
+    # --- remaining vanilla art, by connected area:
+    #     small (arrows, flame icons) -> aurora colours; big dark (text fields, lists, scroll tracks) -> night sky;
+    #     big light (odd slot grids such as the crafter's) -> lavender slot greys
+    left = lambda x, y: not used[x][y] and v.getpixel((x, y))[3] and not is_rgb(v.getpixel((x, y)), 198)
+    seen = [[False] * h for _ in range(w)]
+    for y0 in range(h):
+        for x0 in range(w):
+            if seen[x0][y0] or not left(x0, y0):
                 continue
-            p = v.getpixel((x, y))
-            if p[3] == 0 or is_rgb(p, 198):
-                continue
-            l = (p[0] + p[1] + p[2]) / 765
-            c = mix(cyc(x / w * 0.9 + 0.2), WHITE, max(0, (l - 0.55)) * 1.6) if l > 0.3 else mix(OUT, cyc(x / w), 0.3)
-            img.putpixel((x, y), C(c))
-            used[x][y] = True
+            comp, stack = [], [(x0, y0)]; seen[x0][y0] = True
+            while stack:
+                x, y = stack.pop(); comp.append((x, y))
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    xx, yy = x + dx, y + dy
+                    if 0 <= xx < w and 0 <= yy < h and not seen[xx][yy] and left(xx, yy):
+                        seen[xx][yy] = True; stack.append((xx, yy))
+            lum = sum(sum(v.getpixel(p)[:3]) for p in comp) / (765 * len(comp))
+            cw = max(p[0] for p in comp) - min(p[0] for p in comp) + 1
+            ch = max(p[1] for p in comp) - min(p[1] for p in comp) + 1
+            big = len(comp) >= 200 and len(comp) / (cw * ch) > 0.3   # dense area, not a thin frame
+            if big and lum < 0.4:
+                night_sky(img, comp, seed + len(comp))
+            for (x, y) in comp:
+                used[x][y] = True
+                if big and lum < 0.4:
+                    continue
+                p = v.getpixel((x, y)); l = (p[0] + p[1] + p[2]) / 765
+                if big and p[0] == p[1] == p[2]:
+                    g = p[0]
+                    c = OUT if g < 30 else SLOT_GREYS[min(SLOT_GREYS, key=lambda k: abs(k - g))]
+                else:
+                    c = mix(cyc(x / w * 0.9 + 0.2), WHITE, max(0, (l - 0.55)) * 1.6) if l > 0.3 else mix(OUT, cyc(x / w), 0.3)
+                img.putpixel((x, y), C(c))
     # --- corner gems + edge ornaments
     for (gx, gy) in ((3, 3), (w - 4, 3), (3, h - 4), (w - 4, h - 4)):
         gem(img, gx, gy)

@@ -63,6 +63,19 @@ y beige) y el inventario creativo (oscuro). Esas dos pantallas no las tocaba Aur
 Ahora las cubre `extra.py`. Para que se vean, Aurora tiene que estar por encima de ese pack.
 Queda por ver en el juego: la túnica de netherita y la capa, el borde de bloque, y los nuevos libro de recetas, creativo y HUD.
 
+## Sesión 2026-10-08
+- `menus.py`: todos los fondos de contenedor que quedaban y sus sprites, más los widgets comunes y los tooltips.
+- `build_container()` (magic.py) ahora clasifica el arte vanilla que sobra por zonas conectadas:
+  - zona pequeña (flechas, iconos): colores aurora, como antes;
+  - zona grande y densa oscura (campo de texto del yunque, faro, listas, scroll): cielo nocturno;
+  - zona grande y densa clara (rejilla del crafter): grises de casilla lavanda;
+  - marcos finos (el del jugador en el inventario): como antes.
+  Comprobado: los 7 menús que ya había siguen idénticos byte a byte. El lienzo usa ya el tamaño vanilla (villager.png es de 512x256).
+- `polish.py`: hierro (piedra lunar) y oro (oro rosa), tótem y élitros. `gear.finish_tool()` se ha sacado de `tools()`
+  para reutilizarlo (con diamante y netherita la salida es idéntica).
+- `palette.py`: `cyc()` interpola en OKLab.
+- Armadura de diamante puesta: rampa por rangos de tono (`crystal_worn`), con más contraste que antes, que se veía lavada en el juego.
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar ambos packs
   (Aurora Outline encima de Aurora Pack), comprobar capa, aura, borde y menús con capturas.

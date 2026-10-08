@@ -3,7 +3,7 @@
 import os, sys, math, json, random, colorsys, shutil
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image
-from magic import cyc, mix, C, OUT, WHITE, PEARL, sparkle, ref, save, REF, TX
+from magic import cyc, mix, C, OUT, WHITE, PEARL, sparkle, ref, save, REF, TX, night_sky as sky
 
 SLOT_EDGE = (150, 128, 214)
 SLOT_FILL = (230, 221, 251)
@@ -53,28 +53,6 @@ def pastel(p, t, tint=0.18, min_hue=None):
         return mix(cyc(t), WHITE, 0.6)
     r, g, b = colorsys.hsv_to_rgb(h, min(s, 0.8) * 0.78, 0.42 + 0.58 * v)
     return mix((r * 255, g * 255, b * 255), cyc(t), tint)
-
-def sky(img, pts, seed=1):
-    """aurora night sky over the given pixels (same look as the inventory player window)"""
-    if not pts:
-        return
-    bx0 = min(p[0] for p in pts); bx1 = max(p[0] for p in pts)
-    by0 = min(p[1] for p in pts); by1 = max(p[1] for p in pts)
-    rnd = random.Random(seed)
-    for (x, y) in pts:
-        u = (x - bx0) / max(1, bx1 - bx0); vv = (y - by0) / max(1, by1 - by0)
-        c = mix((22, 14, 58), (92, 58, 150), vv)
-        for k, (amp, off, th) in enumerate(((5, 0.25, 4.5), (4, 0.42, 3.5))):
-            cy = by0 + (by1 - by0) * off + amp * math.sin(u * 6.3 + k * 2)
-            d = abs(y - cy)
-            if d < th:
-                c = mix(c, cyc(u * 0.6 + k * 0.3), (1 - d / th) * 0.55)
-        img.putpixel((x, y), C(c))
-    pset = set(pts)
-    for _ in range(len(pts) // 90):
-        x, y = rnd.choice(pts)
-        if (x, y) in pset:
-            img.putpixel((x, y), C(mix(WHITE, cyc(rnd.random()), 0.3)))
 
 def gui_recolor(rel, t0=0.0, span=0.8, sky_value=None, seed=1, glass=True):
     """vanilla grey GUI art -> Aurora frame: aurora rim, pearl panel, lavender slots"""

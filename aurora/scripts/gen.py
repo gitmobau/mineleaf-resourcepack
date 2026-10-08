@@ -1,5 +1,7 @@
-import os, math, json, colorsys, shutil
+import os, sys, math, json, colorsys, shutil
 from PIL import Image
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from palette import cycle
 
 HOME = os.path.expanduser('~')
 # Paths can be overridden by build.py (AURORA_REF = folder holding assets/minecraft of vanilla 26.3,
@@ -14,9 +16,7 @@ P = [(123,225,249),(155,210,248),(187,185,248),(220,181,240),(248,176,234),
      (248,188,199),(248,201,173),(248,225,156),(209,248,145),(170,245,215)]
 
 def cyc(t):
-    t = (t % 1.0) * len(P); i = int(t) % len(P); f = t - int(t)
-    a = P[i]; b = P[(i + 1) % len(P)]
-    return tuple(a[k] + (b[k] - a[k]) * f for k in range(3))
+    return cycle(t, P)
 
 def mix(a, b, f):
     return tuple(a[k] + (b[k] - a[k]) * f for k in range(3))
