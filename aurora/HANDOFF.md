@@ -84,6 +84,14 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   cartografía (y=4), aldeano (centrado + etiqueta del inventario en 107,72). Si un título queda fuera de su placa,
   se ajusta en `SCREENS`.
 
+### Pantallas sin contenedor (sesión del 2026-10-08, 4ª parte)
+- Con shader (Aurora HUD XL): libro de recetas (blit desde (1,1), soportado con `origin`), ventana de progresos
+  (hueco interior conservado: el árbol se dibuja por debajo) y selector de modo de juego (fondo translúcido conservado).
+  Las dos últimas casi llenan su textura (252 de 256 y 125 de 128): solo sobresalen arriba/abajo.
+- Sin shader (Aurora Pack, `screens.py`): libro (cabe en los márgenes libres de su ventana de 192), carteles, fondos
+  y separadores de menús, todos los widgets (mismos nine-slice, color solo según luminancia), tooltips y logo.
+- No tocados a propósito: panoramas del título, logo de Mojang Studios, imágenes de Realms, toasts y barras de jefe.
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
   (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar capa, aura, borde, menús y HUD XL con capturas.

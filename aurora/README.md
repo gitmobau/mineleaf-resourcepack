@@ -30,7 +30,7 @@ No están en el repo porque son assets de Mojang. Para conseguirlas:
 `ref63/` del zip de traspaso y genera exactamente los mismos zips. También vale el
 `versions/26.3/26.3.jar`.
 
-`build.py` borra y regenera `packs/Aurora Pack`, ejecuta `gen.py → magic.py → gear.py → icons.py` (en ese
+`build.py` borra y regenera `packs/Aurora Pack`, ejecuta `gen.py → magic.py → gear.py → icons.py → screens.py` (en ese
 orden, porque los últimos sobrescriben a los primeros), luego `hud_xl.py → menus_xl.py`, pasa `validate.py` y crea los zips.
 La salida es determinista: con la misma entrada salen los mismos bytes.
 
@@ -41,7 +41,8 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 - `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (túnica galáctica + capa 3D), también puestas en bebés, caballos y nautilus.
 - `hud_xl.py`: texturas de Aurora HUD XL (hotbar con alas de cristal, selección con corona y halo, mano secundaria con aguja) y previsualización del HUD en `previews/`.
 - `menus_xl.py`: menús temáticos de Aurora HUD XL (ver abajo): lista de pantallas, construcción de cada fondo y una emulación del shader que comprueba que cada pantalla sale al píxel. Genera `previews/menus_xl.png` y `menus_xl_2.png`.
-- `menu_themes.py`: utilidades de dibujo y los 23 temas (marco, fondo, casillas, placas y adornos que sobresalen).
+- `screens.py`: pantallas sin contenedor, retocadas en su sitio (sin shader): libro (cuero violeta, papel perla, cinta y amuleto), carteles y carteles colgantes de las 13 maderas en pastel, fondos de opciones y menús, separadores, botones y demás controles (deslizadores, campos de texto, casillas, pestañas, barras), tooltips, iconos del selector de modo y el logo del título. Genera `previews/pantallas.png`.
+- `menu_themes.py`: utilidades de dibujo y los 26 temas (marco, fondo, casillas, placas y adornos que sobresalen).
 - `validate.py`: validación estática contra la 26.3. Revisa JSON, tamaños y frames de las animaciones, nine-slice, referencias de modelos y texturas, definiciones de items, capas de equipamiento, compilación de los shaders en las 5 variantes OIT con `glslangValidator` y que las salidas del vsh coincidan con las entradas del fsh.
 - `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta.
 
@@ -73,6 +74,9 @@ Recursos externos útiles (espejos de assets, esquemas, shaders, EMF/ETF y pixel
 | Cortapiedras | Geoda del cantero: sierra circular y racimos de amatista |
 | Aldeano | Mercado: toldo de rayas festoneado, esmeralda y cajas |
 | Inventario creativo (3 pestañas) | Estudio del creador: cristales arcoíris a los lados (arriba y abajo están las pestañas, no sobresale ahí) |
+| Libro de recetas (panel) | Recetario estelar: libro abierto con estrellas, esquinas doradas y cintas marcapáginas colgando |
+| Ventana de progresos | Salón de laureles: trofeo dorado y ramas de laurel por abajo (arriba van las pestañas) |
+| Selector de modo de juego (F3+F4) | Portal de modos: estrella portal arriba y flecos de cristal abajo |
 
 Los títulos de los menús los pinta el juego en gris oscuro (no se puede cambiar con un resource pack), así que
 cada tema pone una placa clara debajo de cada título.

@@ -62,6 +62,7 @@ class Theme:
     def window(self, img, cells): pass
     def ornaments(self, img, L, T, w, h): pass
     def motif(self, img, x, y, r): star(img, x, y, 0.8, cyc(r.random()))
+    def translucent(self, c, a): return c, a       # colour for vanilla's see-through pixels
 
 class Observatory(Theme):
     band = [OUT, (110, 120, 190), (190, 200, 245), (245, 248, 255), (150, 160, 220), (70, 70, 140), OUT]
@@ -773,3 +774,60 @@ class Creator(Theme):                     # creative inventory: creator's studio
             for k, y in enumerate(range(T + 10, T + h - 6, 16)):
                 crystal_shard(img, S, (x0, y + 3), (x0 + side * (11 - k % 2 * 3), y - 4), 2.6, cyc(k / 8), line=(60, 40, 110))
     def motif(self, img, x, y, r): star(img, x, y, 0.5 + 0.5 * r.random(), cyc(r.random()))
+
+# ------------------------------------------------------------------ non-container windows
+class Cookbook(Theme):                    # recipe book panel: starry cookbook (inside stays dark: white text)
+    pads = (6, 16, 6, 10)
+    band = [(50, 26, 60), (150, 90, 150), (225, 165, 215), (255, 238, 250), (185, 120, 180), (100, 55, 110), (50, 26, 60)]
+    def bg(self, x, y, w, h): return grad([(250, 236, 248), (236, 218, 240)], y / h)
+    def feature(self, l, x, w): return grad([(26, 18, 44), (52, 38, 84), (200, 180, 240), (255, 255, 255)], l)
+    def ornaments(self, img, L, T, w, h):
+        S = img.size; cx = L + w // 2
+        paint(img, poly(S, [(cx, T - 3), (cx - 13, T - 6), (cx - 13, T - 14), (cx, T - 11)]), lambda x, y: (255, 250, 238), line=(110, 60, 120))
+        paint(img, poly(S, [(cx, T - 3), (cx + 13, T - 6), (cx + 13, T - 14), (cx, T - 11)]), lambda x, y: (246, 236, 226), line=(110, 60, 120))
+        paint(img, poly(S, star_pts(cx - 6, T - 9, 3, 1.3, 5)), lambda x, y: (255, 160, 200), line=None, bevel=False)
+        paint(img, poly(S, star_pts(cx + 6, T - 9, 3, 1.3, 5)), lambda x, y: (150, 220, 255), line=None, bevel=False)
+        for (x, y) in ((L - 1, T - 1), (L + w, T - 1)):
+            paint(img, poly(S, [(x, y - 5), (x + 5, y), (x, y + 5), (x - 5, y)]), lambda a, b: (255, 220, 140), line=(130, 90, 40), bevel=False)
+        for k, (x, col) in enumerate(((L + 30, (255, 150, 200)), (L + 40, (150, 210, 255)))):   # ribbon bookmarks
+            paint(img, poly(S, [(x - 2, T + h - 1), (x + 2, T + h - 1), (x + 2, T + h + 8), (x, T + h + 6), (x - 2, T + h + 8)]),
+                  lambda a, b, col=col: col, line=(110, 60, 120), bevel=False)
+    def motif(self, img, x, y, r): pass
+
+class Laurels(Theme):                     # advancements window: hall of laurels (tabs above: only sides and bottom)
+    pads = (2, 0, 2, 16)
+    band = [(60, 40, 20), (200, 150, 70), (255, 225, 140), (255, 248, 210), (220, 170, 90), (130, 90, 40), (60, 40, 20)]
+    plaque = ((255, 250, 232), (170, 120, 50))
+    def bg(self, x, y, w, h): return grad([(250, 238, 214), (232, 214, 186)], y / h)
+    def translucent(self, c, a): return (40, 26, 60), a
+    def feature(self, l, x, w): return grad([(90, 60, 30), (210, 170, 110), (255, 248, 225)], l)
+    def ornaments(self, img, L, T, w, h):
+        S = img.size; cx = L + w // 2; by = T + h + 1
+        for side in (-1, 1):                                   # laurel branches along the bottom
+            for k in range(9):
+                x = cx + side * (16 + k * 9); y = by + 4 + int(2 * math.sin(k))
+                paint(img, ellipse(S, x, y, 3.5, 1.8), lambda a, b, k=k: mix((170, 230, 160), (120, 200, 150), k / 9), line=(50, 100, 60), bevel=False)
+                paint(img, ellipse(S, x + side * 4, y + 3, 3, 1.6), lambda a, b: (150, 215, 170), line=(50, 100, 60), bevel=False)
+        gold = lambda x, y: grad([(255, 245, 190), (240, 195, 90), (180, 120, 40)], (y - by) / 14)
+        paint(img, poly(S, [(cx - 8, by - 1), (cx + 8, by - 1), (cx + 6, by + 6), (cx + 2, by + 8), (cx + 2, by + 11), (cx + 5, by + 13),
+                            (cx - 5, by + 13), (cx - 2, by + 11), (cx - 2, by + 8), (cx - 6, by + 6)]), gold)
+        for side in (-1, 1):
+            paint(img, ellipse(S, cx + side * 9, by + 3, 3, 3) - ellipse(S, cx + side * 9, by + 3, 1.5, 1.5), gold, line=(130, 90, 40), bevel=False)
+        star(img, cx, by + 3, 1.0, (255, 255, 230))
+    def motif(self, img, x, y, r): pass
+
+class ModePortal(Theme):                  # F3+F4 game mode switcher: portal of modes (dark: white text)
+    pads = (1, 16, 2, 12)
+    band = [(20, 12, 40), (90, 60, 160), (170, 140, 240), (240, 230, 255), (120, 90, 200), (60, 40, 120), (20, 12, 40)]
+    def bg(self, x, y, w, h): return (40, 28, 80)
+    def feature(self, l, x, w): return grad([(22, 14, 46), (60, 40, 110), (200, 180, 255)], l)
+    def ornaments(self, img, L, T, w, h):
+        S = img.size; cx = L + w // 2
+        paint(img, poly(S, star_pts(cx, T - 7, 9, 3, 4)), lambda x, y: mix((200, 180, 255), (150, 230, 255), (x - cx + 9) / 18), line=(60, 40, 110), bevel=False)
+        paint(img, ellipse(S, cx, T - 7, 2.5, 2.5), lambda x, y: WHITE, line=(120, 90, 200), bevel=False)
+        for side in (-1, 1):
+            star(img, cx + side * 20, T - 6, 0.8, cyc(0.3 + side * 0.2))
+            star(img, cx + side * 40, T - 3, 0.6, cyc(0.6 + side * 0.2))
+        for k, x in enumerate(range(L + 12, L + w - 8, 18)):    # crystal fringe hanging below
+            crystal_shard(img, S, (x, T + h + 1), (x + (1 if k % 2 else -1), T + h + 7 + (k % 3) * 2), 1.8, cyc(k / 7), line=(60, 40, 110))
+    def motif(self, img, x, y, r): pass

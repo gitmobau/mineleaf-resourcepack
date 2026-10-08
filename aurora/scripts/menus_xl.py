@@ -25,8 +25,8 @@ def ref(rel):
 # used by the preview (text, x, y; x None = centred). The vanilla texture gives size and slot layout.
 # Plaques: the game paints titles in dark grey, so every theme puts a light plate behind them.
 HEAD = 'head'                                    # full-width title strip (5, 3, w - 6, 16)
-def S(theme, plaques=(HEAD, 'inv'), kind='single', title=None, inv=True):
-    return dict(theme=theme, plaques=plaques, kind=kind, title=title, inv=inv)
+def S(theme, plaques=(HEAD, 'inv'), kind='single', title=None, inv=True, origin=(0, 0)):
+    return dict(theme=theme, plaques=plaques, kind=kind, title=title, inv=inv, origin=origin)
 SCREENS = {
     'inventory':         S(Observatory(), [(94, 5, 170, 17)], title=('Fabricación', 97, 8), inv=False),
     'crafting_table':    S(Fabricator(), [(26, 3, 112, 16), 'inv'], title=('Fabricación', 29, 6)),
@@ -53,28 +53,34 @@ SCREENS = {
     'creative_inventory/tab_items':       S(Creator(), [(5, 3, 120, 16)], title=('Buscar objetos', 8, 6), inv=False),
     'creative_inventory/tab_item_search': S(Creator(), [(5, 3, 85, 16)], title=('Buscar objetos', 8, 6), inv=False),
     'creative_inventory/tab_inventory':   S(Creator(), [], title=None, inv=False),
+    # not containers, but drawn the same way (one blit of a fixed window)
+    '../recipe_book':    S(Cookbook(), [], title=None, inv=False, origin=(1, 1)),
+    '../advancements/window': S(Laurels(), [(5, 3, 120, 16)], title=('Progresos', 8, 6), inv=False),
+    'gamemode_switcher': S(ModePortal(), [], title=None, inv=False),
 }
 
 def geometry(name):
-    """vanilla texture, blitted width/height (content box) and texture size"""
+    """vanilla window (cropped to the blitted rectangle), its width/height, origin and the texture size"""
     v = ref('gui/container/%s.png' % name)
+    u0, v0 = SCREENS[name]['origin']
     bb = v.getbbox()
-    return v, bb[2], bb[3], v.size
+    w, h = bb[2] - u0, bb[3] - v0
+    return v.crop((u0, v0, u0 + w, v0 + h)), w, h, (u0, v0), v.size
 
 def quads(kind, h):
     """vanilla blits as (v0, v1) texel rows; the chest draws rows*18+17 of the top part plus the bottom 96"""
     if kind == 'single': return [(0, h, 'tb')]
     return [(0, r * 18 + 17, 't') for r in range(1, 7)] + [(126, 222, 'b')]
 
-def write_markers(img, kind, w, h, pads):
-    l, t, r, b = pads
+def write_markers(img, kind, w, h, pads, origin=(0, 0)):
+    l, t, r, b = pads; ou, ov = origin
     for (v0, v1, edge) in quads(kind, h):
         top_pad = t if 't' in edge else 0; bot_pad = b if 'b' in edge else 0
         dv_top = 0 if v0 == 0 else t                       # UV shift of this blit's top edge
         dv_bot = t + bot_pad                               # ... and of its bottom edge
-        xr = w - 1
-        for (x, y, role, px_, py_, du, dv) in ((0, v0, 1, l, top_pad, 0, dv_top), (xr, v0, 2, r, top_pad, l + r, dv_top),
-                                               (0, v1 - 1, 3, l, bot_pad, 0, dv_bot), (xr, v1 - 1, 4, r, bot_pad, l + r, dv_bot)):
+        xl, xr, yt, yb = ou, ou + w - 1, ov + v0, ov + v1 - 1
+        for (x, y, role, px_, py_, du, dv) in ((xl, yt, 1, l, top_pad, 0, dv_top), (xr, yt, 2, r, top_pad, l + r, dv_top),
+                                               (xl, yb, 3, l, bot_pad, 0, dv_bot), (xr, yb, 4, r, bot_pad, l + r, dv_bot)):
             if role in (1, 2) and v0 != 0 and img.getpixel((x, y))[2] == MARK: continue
             img.putpixel((x, y), (px_, py_, MARK, role))
             img.putpixel((x + (1 if role in (1, 3) else -1), y), (du, dv, SHIFT, role))
@@ -89,23 +95,28 @@ def plaque_rects(cfg, w, h):
 
 def build(name):
     cfg = SCREENS[name]; theme = cfg['theme']; kind = cfg['kind']
-    v, w, h, tsize = geometry(name)
+    v, w, h, origin, tsize = geometry(name)
     l, t, r, b = theme.pads
     AW, AH = w + l + r, h + t + b
-    assert AW <= tsize[0] and AH <= tsize[1], (name, AW, AH, tsize)
+    assert origin[0] + AW <= tsize[0] and origin[1] + AH <= tsize[1], (name, AW, AH, tsize)
+    va = lambda x, y: v.getpixel((x, y))[3] if 0 <= x < w and 0 <= y < h else 255
     art = Image.new('RGBA', (AW, AH))
     used = set()
     # panel + frame band (rounded rect from -4 to +w+3 around the vanilla rectangle)
     band = theme.band; BW = len(band)
     x0, y0, x1, y1, R = l - 4, t - 4, l + w + 3, t + h + 3, 6
     for y in range(max(0, y0), min(AH, y1 + 1)):
-        for x in range(x0, x1 + 1):
+        for x in range(max(0, x0), min(AW, x1 + 1)):
             cx = min(max(x, x0 + R), x1 - R); cy = min(max(y, y0 + R), y1 - R)
             d = math.hypot(x - cx, y - cy)
             if d > R + 0.4: continue
             e = min(x - x0, x1 - x, y - y0, y1 - y)
             if (x < x0 + R or x > x1 - R) and (y < y0 + R or y > y1 - R): e = int(R - d)
-            art.putpixel((x, y), C(band[e] if e < BW else theme.bg(x - l, y - t, w, h)))
+            if e < BW: art.putpixel((x, y), C(band[e])); continue
+            a = va(x - l, y - t)                               # keep vanilla holes / translucency inside
+            if a == 0: used.add((x, y)); continue
+            c = theme.bg(x - l, y - t, w, h)
+            art.putpixel((x, y), C(c) if a == 255 else C(*theme.translucent(c, a)))
     # label plaques first: slots and vanilla decorations are drawn over them, never hidden
     for (px0, py0, px1, py1) in plaque_rects(cfg, w, h):
         fill, line = theme.plaque
@@ -138,7 +149,7 @@ def build(name):
              and (x, y) not in in_slot]
     for (x, y) in feats:
         p = v.getpixel((x, y)); lum = (p[0] + p[1] + p[2]) / 765
-        art.putpixel((x + l, y + t), C(theme.feature(lum, x, w)))
+        art.putpixel((x + l, y + t), C(theme.feature(lum, x, w), p[3]))
     for (x, y) in feats:
         used |= rect(art.size, x + l - 1, y + t - 1, x + l + 1, y + t + 1)
     # small theme motifs in free panel space (not between chest rows: that part gets cut)
@@ -151,9 +162,9 @@ def build(name):
             theme.motif(art, x, y, rr); used |= rect(art.size, x - 4, y - 4, x + 4, y + 4); placed += 1
             if placed >= 10: break
     theme.ornaments(art, l, t, w, h)
-    img = Image.new('RGBA', tsize); img.alpha_composite(art)
-    write_markers(img, kind, w, h, theme.pads)
-    p = TX + 'gui/container/%s.png' % name
+    img = Image.new('RGBA', tsize); img.alpha_composite(art, origin)
+    write_markers(img, kind, w, h, theme.pads, origin)
+    p = os.path.normpath(TX + 'gui/container/%s.png' % name)
     os.makedirs(os.path.dirname(p), exist_ok=True); img.save(p, optimize=True)
     return img
 
@@ -187,7 +198,7 @@ def emulate(tex, quad, uv):
     return (int(qx0), int(qy0)), piece
 
 def screen(name, tex, rows=6):
-    _, w, h, _ = geometry(name)
+    _, w, h, (u0, v0), _ = geometry(name)
     hh = h if name != 'generic_54' else 114 + rows * 18
     W, Hh = 340, 290
     sc = Image.new('RGBA', (max(W, w + 64), Hh), (30, 26, 44, 255))
@@ -198,7 +209,7 @@ def screen(name, tex, rows=6):
                       ((lx, ly + top, lx + w, ly + top + 96), (0, 126, w, 222))):
             at, piece = emulate(tex, q, uv); sc.alpha_composite(piece, at)
     else:
-        at, piece = emulate(tex, (lx, ly, lx + w, ly + h), (0, 0, w, h)); sc.alpha_composite(piece, at)
+        at, piece = emulate(tex, (lx, ly, lx + w, ly + h), (u0, v0, u0 + w, v0 + h)); sc.alpha_composite(piece, at)
     return sc, (lx, ly), w, hh
 
 def previews(imgs):
@@ -217,7 +228,7 @@ def previews(imgs):
             if cfg['inv']:
                 ix, iy = cfg['inv'] if isinstance(cfg['inv'], tuple) else (8, hh - 94)
                 d.text((lx + ix, ly + iy - 1), 'Inventario', font=F, fill=(64, 64, 64))
-            v, _, h, _ = geometry(name)
+            v, _, h, _, _ = geometry(name)
             for k, (sx, sy, s) in enumerate(magic.find_slots(v, w, h)):
                 if name == 'generic_54' and sy >= 17 + rows * 18 and sy < 126: continue
                 yy = sy if not (name == 'generic_54' and sy >= 126) else sy - 126 + rows * 18 + 17
@@ -235,7 +246,8 @@ def previews(imgs):
         out.save(path)
     os.makedirs(PREVIEWS, exist_ok=True)
     sheet(tiles[:8], PREVIEWS + '/menus_xl.png')
-    sheet(tiles[8:], PREVIEWS + '/menus_xl_2.png')
+    sheet(tiles[8:20], PREVIEWS + '/menus_xl_2.png')
+    sheet(tiles[20:], PREVIEWS + '/menus_xl_3.png')
 
 if __name__ == '__main__':
     imgs = {n: build(n) for n in SCREENS}
