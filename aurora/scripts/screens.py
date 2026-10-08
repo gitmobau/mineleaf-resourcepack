@@ -240,7 +240,7 @@ def toast_panel(w, h, dark):
 
 def toasts():
     T = 'gui/sprites/toast/'
-    save(toast_panel(160, 32, True), T + 'advancement.png')
+    # advancement toast stays vanilla (advancements are left untouched on purpose)
     save(toast_panel(160, 32, False), T + 'recipe.png')
     ramp_recolor(T + 'now_playing.png', DARK)          # nine-slice: colour only from luminance
     ramp_recolor(T + 'system.png', DARK)

@@ -1,4 +1,4 @@
-# Aurora gear: animated tools, enchantment aura, diamond crystal armor, netherite galactic robe + 3D cloak.
+# Aurora gear: animated tools, enchantment aura, diamond crystal armor, netherite armor in the icon's style + 3D cloak.
 import os, math, json, random, colorsys
 from PIL import Image
 
@@ -51,7 +51,7 @@ def save_json(obj, rel):
 def hsh(x, y, s=0):
     return ((x * 73856093) ^ (y * 19349663) ^ (s * 83492791)) & 0xffff
 
-# ------------------------------------------------------------------ crystal / galaxy painters
+# ------------------------------------------------------------------ crystal painter
 def crystal_px(p, t):
     """diamond-family pixel -> aurora crystal (by original brightness)"""
     hh, s, v = hsv(p)
@@ -63,20 +63,6 @@ def crystal_px(p, t):
     if v < 0.85:  return mix(c, (150, 130, 230), 0.10)
     if s > 0.4:   return mix(c, WHITE, 0.30)
     return mix(c, WHITE, 0.70)
-
-def galaxy_px(x, y, seed=0, scale=1.0, phase=0.0):
-    u, v = x * scale, y * scale
-    base = mix((18, 10, 44), (58, 28, 104), 0.5 + 0.5 * math.sin(u * 0.21 + v * 0.13 + seed))
-    neb = (math.sin(u * 0.33 + seed * 1.7 + phase * 6.283) + math.sin(v * 0.27 - u * 0.11 + seed)
-           + math.sin((u + v) * 0.19 + seed * 0.5)) / 3
-    if neb > 0.15:
-        base = mix(base, cyc(u * 0.02 + v * 0.015 + seed * 0.1 + phase, VIVID), min(0.42, (neb - 0.15) * 1.0))
-    r = hsh(x, y, seed) % 97
-    if r == 0:
-        base = WHITE
-    elif r in (1, 2):
-        base = mix(base, cyc(r * 0.3 + seed, P), 0.85)
-    return base
 
 # ------------------------------------------------------------------ tools
 TOOLS = ['sword', 'pickaxe', 'axe', 'shovel', 'hoe', 'spear']
@@ -295,125 +281,40 @@ def box_faces(u, v, w, h, d):
     return {'top': (u + d, v, w, d), 'bottom': (u + d + w, v, w, d), 'right': (u, v + d, d, h),
             'front': (u + d, v + d, w, h), 'left': (u + d + w, v + d, d, h), 'back': (u + 2 * d + w, v + d, w, h)}
 
-def paint_face(img, face, fn):
-    x0, y0, w, h = face
-    for j in range(h):
-        for i in range(w):
-            c = fn(i, j, w, h, x0 + i, y0 + j)
-            if c is not None:
-                img.putpixel((x0 + i, y0 + j), C(c[:3], c[3] if len(c) > 3 else 255))
+def value_range(im):
+    vs = [hsv(im.getpixel((x, y)))[2] for y in range(im.height) for x in range(im.width) if im.getpixel((x, y))[3]]
+    return min(vs), max(vs)
 
-def trim(t):
-    return mix(cyc(t, VIVID), WHITE, 0.2)
+def netherite_px(p, x, y, W, H, vrange, seed=0):
+    """netherite pixel -> the armour icon's look: plum metal, violet outline, iridescent highlights, a few sparkles.
+    vrange = (darkest, brightest) value of the source texture, so light sources (elytra) map the same way"""
+    t = max(0.0, min(1.0, (hsv(p)[2] - vrange[0]) / max(1e-6, vrange[1] - vrange[0])))
+    if t < 0.3:
+        return mix((26, 14, 56), (40, 24, 80), t / 0.3)
+    if t < 0.6:
+        c = mix((44, 26, 88), (70, 42, 124), (t - 0.3) / 0.3)
+        if hsh(x, y, seed) % 41 == 0:
+            c = mix(cyc((x + y) / (W + H) * 2, VIVID), WHITE, 0.5)
+        return c
+    if t < 0.82:
+        return mix((92, 62, 158), cyc((x + y) / (W + H) * 2, VIVID), 0.3)
+    return mix(cyc((x + y) / (W + H) * 2, VIVID), WHITE, 0.25)
 
-def galaxy_robe():
-    S = 4
-    hum = Image.new('RGBA', (64, 32)); leg = Image.new('RGBA', (64, 32))
-    g = lambda gx, gy, s=S: galaxy_px(gx, gy, seed=s)
-    # --- hood (head 0,0 8x8x8)
-    hf = box_faces(0, 0, 8, 8, 8)
-    for name, face in hf.items():
-        if name == 'front':
-            def fn(i, j, w, h, X, Y):
-                inner = 1 <= i <= 6 and 2 <= j <= 7
-                if inner:
-                    return None                      # face opening
-                rim = (i in (1, 6) and j >= 2) or (j == 1 and 1 <= i <= 6)
-                return trim(i / 8 + 0.1) if rim else g(X, Y)
-        elif name == 'bottom':
-            fn = lambda i, j, w, h, X, Y: None
-        else:
-            def fn(i, j, w, h, X, Y, name=name):
-                if name != 'top' and j == h - 1:
-                    return trim(i / w * 0.3 + 0.4)
-                return g(X, Y)
-        paint_face(hum, face, fn)
-    gem = lambda: (120, 235, 255)
-    # --- robe torso (body 16,16 8x12x4)
-    for name, face in box_faces(16, 16, 8, 12, 4).items():
-        def fn(i, j, w, h, X, Y, name=name):
-            if name == 'bottom':
-                return g(X, Y)
-            if name == 'front':
-                if j <= 2 and (i == 3 - j or i == 4 + j):
-                    return trim(0.2 + j * 0.05)          # V collar
-                if 3 <= i <= 4 and j == 3:
-                    return WHITE if i == 3 else gem()    # crystal clasp
-                if i in (3, 4) and j > 3:
-                    return trim(0.55 + j / 40)           # front opening trim
-                if j == 8:
-                    return trim(0.8 + i / 30)            # sash
-            if name in ('left', 'right', 'back') and j == 8:
-                return trim(0.8 + i / 30)
-            return g(X, Y)
-        paint_face(hum, face, fn)
-    # --- sleeves (arm 40,16 4x12x4)
-    for name, face in box_faces(40, 16, 4, 12, 4).items():
-        def fn(i, j, w, h, X, Y, name=name):
-            if name not in ('top', 'bottom') and j >= h - 2:
-                return trim(0.35 + i / 12 + (j - h) * 0.05)
-            return g(X, Y)
-        paint_face(hum, face, fn)
-    # --- boots (leg 0,16 4x12x4) lower part only
-    for name, face in box_faces(0, 16, 4, 12, 4).items():
-        def fn(i, j, w, h, X, Y, name=name):
-            if name == 'top':
-                return None
-            if name == 'bottom':
-                return trim(0.6)
-            if j < 7:
-                return None
-            if j == 7:
-                return trim(0.15 + i / 10)
-            if j == h - 1:
-                return trim(0.6 + i / 10)
-            return g(X, Y)
-        paint_face(hum, face, fn)
-    # --- leggings layer: robe skirt over legs + waist
-    for name, face in box_faces(0, 16, 4, 12, 4).items():
-        def fn(i, j, w, h, X, Y, name=name):
-            if name == 'top':
-                return g(X, Y)
-            if name == 'bottom':
-                return None
-            if j >= h - 2:
-                return trim(0.05 + i / 10 + j * 0.02)    # glowing hem
-            if j == h - 3 and (i + X) % 2 == 0:
-                return mix(g(X, Y), WHITE, 0.5)
-            return g(X, Y)
-        paint_face(leg, face, fn)
-    for name, face in box_faces(16, 16, 8, 12, 4).items():
-        def fn(i, j, w, h, X, Y, name=name):
-            if name in ('top',):
-                return None
-            if name == 'bottom':
-                return g(X, Y)
-            if j < 7:
-                return None
-            if j == 8:
-                return trim(0.8 + i / 30)
-            return g(X, Y)
-        paint_face(leg, face, fn)
-    save_tex(hum, 'entity/equipment/humanoid/netherite.png')
-    save_tex(leg, 'entity/equipment/humanoid_leggings/netherite.png')
-    # --- 3D cloak on the elytra geometry (wing box texOffs 22,0 size 10x20x2)
-    cloak = Image.new('RGBA', (64, 32))
-    for name, face in box_faces(22, 0, 10, 20, 2).items():
-        def fn(i, j, w, h, X, Y, name=name):
-            if name in ('front', 'back'):
-                if j >= h - 2:
-                    return trim(0.1 + i / 20 + j * 0.03)
-                if (name == 'front' and i == 0) or (name == 'back' and i == w - 1):
-                    return trim(0.4 + j / 40)
-                if j == 0:
-                    return trim(0.7)
-            return galaxy_px(X * 2, Y * 2, seed=9)
-        paint_face(cloak, face, fn)
-    save_tex(cloak, 'entity/equipment/wings/aurora_cloak.png')
-    eq = json.load(open(REF + 'equipment/netherite.json'))
-    eq["layers"]["wings"] = [{"texture": "minecraft:aurora_cloak"}]
-    save_json(eq, 'equipment/netherite.json')
-    return hum, leg, cloak
+def netherite_worn():
+    """player netherite armour + the cloak (wings layer), recoloured from the vanilla textures"""
+    out = []
+    for rel in ('entity/equipment/humanoid/netherite.png', 'entity/equipment/humanoid_leggings/netherite.png',
+                ('entity/equipment/wings/elytra.png', 'entity/equipment/wings/aurora_cloak.png')):
+        src, dst = rel if isinstance(rel, tuple) else (rel, rel)
+        im = ref(src); W, H = im.size; o = Image.new('RGBA', im.size)
+        vrange = value_range(im)
+        for y in range(H):
+            for x in range(W):
+                q = im.getpixel((x, y))
+                if q[3]:
+                    o.putpixel((x, y), C(netherite_px(q, x, y, W, H, vrange), q[3]))
+        save_tex(o, dst); out.append(o)
+    return tuple(out)
 
 def diamond_worn():
     out = []
@@ -436,8 +337,7 @@ def other_worn():
             if not os.path.exists(REF + 'textures/' + rel):
                 continue
             im = ref(rel); o = Image.new('RGBA', im.size); W, H = im.size
-            vs = [hsv(im.getpixel((x, y)))[2] for y in range(H) for x in range(W) if im.getpixel((x, y))[3]]
-            vmean = sum(vs) / max(1, len(vs))
+            vrange = value_range(im)
             for y in range(H):
                 for x in range(W):
                     p = im.getpixel((x, y))
@@ -446,11 +346,7 @@ def other_worn():
                     if mat == 'diamond':
                         c = crystal_px(p, (x * 0.6 + y) / W * 0.6)
                     else:
-                        v = hsv(p)[2]
-                        c = galaxy_px(x, y, seed=4)
-                        c = tuple(q * max(0.45, min(1.6, 1 + (v - vmean) * 2.2)) for q in c)
-                        if v > vmean + 0.16:
-                            c = mix(c, trim((x + y) / (W + H)), 0.65)
+                        c = netherite_px(p, x, y, W, H, vrange)
                     o.putpixel((x, y), C(c, p[3]))
             save_tex(o, rel); out[(layer, mat)] = o
     return out
@@ -485,7 +381,7 @@ def player_preview(hum, leg, cloak, skin_front=None):
 if __name__ == '__main__':
     t = tools(); glint()
     di = diamond_armor_icons(); ni = netherite_armor_icons()
-    hum, leg, cloak = galaxy_robe(); diamond_worn(); ow = other_worn()
+    hum, leg, cloak = netherite_worn(); diamond_worn(); ow = other_worn()
     sheet = Image.new('RGBA', (760, 560), (60, 52, 84, 255))
     for i, n in enumerate(['diamond_sword', 'diamond_pickaxe', 'diamond_axe', 'netherite_sword', 'netherite_pickaxe', 'netherite_spear']):
         strip, au, sz = t[n]

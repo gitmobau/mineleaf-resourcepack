@@ -278,7 +278,7 @@ def offhand():
     save(right, H + 'hotbar_offhand_right.png', N, W, Hh, 3)
     return left, right, W, Hh
 
-# ------------------------------------------------------------------ boss bar backgrounds (182x5 -> 198x11) + advancement toast
+# ------------------------------------------------------------------ boss bar backgrounds (182x5 -> 198x11)
 BOSS_PADS = (8, 3, 8, 3)
 BOSS_GEM = {'pink': (255, 150, 210), 'blue': (120, 200, 255), 'red': (255, 130, 140), 'green': (150, 240, 170),
             'yellow': (255, 230, 130), 'purple': (190, 150, 255), 'white': (236, 238, 255)}
@@ -310,21 +310,6 @@ def bossbars():
             im.alpha_composite(layer if side == 0 else layer.transpose(Image.FLIP_LEFT_RIGHT))
         markers(im, BOSS_PADS, Hh, 1)
         save_static(im, 'gui/sprites/boss_bar/%s_background.png' % col)
-
-TOAST_PADS = (12, 0, 0, 0)
-def advancement_toast():
-    """Aurora Pack's advancement toast plus a crystal wing sticking out on the left (toasts slide in from the right)"""
-    core = Image.open(AURORA + 'gui/sprites/toast/advancement.png').convert('RGBA')
-    l = TOAST_PADS[0]; W, Hh = 160 + l, 32
-    im = Image.new('RGBA', (W, Hh)); im.alpha_composite(core, (l, 0))
-    layer = Image.new('RGBA', (W, Hh))
-    for k, (ty, tx) in enumerate(((3, 1), (11, 0), (20, 1), (28, 3))):
-        crystal(layer, [(l + 2, Hh // 2 - 6 + k * 3), (tx, ty), (l + 2, Hh // 2 - 2 + k * 3)], 0.0, k / 4, 0.9)
-    halo(layer, 0.0)
-    im.alpha_composite(layer, (0, 0)); im.alpha_composite(core.crop((0, 0, 3, 32)), (l, 0))   # keep the rim on top
-    star(im, 4, 16, 1.0, (255, 236, 160))
-    markers(im, TOAST_PADS, Hh, 1)
-    save_static(im, 'gui/sprites/toast/advancement.png')
 
 def pack_icon(hb, W, Hh):
     icon = Image.new('RGBA', (128, 128))
@@ -409,7 +394,7 @@ def previews():
 if __name__ == '__main__':
     import shutil
     shutil.rmtree(TX, ignore_errors=True)     # textures are 100% generated; shaders + pack.mcmeta are hand-written
-    hb, W, Hh = hotbar(); selection(); offhand(); bossbars(); advancement_toast()
+    hb, W, Hh = hotbar(); selection(); offhand(); bossbars()
     pack_icon(hb, W, Hh)
     previews()
     print('ok')

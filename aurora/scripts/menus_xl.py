@@ -23,7 +23,8 @@ def ref(rel):
 # ------------------------------------------------------------------ containers
 # Each screen: theme, label plaques in vanilla coords (x0, y0, x1, y1), how it is blitted, and the label texts
 # used by the preview (text, x, y; x None = centred). The vanilla texture gives size and slot layout.
-# Plaques: the game paints titles in dark grey, so every theme puts a light plate behind them.
+# Plaques: a dark plate in the theme's colour with a light rim behind every title (labels show up white with a
+# dark-mode pack; a dark plate keeps them readable).
 HEAD = 'head'                                    # full-width title strip (5, 3, w - 6, 16)
 def S(theme, plaques=(HEAD, 'inv'), kind='single', title=None, inv=True, origin=(0, 0)):
     return dict(theme=theme, plaques=plaques, kind=kind, title=title, inv=inv, origin=origin)
@@ -55,7 +56,6 @@ SCREENS = {
     'creative_inventory/tab_inventory':   S(Creator(), [], title=None, inv=False),
     # not containers, but drawn the same way (one blit of a fixed window)
     '../recipe_book':    S(Cookbook(), [], title=None, inv=False, origin=(1, 1)),
-    '../advancements/window': S(Laurels(), [(5, 3, 120, 16)], title=('Progresos', 8, 6), inv=False),
     'gamemode_switcher': S(ModePortal(), [], title=None, inv=False),
 }
 
@@ -119,10 +119,11 @@ def build(name):
             art.putpixel((x, y), C(c) if a == 255 else C(*theme.translucent(c, a)))
     # label plaques first: slots and vanilla decorations are drawn over them, never hidden
     for (px0, py0, px1, py1) in plaque_rects(cfg, w, h):
-        fill, line = theme.plaque
+        light, accent = theme.plaque
+        fill = mix(accent, (18, 10, 36), 0.6)
         m = rect(art.size, l + px0, t + py0, l + px1, t + py1)
         m -= {(l + px0, t + py0), (l + px1, t + py0), (l + px0, t + py1), (l + px1, t + py1)}
-        paint(art, m, lambda x, y: mix(fill, WHITE, 0.3) if y == t + py0 + 1 else fill, line=line, bevel=False)
+        paint(art, m, lambda x, y: mix(fill, light, 0.18) if y == t + py0 + 1 else fill, line=light, bevel=False)
         used |= rect(art.size, l + px0 - 2, t + py0 - 2, l + px1 + 2, t + py1 + 2)
     # entity window (black area of the vanilla texture)
     blk = [(x + l, y + t) for y in range(h) for x in range(w) if magic.is_rgb(v.getpixel((x, y)), 0)]
@@ -224,10 +225,10 @@ def previews(imgs):
             if cfg['title']:
                 title, tx, ty = cfg['title']
                 if tx is None: tx = (w - d.textlength(title, font=F)) // 2
-                d.text((lx + tx, ly + ty - 1), title, font=F, fill=(64, 64, 64))
+                d.text((lx + tx + 1, ly + ty), title, font=F, fill=(62, 62, 62)); d.text((lx + tx, ly + ty - 1), title, font=F, fill=(255, 255, 255))
             if cfg['inv']:
                 ix, iy = cfg['inv'] if isinstance(cfg['inv'], tuple) else (8, hh - 94)
-                d.text((lx + ix, ly + iy - 1), 'Inventario', font=F, fill=(64, 64, 64))
+                d.text((lx + ix + 1, ly + iy), 'Inventario', font=F, fill=(62, 62, 62)); d.text((lx + ix, ly + iy - 1), 'Inventario', font=F, fill=(255, 255, 255))
             v, _, h, _, _ = geometry(name)
             for k, (sx, sy, s) in enumerate(magic.find_slots(v, w, h)):
                 if name == 'generic_54' and sy >= 17 + rows * 18 and sy < 126: continue

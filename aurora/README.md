@@ -38,11 +38,11 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 - `gen.py`: base v1 (agua, mira, fondo de la barra de XP, indicadores de ataque, `pack.png` y `pack.mcmeta`).
 - `icons.py`: corazones con la paleta Aurora (cada estado con sus colores: veneno, wither, congelado, absorción, montura, hardcore) y la comida convertida en estrellas, todo animado y sincronizado.
 - `magic.py`: "Marco mágico". Menús (inventario, mesa de crafteo, hornos, cofre grande y shulker) y sprites animados (hotbar, selección, casilla resaltada, botón del libro de recetas, fuego y flecha del horno, XP).
-- `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (túnica galáctica + capa 3D), también puestas en bebés, caballos y nautilus.
-- `hud_xl.py`: texturas de Aurora HUD XL (hotbar con alas de cristal, selección con corona y halo, mano secundaria con aguja, fondo de las barras de jefe con gemas en los extremos y toast de progreso con un ala de cristal a la izquierda) y previsualización del HUD en `previews/`.
+- `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (estilo del icono: metal ciruela con reflejos iridiscentes, recoloreada desde la vanilla, + capa 3D), también puestas en bebés, caballos y nautilus.
+- `hud_xl.py`: texturas de Aurora HUD XL (hotbar con alas de cristal, selección con corona y halo, mano secundaria con aguja, fondo de las barras de jefe con gemas en los extremos) y previsualización del HUD en `previews/`.
 - `menus_xl.py`: menús temáticos de Aurora HUD XL (ver abajo): lista de pantallas, construcción de cada fondo y una emulación del shader que comprueba que cada pantalla sale al píxel. Genera `previews/menus_xl.png` y `menus_xl_2.png`.
-- `screens.py`: pantallas sin contenedor, retocadas en su sitio (sin shader): libro (cuero violeta, papel perla, cinta y amuleto), carteles y carteles colgantes de las 13 maderas en pastel, fondos de opciones y menús, separadores, botones y demás controles (deslizadores, campos de texto, casillas, pestañas, barras), tooltips, iconos del selector de modo y el logo del título. También las barras de jefe (los 7 colores en pastel, progreso con brillo animado y muescas violeta) y los toasts (progreso y recetas a medida, sistema, tutorial y "sonando ahora" por luminancia; iconos grises del tutorial en Aurora). Genera `previews/pantallas.png`.
-- `menu_themes.py`: utilidades de dibujo y los 26 temas (marco, fondo, casillas, placas y adornos que sobresalen).
+- `screens.py`: pantallas sin contenedor, retocadas en su sitio (sin shader): libro (cuero violeta, papel perla, cinta y amuleto), carteles y carteles colgantes de las 13 maderas en pastel, fondos de opciones y menús, separadores, botones y demás controles (deslizadores, campos de texto, casillas, pestañas, barras), tooltips, iconos del selector de modo y el logo del título. También las barras de jefe (los 7 colores en pastel, progreso con brillo animado y muescas violeta) y los toasts (recetas a medida, sistema, tutorial y "sonando ahora" por luminancia; iconos grises del tutorial en Aurora). Los logros (ventana de progresos y su toast) se dejan vanilla a propósito. Genera `previews/pantallas.png`.
+- `menu_themes.py`: utilidades de dibujo y los 25 temas (marco, fondo, casillas, placas y adornos que sobresalen).
 - `validate.py`: validación estática contra la 26.3. Revisa JSON, tamaños y frames de las animaciones, nine-slice, referencias de modelos y texturas, definiciones de items, capas de equipamiento, compilación de los shaders en las 5 variantes OIT con `glslangValidator` y que las salidas del vsh coincidan con las entradas del fsh.
 - `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta.
 
@@ -73,13 +73,12 @@ Recursos externos útiles (espejos de assets, esquemas, shaders, EMF/ETF y pixel
 | Mesa de herrería | Armería real: escudo con espadas cruzadas, oro y filigrana |
 | Cortapiedras | Geoda del cantero: sierra circular y racimos de amatista |
 | Aldeano | Mercado: toldo de rayas festoneado, esmeralda y cajas |
-| Inventario creativo (3 pestañas) | Estudio del creador: cristales arcoíris a los lados (arriba y abajo están las pestañas, no sobresale ahí) |
+| Inventario creativo (3 pestañas) | Estudio del creador: cristales arcoíris por la derecha (arriba y abajo van las pestañas, y el juego vuelve a dibujar la rejilla recortando la textura, así que el dibujo vanilla no se puede desplazar) |
 | Libro de recetas (panel) | Recetario estelar: libro abierto con estrellas, esquinas doradas y cintas marcapáginas colgando |
-| Ventana de progresos | Salón de laureles: trofeo dorado y ramas de laurel por abajo (arriba van las pestañas) |
 | Selector de modo de juego (F3+F4) | Portal de modos: estrella portal arriba y flecos de cristal abajo |
 
 Los títulos de los menús los pinta el juego en gris oscuro (no se puede cambiar con un resource pack), así que
-cada tema pone una placa clara debajo de cada título.
+cada tema pone una placa oscura con borde claro detrás de cada título (los títulos salen en blanco con un pack de modo oscuro).
 
 ## Aurora HUD XL: cómo sobresalen los marcos
 El juego siempre mete un sprite de la GUI en su rectángulo fijo (la hotbar ocupa 182×22 pase lo que pase), así que una

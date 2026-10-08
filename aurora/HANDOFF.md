@@ -11,7 +11,7 @@ Inspirado en la capa Aurora y la skin del usuario (skin_aurora_v2.png).
 - Scripts generadores: `Aurora_export\scripts\` (Python + Pillow)
   - `gen.py`   v1: HUD, agua, crosshair, herramientas (base)
   - `magic.py` "Marco mágico": menús (inventario, crafteo, hornos, cofres, shulker) + sprites animados
-  - `gear.py`  herramientas animadas, aura de encantamiento, armaduras, túnica galáctica + capa
+  - `gear.py`  herramientas animadas, aura de encantamiento, armaduras (netherita con el estilo del icono) + capa
   - `outline_shaders/` rendertype_lines.vsh/.fsh (borde de bloque neón Aurora)
 - Referencias vanilla: extraer de `versions\26.3\26.3.jar` (el jar NO está ofuscado en 26.x).
   Los scripts esperan las texturas vanilla en `~/ref63/assets/minecraft/...`.
@@ -77,7 +77,7 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
 ### Resto de pantallas (sesión del 2026-10-08, 3ª parte)
 - Todas las pantallas con fondo propio de la 26.3 tienen tema XL (25 texturas, tabla en `aurora/README.md`).
   Temas en `menu_themes.py`; `menus_xl.py` saca ancho, alto y tamaño de textura del vanilla.
-- El creativo solo sobresale por los lados (las pestañas van encima y debajo) y su barra/caja de búsqueda van oscuras
+- El creativo solo sobresale por la derecha (ver la 6ª parte) y su barra/caja de búsqueda van oscuras
   porque el juego escribe ahí en blanco. La baliza no lleva placas: sus textos son claros.
 - Las placas de los títulos se pintan antes que casillas y decoraciones, así nunca tapan nada del juego.
 - Supuestos de posiciones de títulos sin verificar en el jar para: yunque (60,6), herrería (44,15), telar y
@@ -85,19 +85,32 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   se ajusta en `SCREENS`.
 
 ### Pantallas sin contenedor (sesión del 2026-10-08, 4ª parte)
-- Con shader (Aurora HUD XL): libro de recetas (blit desde (1,1), soportado con `origin`), ventana de progresos
-  (hueco interior conservado: el árbol se dibuja por debajo) y selector de modo de juego (fondo translúcido conservado).
-  Las dos últimas casi llenan su textura (252 de 256 y 125 de 128): solo sobresalen arriba/abajo.
+- Con shader (Aurora HUD XL): libro de recetas (blit desde (1,1), soportado con `origin`) y selector de modo de juego
+  (fondo translúcido conservado; casi llena su textura, 125 de 128, así que solo sobresale arriba/abajo). El motor también
+  conserva huecos del fondo vanilla (alpha 0).
 - Sin shader (Aurora Pack, `screens.py`): libro (cabe en los márgenes libres de su ventana de 192), carteles, fondos
   y separadores de menús, todos los widgets (mismos nine-slice, color solo según luminancia), tooltips y logo.
 - No tocados a propósito: panoramas del título, logo de Mojang Studios, imágenes de Realms, toasts y barras de jefe.
 
 ### Barras de jefe y toasts (sesión del 2026-10-08, 5ª parte)
 - Aurora Pack (`screens.py`): los 7 colores de barra en pastel (el progreso animado 16×2 ticks, 182×5 por frame) y toasts.
-  Los toasts de recetas y tutorial siguen claros (el juego escribe en morado/negro); progreso, sistema y "sonando ahora"
+  Los toasts de recetas y tutorial siguen claros (el juego escribe en morado/negro); sistema y "sonando ahora"
   oscuros (texto blanco/amarillo).
-- Aurora HUD XL (`hud_xl.py`): fondo de barra de jefe 182×5 → 198×11 (gemas dentro del margen, el progreso tapa el resto)
-  y toast de progreso 160×32 → 172×32 (solo hacia la izquierda: entran por la derecha y se apilan sin hueco).
+- Aurora HUD XL (`hud_xl.py`): fondo de barra de jefe 182×5 → 198×11 (gemas dentro del margen, el progreso tapa el resto).
+
+### Primera prueba en el juego (sesión del 2026-10-08, 6ª parte)
+- Capturas del usuario: el truco del shader FUNCIONA (los marcos sobresalen y la mesa de encantamientos cuadra), así que
+  el orden de vértices supuesto es correcto.
+- Creativo: el juego dibuja el fondo entero y además vuelve a dibujar la zona de la rejilla recortando la misma textura
+  en sus coordenadas vanilla. Con el dibujo desplazado (margen izquierdo) esa segunda pasada salía corrida 14 px.
+  Regla: si una pantalla vuelve a recortar su textura, su zona vanilla debe quedarse en su sitio (solo márgenes a la
+  derecha y abajo). El creativo ahora solo sobresale por la derecha. Si otra pantalla sale desplazada, igual.
+- El usuario usa además un pack de modo oscuro (pestañas del creativo y caja de efectos negras, títulos en blanco):
+  las placas de los títulos pasan a ser oscuras con borde claro.
+- Logros: el usuario NO quiere que se toquen. Ventana de progresos y toast de progreso vuelven a vanilla.
+- Netherita puesta: la "túnica galáctica" no gustaba nada. Ahora se recolorea la textura vanilla (y los élitros para la
+  capa) con el estilo del icono: ciruela oscuro, contorno violeta, reflejos iridiscentes y algún destello.
+- Pendiente ofrecido: versión 3D de las armaduras con Entity Model Features / Entity Texture Features.
 
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs

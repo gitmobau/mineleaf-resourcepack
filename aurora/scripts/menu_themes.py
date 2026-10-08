@@ -756,8 +756,10 @@ class Market(Theme):                      # villager: trading market
             for i in range(-6, 7): put(img, x + i, y + i, C((150, 100, 50))); put(img, x + i, y - i, C((150, 100, 50)))
     def motif(self, img, x, y, r): paint(img, poly(img.size, [(x, y - 2), (x + 2, y), (x, y + 2), (x - 2, y)]), lambda a, b: (120, 235, 160), line=(30, 90, 60), bevel=False)
 
-class Creator(Theme):                     # creative inventory: creator's studio (only the sides stick out: tabs live above/below)
-    pads = (14, 0, 14, 0)
+class Creator(Theme):                     # creative inventory: creator's studio
+    # Only the right side sticks out: tabs live above/below, and the game blits the slot grid again as a sub-window
+    # of the same texture, so the vanilla area must stay at its vanilla texels (no left/top padding).
+    pads = (0, 0, 14, 0)
     band = [OUT, (150, 140, 220), (222, 204, 255), (255, 255, 255), (170, 150, 230), (100, 80, 170), OUT]
     def feature(self, l, x, w): return grad([(24, 18, 50), (54, 44, 100), (150, 140, 220)], l)   # dark: the game writes white here
     slot = ((70, 60, 120), (230, 225, 252), (48, 40, 94), (36, 30, 74))
@@ -769,8 +771,8 @@ class Creator(Theme):                     # creative inventory: creator's studio
         return c
     def ornaments(self, img, L, T, w, h):
         S = img.size
-        for side in (-1, 1):
-            x0 = L - 2 if side < 0 else L + w + 1
+        for side in (1,):
+            x0 = L + w + 1
             for k, y in enumerate(range(T + 10, T + h - 6, 16)):
                 crystal_shard(img, S, (x0, y + 3), (x0 + side * (11 - k % 2 * 3), y - 4), 2.6, cyc(k / 8), line=(60, 40, 110))
     def motif(self, img, x, y, r): star(img, x, y, 0.5 + 0.5 * r.random(), cyc(r.random()))
@@ -792,28 +794,6 @@ class Cookbook(Theme):                    # recipe book panel: starry cookbook (
         for k, (x, col) in enumerate(((L + 30, (255, 150, 200)), (L + 40, (150, 210, 255)))):   # ribbon bookmarks
             paint(img, poly(S, [(x - 2, T + h - 1), (x + 2, T + h - 1), (x + 2, T + h + 8), (x, T + h + 6), (x - 2, T + h + 8)]),
                   lambda a, b, col=col: col, line=(110, 60, 120), bevel=False)
-    def motif(self, img, x, y, r): pass
-
-class Laurels(Theme):                     # advancements window: hall of laurels (tabs above: only sides and bottom)
-    pads = (2, 0, 2, 16)
-    band = [(60, 40, 20), (200, 150, 70), (255, 225, 140), (255, 248, 210), (220, 170, 90), (130, 90, 40), (60, 40, 20)]
-    plaque = ((255, 250, 232), (170, 120, 50))
-    def bg(self, x, y, w, h): return grad([(250, 238, 214), (232, 214, 186)], y / h)
-    def translucent(self, c, a): return (40, 26, 60), a
-    def feature(self, l, x, w): return grad([(90, 60, 30), (210, 170, 110), (255, 248, 225)], l)
-    def ornaments(self, img, L, T, w, h):
-        S = img.size; cx = L + w // 2; by = T + h + 1
-        for side in (-1, 1):                                   # laurel branches along the bottom
-            for k in range(9):
-                x = cx + side * (16 + k * 9); y = by + 4 + int(2 * math.sin(k))
-                paint(img, ellipse(S, x, y, 3.5, 1.8), lambda a, b, k=k: mix((170, 230, 160), (120, 200, 150), k / 9), line=(50, 100, 60), bevel=False)
-                paint(img, ellipse(S, x + side * 4, y + 3, 3, 1.6), lambda a, b: (150, 215, 170), line=(50, 100, 60), bevel=False)
-        gold = lambda x, y: grad([(255, 245, 190), (240, 195, 90), (180, 120, 40)], (y - by) / 14)
-        paint(img, poly(S, [(cx - 8, by - 1), (cx + 8, by - 1), (cx + 6, by + 6), (cx + 2, by + 8), (cx + 2, by + 11), (cx + 5, by + 13),
-                            (cx - 5, by + 13), (cx - 2, by + 11), (cx - 2, by + 8), (cx - 6, by + 6)]), gold)
-        for side in (-1, 1):
-            paint(img, ellipse(S, cx + side * 9, by + 3, 3, 3) - ellipse(S, cx + side * 9, by + 3, 1.5, 1.5), gold, line=(130, 90, 40), bevel=False)
-        star(img, cx, by + 3, 1.0, (255, 255, 230))
     def motif(self, img, x, y, r): pass
 
 class ModePortal(Theme):                  # F3+F4 game mode switcher: portal of modes (dark: white text)
