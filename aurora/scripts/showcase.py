@@ -120,7 +120,7 @@ PARTS = {
 }
 POSE = {'head': (0, 0.15, 0), 'right_arm': (0.25, 0, 0.08), 'left_arm': (-0.25, 0, -0.08),
         'right_leg': (-0.22, 0, 0.03), 'left_leg': (0.22, 0, -0.03), 'body': (0, 0, 0)}
-SKIN = (196, 186, 214, 255)
+SKIN = (214, 168, 140, 255)
 
 def figure(mat, cloak=False):
     eq = 'entity/equipment/'
@@ -145,7 +145,7 @@ def figure(mat, cloak=False):
     return q
 
 def showcase_armor():
-    sets = [('diamond', 'Diamante: cristal', False), ('netherite', 'Netherita: túnica galáctica + capa', True),
+    sets = [('diamond', 'Diamante: cristal', False), ('netherite', 'Netherita: noche aurora + capa', True),
             ('iron', 'Hierro: piedra lunar', False), ('gold', 'Oro: oro rosa', False)]
     W, H = 300, 420
     sheet = Image.new('RGBA', (len(sets) * (2 * W) + 20, H + 70), BG)

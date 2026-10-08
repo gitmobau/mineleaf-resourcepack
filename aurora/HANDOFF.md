@@ -83,6 +83,14 @@ Un modelo 3D que quede bien tiene que hacerse a mano en Blockbench, o salir de u
 adaptarlo. No se puede copiar el trabajo de otro pack sin permiso.
 `showcase.py` genera vistas previas de todo; el render 3D de la armadura usa el mapeo UV exacto de ModelPart.Cube.
 
+## Armadura puesta v2 (2026-10-08)
+Al usuario no le convencían las armaduras (sobre todo la netherita). `armor.py` ya no recolorea el ruido vanilla: pinta
+placas por cara de caja, con cobertura propia (abertura de la cara con protector nasal, mangas hasta la fila 6, botas
+desde la 7), contorno, ribete, una sola junta en el peto, cuello en V, rodilleras, remaches, cresta, gemas y paleta corta.
+La netherita pasa de "túnica galáctica" a "noche aurora": placas índigo, ribetes iridiscentes, pocas estrellas y capa
+de seda nocturna con dobladillo aurora. Antes y después en `previews/armor_antes_ahora.png`.
+Ojo: `gear.hsh` tiene los bits bajos correlacionados por fila (pintaba rayas al hacer `% n`); `armor.py` usa su propio hash.
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar ambos packs
   (Aurora Outline encima de Aurora Pack), comprobar capa, aura, borde y menús con capturas.

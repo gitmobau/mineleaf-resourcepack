@@ -33,7 +33,7 @@ No están en el repo porque son assets de Mojang. Para conseguirlas:
 `ref63/` del zip de traspaso y genera exactamente los mismos zips. También vale el
 `versions/26.3/26.3.jar`.
 
-`build.py` borra y regenera `packs/Aurora Pack`, ejecuta `gen.py → magic.py → gear.py → extra.py → menus.py → polish.py → emf.py → showcase.py` (en ese
+`build.py` borra y regenera `packs/Aurora Pack`, ejecuta `gen.py → magic.py → gear.py → extra.py → menus.py → polish.py → armor.py → emf.py → showcase.py` (en ese
 orden, porque los últimos sobrescriben a los primeros), pasa `validate.py` y crea los zips.
 La salida es determinista: con la misma entrada salen los mismos bytes.
 
@@ -44,6 +44,7 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 - `extra.py`: libro de recetas (cielo nocturno con aurora, pestañas, filtros, flechas), inventario creativo (3 fondos, 28 pestañas, scroll) e iconos del HUD (corazones de todos los tipos, comida, armadura, burbujas), conservando su tono para que se sigan distinguiendo.
 - `menus.py`: el resto de menús (yunque, faro, soporte de pociones, mesa de cartografía, crafter, dispensador, mesa de encantamientos, afiladora, tolva, caballo, telar, nautilus, herrería, cortapiedras y aldeano) y todos sus sprites, más los widgets comunes: botones, deslizadores, campos de texto, pestañas, casillas de verificación y tooltips. Los widgets son oscuros para que el texto blanco se siga leyendo.
 - `polish.py`: hierro en "piedra lunar" (lavanda plateada) y oro en "oro rosa", con herramientas, armaduras, armadura de caballo y de nautilus (icono y puesta), brillo animado y aura de encantamiento; también tótem y élitros.
+- `armor.py`: armadura puesta v2 de los cuatro materiales, diseñada pieza a pieza: cobertura propia, contorno, ribete, junta en el peto, cuello en V, rodilleras, remaches, cresta y gemas. También la capa de netherita.
 - `emf.py`: genera el add-on Aurora Glow (mapas de brillo `_e` de ETF). La túnica 3D experimental para EMF sigue en el script detrás de `GEOMETRY = False`: se descartó porque quedaba tosca.
 - `showcase.py`: vistas previas de todo en `previews/showcase_*.png`, con la armadura renderizada en 3D sobre un maniquí con la geometría vanilla.
 - `palette.py`: interpolación de color en OKLab, compartida por los generadores, para que los degradados pastel queden más suaves.
