@@ -40,7 +40,8 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 - `magic.py`: "Marco mágico". Menús (inventario, mesa de crafteo, hornos, cofre grande y shulker) y sprites animados (hotbar, selección, casilla resaltada, botón del libro de recetas, fuego y flecha del horno, XP).
 - `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (túnica galáctica + capa 3D), también puestas en bebés, caballos y nautilus.
 - `hud_xl.py`: texturas de Aurora HUD XL (hotbar con alas de cristal, selección con corona y halo, mano secundaria con aguja) y previsualización del HUD en `previews/`.
-- `menus_xl.py`: menús temáticos de Aurora HUD XL (ver abajo), con una emulación del shader que comprueba que cada pantalla sale al píxel y genera `previews/menus_xl.png`.
+- `menus_xl.py`: menús temáticos de Aurora HUD XL (ver abajo): lista de pantallas, construcción de cada fondo y una emulación del shader que comprueba que cada pantalla sale al píxel. Genera `previews/menus_xl.png` y `menus_xl_2.png`.
+- `menu_themes.py`: utilidades de dibujo y los 23 temas (marco, fondo, casillas, placas y adornos que sobresalen).
 - `validate.py`: validación estática contra la 26.3. Revisa JSON, tamaños y frames de las animaciones, nine-slice, referencias de modelos y texturas, definiciones de items, capas de equipamiento, compilación de los shaders en las 5 variantes OIT con `glslangValidator` y que las salidas del vsh coincidan con las entradas del fsh.
 - `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta.
 
@@ -56,6 +57,22 @@ Recursos externos útiles (espejos de assets, esquemas, shaders, EMF/ETF y pixel
 | Ahumador | Ahumador de nubes: nubes esponjosas, bocanadas de humo, luna y cielo pastel |
 | Cofre (todos los tamaños) | Bóveda del tesoro: candado, gemas, montones de monedas y terciopelo |
 | Caja de shulker | Caparazón del End: cúpula de concha, shulker asomándose, flores coral y vacío estrellado |
+| Yunque | Herrería celestial: yunque con martillo y chispas, remaches y cadenas colgando |
+| Baliza | Santuario del faro: haz de luz hacia arriba, pirámides de bloques y gemas |
+| Soporte para pociones | Laboratorio alquímico: matraces, burbujas y estantes con viales |
+| Mesa de cartografía | Mesa del cartógrafo: rosa de los vientos, mapas enrollados y pergamino con rutas |
+| Crafteador | Taller autómata: antorchas de redstone, repetidor, pistones y circuitos |
+| Dispensador y soltador | Lanzadera: diana con flechas clavadas y flechas saliendo por los lados |
+| Mesa de encantamientos | Biblioteca arcana: libro abierto brillante, estanterías, velas y runas |
+| Afiladora | Piedra lunar del afilador: rueda de piedra con chispas y clavijas de madera |
+| Tolva | Recolector de estrellas: embudo con estrellas cayendo y cielo nocturno |
+| Caballo | Caballeriza: herradura de la suerte, balas de paja, valla y ventana al atardecer |
+| Telar | Taller de la tejedora: banderines, ovillos, carretes y tela tejida |
+| Nautilus | Arrecife abisal: concha en espiral, corales, burbujas y océano |
+| Mesa de herrería | Armería real: escudo con espadas cruzadas, oro y filigrana |
+| Cortapiedras | Geoda del cantero: sierra circular y racimos de amatista |
+| Aldeano | Mercado: toldo de rayas festoneado, esmeralda y cajas |
+| Inventario creativo (3 pestañas) | Estudio del creador: cristales arcoíris a los lados (arriba y abajo están las pestañas, no sobresale ahí) |
 
 Los títulos de los menús los pinta el juego en gris oscuro (no se puede cambiar con un resource pack), así que
 cada tema pone una placa clara debajo de cada título.
@@ -71,8 +88,8 @@ textura más grande solo se vería aplastada. Para que sobresalga:
   arriba-dcha). Así un sprite normal pegado a uno XL en el atlas nunca lee el marcador del vecino.
 - Cuánto sobresale cada uno: hotbar 12 px a los lados y 18 hacia arriba (las alas suben junto a la XP y los corazones),
   selección 4 a los lados y 2 arriba, mano secundaria 5 hacia fuera y 18 arriba. Nada sobresale por abajo (borde de pantalla).
-- Los fondos de menú no son sprites del atlas: el juego recorta siempre una ventana fija de 176×N de una textura
-  de 256×256. Por eso el dibujo grande empieza en (0,0) de la textura y, junto a cada marcador, hay un segundo texel
+- Los fondos de menú no son sprites del atlas: el juego recorta siempre una ventana fija (176×166 casi siempre, 230×219
+  la baliza, 276×166 el aldeano en una textura de 512×256, 195×136 el creativo). Por eso el dibujo grande empieza en (0,0) de la textura y, junto a cada marcador, hay un segundo texel
   (du, dv, 168, esquina) que dice cuánto se desplaza la UV de esa esquina. El cofre se dibuja en dos trozos (filas +
   inventario) y su textura lleva marcadores para 1 a 6 filas. El `.fsh` sustituye los texels marcadores por el de al lado.
 - `validate.py` acepta un sprite de la GUI más grande que el vanilla solo si sus marcadores son coherentes en todos los

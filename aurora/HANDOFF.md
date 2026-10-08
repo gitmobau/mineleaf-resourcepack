@@ -74,6 +74,16 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   `gl_VertexIndex` evita leer marcadores de sprites vecinos (simulado con vecinos pegados por todos los lados).
 - Si Aurora HUD XL está desactivado se ven los menús pastel normales de Aurora Pack.
 
+### Resto de pantallas (sesión del 2026-10-08, 3ª parte)
+- Todas las pantallas con fondo propio de la 26.3 tienen tema XL (25 texturas, tabla en `aurora/README.md`).
+  Temas en `menu_themes.py`; `menus_xl.py` saca ancho, alto y tamaño de textura del vanilla.
+- El creativo solo sobresale por los lados (las pestañas van encima y debajo) y su barra/caja de búsqueda van oscuras
+  porque el juego escribe ahí en blanco. La baliza no lleva placas: sus textos son claros.
+- Las placas de los títulos se pintan antes que casillas y decoraciones, así nunca tapan nada del juego.
+- Supuestos de posiciones de títulos sin verificar en el jar para: yunque (60,6), herrería (44,15), telar y
+  cartografía (y=4), aldeano (centrado + etiqueta del inventario en 107,72). Si un título queda fuera de su placa,
+  se ajusta en `SCREENS`.
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
   (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar capa, aura, borde, menús y HUD XL con capturas.

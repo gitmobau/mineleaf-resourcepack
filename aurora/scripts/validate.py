@@ -101,15 +101,16 @@ for pack in PACKS:
         g = meta.get('gui', {}).get('scaling')
         if g and g.get('type') == 'nine_slice' and (g['width'], g['height']) != (fw, fh):
             warn('%s: nine_slice %sx%s vs frame %dx%d' % (rel, g['width'], g['height'], fw, fh))
-        if rel.startswith('gui/container/') and (w, h) != (256, 256):
-            err('%s: container background must stay 256x256' % rel)
+        if rel.startswith('gui/container/') and os.path.exists(refpng) and (w, h) != Image.open(refpng).size:
+            err('%s: container background must keep the vanilla size %s' % (rel, Image.open(refpng).size))
         if rel.startswith('gui/container/') and a is not None:
             err('%s: container backgrounds cannot animate' % rel)
         if rel.startswith('gui/container/') and im.convert('RGBA').getpixel((0, 0))[2:] == (MARK, 1):
             # Aurora HUD XL background: every corner marker needs its shift texel and sits on a blit corner column
             px = im.convert('RGBA').load()
+            bw = Image.open(refpng).getbbox()[2] if os.path.exists(refpng) else 176   # blitted width
             for y in range(h):
-                for x in (0, 175):
+                for x in (0, bw - 1):
                     q = px[x, y]
                     if q[2] != MARK or not 1 <= q[3] <= 4: continue
                     if (x == 0) != (q[3] in (1, 3)): err('%s: marker role %d at x=%d' % (rel, q[3], x))
