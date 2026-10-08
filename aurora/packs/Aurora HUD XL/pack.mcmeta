@@ -1,0 +1,20 @@
+{
+  "pack": {
+    "description": [
+      "",
+      {
+        "text": "Aurora HUD XL ",
+        "color": "#B9B9F8"
+      },
+      {
+        "text": "· marcos del HUD que sobresalen",
+        "color": "#F8B0EA"
+      }
+    ],
+    "min_format": [
+      97,
+      1
+    ],
+    "max_format": 97
+  }
+}

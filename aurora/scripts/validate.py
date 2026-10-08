@@ -7,7 +7,7 @@ from PIL import Image
 HOME = os.path.expanduser('~')
 REF = os.environ.get('AURORA_REF', HOME + '/ref63') + '/assets/minecraft/'
 RP = os.environ.get('AURORA_RP', HOME + '/mnt/.minecraft/resourcepacks') + '/'
-PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline']
+PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora HUD XL']
 errors, warns = [], []
 # every model id referenced by a vanilla item definition is known to exist in the jar
 VANILLA_MODELS = set(re.findall(r'"model": "(minecraft:[^"]+)"',
@@ -23,6 +23,21 @@ def exists_tex(pack, path):
     ns, p = rid(path)
     return os.path.exists('%s/assets/%s/textures/%s.png' % (pack, ns, p)) or \
         (ns == 'minecraft' and os.path.exists(REF + 'textures/%s.png' % p))
+
+MARK = 167   # Aurora HUD XL corner markers, see hud_xl.py / position_tex_color.vsh
+
+def oversize_pads(im, fw, fh):
+    """(left, top, right, bottom) if every frame carries consistent corner markers, else None"""
+    im = im.convert('RGBA'); pads = None
+    for fy in range(0, im.height, fh):
+        for fx in range(0, im.width, fw):
+            c = [im.getpixel(p) for p in ((fx, fy), (fx + fw - 1, fy), (fx, fy + fh - 1), (fx + fw - 1, fy + fh - 1))]
+            if any(q[2] != MARK or q[3] != i + 1 for i, q in enumerate(c)): return None
+            if c[0][0] != c[2][0] or c[1][0] != c[3][0] or c[0][1] != c[1][1] or c[2][1] != c[3][1]: return None
+            p = (c[0][0], c[0][1], c[1][0], c[2][1])
+            if pads not in (None, p): return None
+            pads = p
+    return pads
 
 def frame_size(meta, w, h):
     fw, fh = meta.get('width'), meta.get('height')
@@ -70,7 +85,15 @@ for pack in PACKS:
             rfw, rfh = frame_size(ra, rw, rh) if ra is not None else (rw, rh)
             # entity/misc textures may be any size; gui sprites & items must keep their aspect
             if rel.startswith('gui/') and (fw, fh) != (rfw, rfh):
-                err('%s: frame %dx%d differs from vanilla %dx%d' % (rel, fw, fh, rfw, rfh))
+                pads = oversize_pads(im, fw, fh) if rel.startswith('gui/sprites/') else None
+                if pads is None:
+                    err('%s: frame %dx%d differs from vanilla %dx%d' % (rel, fw, fh, rfw, rfh))
+                elif (fw, fh) != (rfw + pads[0] + pads[2], rfh + pads[1] + pads[3]):
+                    err('%s: oversized frame %dx%d != vanilla %dx%d + pads %s' % (rel, fw, fh, rfw, rfh, pads))
+                elif 'gui' in rmeta:
+                    err('%s: oversized sprites cannot use gui scaling (%s)' % (rel, rmeta['gui']))
+                elif not os.path.exists(A + 'shaders/core/position_tex_color.vsh'):
+                    err('%s: oversized sprite needs shaders/core/position_tex_color.vsh in the same pack' % rel)
             if rel.startswith('item/') and fw * rfh != fh * rfw:
                 err('%s: aspect differs from vanilla' % rel)
             if 'gui' in rmeta and 'gui' not in meta:
@@ -136,6 +159,8 @@ for pack in PACKS:
     if os.path.isdir(sh):
         for f in os.listdir(sh):
             if not os.path.exists(REF + 'shaders/core/' + f): err('shader %s has no vanilla counterpart' % f)
+            elif "Can't moj_import" in open(REF + 'shaders/core/' + f).read() and '#include' in open(sh + f).read():
+                err('shader %s is used during startup and cannot #include' % f)
         if not gv:
             warn('glslangValidator missing: shaders not compiled')
         else:

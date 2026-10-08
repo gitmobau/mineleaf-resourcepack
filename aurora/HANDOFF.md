@@ -54,9 +54,18 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   `OIT_WAVELET_RANK` y `OIT_COEFF_ATTACHMENT_COUNT`. El validador usa 8, 3 y 2, y el
   `rendertype_lines` vanilla compila con esa misma configuración (sirve de control).
 
+### Aurora HUD XL (sesión del 2026-10-08)
+- Pack nuevo y opcional `packs/Aurora HUD XL`: hotbar, selección y mano secundaria más grandes que su rectángulo vanilla.
+  Explicación del truco (marcadores en las esquinas + `position_tex_color.vsh`) en `aurora/README.md`.
+- Supuesto NO verificado en el jar: los quads de la GUI se emiten en orden arriba-izq, abajo-izq, abajo-dcha, arriba-dcha
+  (como `innerBlit` de siempre) y `gl_VertexIndex % 4` da esa esquina. Si no fuera así, los marcos XL saldrían
+  deformados o aplastados: desactivar el pack y revisar el orden en `BlitRenderState.buildVertices`.
+- `position_tex_color` se usa al arrancar, así que no puede llevar `#include` (el validador lo comprueba).
+- Simulación del shader sobre un atlas con vecinos pegados por todos los lados: los sprites XL crecen exactos y el resto no se mueve.
+
 ## Estado / pendiente
-- Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar ambos packs
-  (Aurora Outline encima de Aurora Pack), comprobar capa, aura, borde y menús con capturas.
+- Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
+  (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar capa, aura, borde, menús y HUD XL con capturas.
 - Ideas pendientes ofrecidas: versión EMF/ETF de la túnica con vuelo 3D; ajustar intensidad/velocidad.
 - Limpieza en el PC: sobra el archivo temporal `Aurora_export\ziJhG1Z5`. Las previews antiguas
   (`preview*.png`, `anim_*.gif`) que hay dentro de la carpeta instalada `Aurora Pack` se pueden borrar.
