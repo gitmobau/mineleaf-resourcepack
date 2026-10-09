@@ -9,13 +9,15 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
 | `packs/Aurora Pack/` | Pack principal. Se genera entero con los scripts (no editar a mano) |
 | `packs/Aurora Outline/` | Borde de bloque neón (core shader `rendertype_lines`). Escrito a mano |
 | `packs/Aurora HUD XL/` | Opcional: marcos del HUD y menús temáticos que sobresalen de su tamaño vanilla. Texturas generadas por `hud_xl.py` y `menus_xl.py` + core shader `position_tex_color` escrito a mano |
+| `packs/Aurora EMF/` | Opcional, necesita los mods **Entity Model Features** y **Entity Texture Features**: armadura de netherita en 3D (cresta, corona, hombreras, gema, faldones, aletas) y la capa como capa de verdad que se mueve al andar. Generado por `emf.py` |
 | `scripts/` | Generadores en Python + Pillow, validador y `build.py` |
 | `previews/` | Capturas y GIFs para ver el resultado sin abrir el juego |
 | `HANDOFF.md` | Contexto técnico completo, decisiones verificadas y pendientes |
 
 ## Instalar
 1. Copia los zips de `dist/` a `%APPDATA%\.minecraft\resourcepacks`.
-2. En el juego, actívalos en este orden (de arriba a abajo): **Aurora Outline**, **Aurora HUD XL**, **Aurora Pack**.
+2. En el juego, actívalos en este orden (de arriba a abajo): **Aurora EMF**, **Aurora Outline**, **Aurora HUD XL**, **Aurora Pack**.
+   Aurora EMF solo hace algo con los mods Entity Model Features + Entity Texture Features instalados (Fabric o NeoForge 26.3).
    Aurora HUD XL es opcional: si los marcos salen aplastados o raros, desactívalo y vuelves al HUD normal de Aurora.
 
 ## Regenerar
@@ -43,6 +45,7 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 - `menus_xl.py`: menús temáticos de Aurora HUD XL (ver abajo): lista de pantallas, construcción de cada fondo y una emulación del shader que comprueba que cada pantalla sale al píxel. Genera `previews/menus_xl.png` y `menus_xl_2.png`.
 - `screens.py`: pantallas sin contenedor, retocadas en su sitio (sin shader): libro (cuero violeta, papel perla, cinta y amuleto), carteles y carteles colgantes de las 13 maderas en pastel, fondos de opciones y menús, separadores, botones y demás controles (deslizadores, campos de texto, casillas, pestañas, barras), tooltips, iconos del selector de modo y el logo del título. También las barras de jefe (los 7 colores en pastel, progreso con brillo animado y muescas violeta) y los toasts (recetas a medida, sistema, tutorial y "sonando ahora" por luminancia; iconos grises del tutorial en Aurora). Los logros (ventana de progresos y su toast) se dejan vanilla a propósito. Genera `previews/pantallas.png`.
 - `menu_themes.py`: utilidades de dibujo y los 25 temas (marco, fondo, casillas, placas y adornos que sobresalen).
+- `emf.py`: pack Aurora EMF (modelos `.jem` de EMF para la netherita y la capa, con sus `.properties`) y vista 3D en `previews/emf_netherite.png` con un pequeño renderizador propio.
 - `validate.py`: validación estática contra la 26.3. Revisa JSON, tamaños y frames de las animaciones, nine-slice, referencias de modelos y texturas, definiciones de items, capas de equipamiento, compilación de los shaders en las 5 variantes OIT con `glslangValidator` y que las salidas del vsh coincidan con las entradas del fsh.
 - `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta.
 
@@ -97,3 +100,12 @@ textura más grande solo se vería aplastada. Para que sobresalga:
   inventario) y su textura lleva marcadores para 1 a 6 filas. El `.fsh` sustituye los texels marcadores por el de al lado.
 - `validate.py` acepta un sprite de la GUI más grande que el vanilla solo si sus marcadores son coherentes en todos los
   frames, el tamaño es vanilla + márgenes, no usa nine-slice y el pack trae el shader.
+
+## Aurora EMF: netherita en 3D
+- Son variantes de los modelos `player_outer_armor`, `player_inner_armor` (también `player_slim_*`) y `elytra` de EMF.
+  Cada `.properties` elige la variante 2 solo mientras se lleva la pieza de netherita (`items=netherite_chestplate` /
+  `netherite_leggings`); si no, EMF usa el modelo vanilla. Las demás armaduras y los élitros de verdad no cambian.
+- Las piezas nuevas se añaden a las partes vanilla (`attach: true`) y sus caras usan UV por cara sobre "muestras de
+  material" (metal, ribete, gemas...) que `gear.py` pinta en las texturas de netherita, en texels que ninguna caja de
+  armadura vanilla usa. Sin EMF no se ven.
+- La capa sustituye a las alas de élitro de la capa Aurora y se balancea con `limb_speed`.

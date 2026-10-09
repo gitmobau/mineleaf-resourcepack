@@ -300,6 +300,26 @@ def netherite_px(p, x, y, W, H, vrange, seed=0):
         return mix((92, 62, 158), cyc((x + y) / (W + H) * 2, VIVID), 0.3)
     return mix(cyc((x + y) / (W + H) * 2, VIVID), WHITE, 0.25)
 
+# Material swatches for the optional Aurora EMF pack (3D netherite pieces). They live in texels that no vanilla armour
+# box ever samples (corners of the box layouts), so without Entity Model Features they are never drawn.
+EMF_SWATCHES = {'metal': (0, 0, 8, 8), 'trim': (24, 0, 8, 8), 'dark': (32, 0, 8, 8), 'gem': (56, 0, 4, 4),
+                'gem2': (60, 0, 4, 4), 'gold': (56, 4, 4, 4), 'glow': (60, 4, 4, 4), 'trimv': (56, 16, 8, 16)}
+
+def paint_swatches(o):
+    def swatch(name, fn, border=True):
+        x0, y0, w, h = EMF_SWATCHES[name]
+        for j in range(h):
+            for i in range(w):
+                edge = border and (i in (0, w - 1) or j in (0, h - 1))
+                o.putpixel((x0 + i, y0 + j), C(OUT if edge else fn(i, j, w, h)))
+    swatch('metal', lambda i, j, w, h: mix((96, 64, 160), (44, 26, 88), j / h) if j > 1 else (120, 90, 190))
+    swatch('trim', lambda i, j, w, h: mix(cyc((i + j) / (w + h) * 1.5, VIVID), WHITE, 0.25 if j > 1 else 0.6))
+    swatch('dark', lambda i, j, w, h: mix((44, 26, 88), (26, 14, 56), j / h))
+    swatch('trimv', lambda i, j, w, h: mix(cyc(j / h, VIVID), WHITE, 0.45 if i == 1 else 0.2))
+    for name, a, b in (('gem', (255, 170, 220), (210, 80, 170)), ('gem2', (170, 240, 255), (70, 150, 230)),
+                       ('gold', (255, 236, 160), (210, 150, 60)), ('glow', (255, 255, 255), (220, 200, 255))):
+        swatch(name, lambda i, j, w, h, a=a, b=b: WHITE if (i, j) == (0, 0) else mix(a, b, (i + j) / (w + h - 2)), border=False)
+
 def netherite_worn():
     """player netherite armour + the cloak (wings layer), recoloured from the vanilla textures"""
     out = []
@@ -313,6 +333,8 @@ def netherite_worn():
                 q = im.getpixel((x, y))
                 if q[3]:
                     o.putpixel((x, y), C(netherite_px(q, x, y, W, H, vrange), q[3]))
+        if 'humanoid' in dst:
+            paint_swatches(o)
         save_tex(o, dst); out.append(o)
     return tuple(out)
 

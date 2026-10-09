@@ -7,7 +7,7 @@ from PIL import Image
 HOME = os.path.expanduser('~')
 REF = os.environ.get('AURORA_REF', HOME + '/ref63') + '/assets/minecraft/'
 RP = os.environ.get('AURORA_RP', HOME + '/mnt/.minecraft/resourcepacks') + '/'
-PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora HUD XL']
+PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora HUD XL', RP + 'Aurora EMF']
 errors, warns = [], []
 # every model id referenced by a vanilla item definition is known to exist in the jar
 VANILLA_MODELS = set(re.findall(r'"model": "(minecraft:[^"]+)"',
@@ -206,6 +206,52 @@ for pack in PACKS:
                 ins = {m[0]: (m[2], m[3]) for m in re.findall(pat % 'in', open(fs).read())}
                 for loc, (ty, nm) in ins.items():
                     if outs.get(loc) != (ty, nm): err('%s: fsh in %s %s@%s not written by vsh' % (base, ty, nm, loc))
+
+# ---- Aurora EMF (Entity Model Features): .jem syntax, part names, UVs on free swatches, .properties -> variant .jem
+EMF_PARTS = {'outer_armor': {'head', 'headwear', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg'},
+             'inner_armor': {'head', 'headwear', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg'},
+             'elytra': {'left_wing', 'right_wing'}}
+cem = RP + 'Aurora EMF/assets/minecraft/emf/cem/'
+if os.path.isdir(cem):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from gear import EMF_SWATCHES
+    # texels sampled by vanilla humanoid armour boxes (u, v, w, h, d): the swatches must stay out of them
+    sampled = set()
+    for (u, v, w_, h_, d) in ((0, 0, 8, 8, 8), (32, 0, 8, 8, 8), (16, 16, 8, 12, 4), (40, 16, 4, 12, 4), (0, 16, 4, 12, 4)):
+        sampled |= {(x, y) for x in range(u + d, u + d + 2 * w_) for y in range(v, v + d)}
+        sampled |= {(x, y) for x in range(u, u + 2 * d + 2 * w_) for y in range(v + d, v + d + h_)}
+    for name, (x0, y0, sw, sh) in EMF_SWATCHES.items():
+        if any((x, y) in sampled for x in range(x0, x0 + sw) for y in range(y0, y0 + sh)):
+            err('EMF swatch %s overlaps texels used by vanilla armour' % name)
+    swatch_rects = [(x0, y0, x0 + sw, y0 + sh) for (x0, y0, sw, sh) in EMF_SWATCHES.values()]
+    for f in sorted(os.listdir(cem)):
+        if f.endswith('.properties'):
+            props = dict(l.split('=', 1) for l in open(cem + f).read().splitlines() if '=' in l and not l.startswith('#'))
+            for k, val in props.items():
+                if k.startswith('models.'):
+                    for n in val.split():
+                        if n != '1' and not os.path.exists(cem + f[:-11] + n + '.jem'): err('EMF %s: variant %s.jem missing' % (f, f[:-11] + n))
+            continue
+        if not f.endswith('.jem'): continue
+        j = json.load(open(cem + f))
+        kind = next((k for k in EMF_PARTS if f.startswith(k) or ('_' + k) in f), None)
+        if kind is None: err('EMF %s: unknown model' % f); continue
+        tw, th = j.get('textureSize', [64, 32])
+        for mdl in j['models']:
+            if mdl.get('part') not in EMF_PARTS[kind]: err('EMF %s: unknown part %s' % (f, mdl.get('part')))
+            for b in mdl.get('boxes', []):
+                if len(b.get('coordinates', [])) != 6: err('EMF %s: box without 6 coordinates' % f)
+                for key in ('uvNorth', 'uvSouth', 'uvEast', 'uvWest', 'uvUp', 'uvDown'):
+                    r = b.get(key)
+                    if r is None: err('EMF %s: box without %s' % (f, key)); continue
+                    if not (0 <= min(r[0], r[2]) and max(r[0], r[2]) <= tw and 0 <= min(r[1], r[3]) and max(r[1], r[3]) <= th):
+                        err('EMF %s: %s outside the texture' % (f, key))
+                    if kind != 'elytra' and not any(a <= min(r[0], r[2]) and max(r[0], r[2]) <= c and bb <= min(r[1], r[3]) and max(r[1], r[3]) <= d_
+                                                     for (a, bb, c, d_) in swatch_rects):
+                        err('EMF %s: %s %s is not on a material swatch' % (f, key, r))
+            for anim in mdl.get('animations', []):
+                for k in anim:
+                    if k.split('.')[0] not in EMF_PARTS[kind]: err('EMF %s: animation of unknown part %s' % (f, k))
 
 for w in warns: print('WARN ', w)
 for e in errors: print('ERROR', e)

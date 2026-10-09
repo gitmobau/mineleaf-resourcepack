@@ -1,0 +1,130 @@
+{
+  "textureSize": [
+    64,
+    32
+  ],
+  "models": [
+    {
+      "part": "left_wing",
+      "id": "aurora_cape",
+      "attach": false,
+      "invertAxis": "xy",
+      "translate": [
+        5,
+        -24,
+        0
+      ],
+      "boxes": [
+        {
+          "coordinates": [
+            -6,
+            5,
+            2,
+            12,
+            19,
+            1
+          ],
+          "uvNorth": [
+            24,
+            2,
+            34,
+            22
+          ],
+          "uvSouth": [
+            36,
+            2,
+            46,
+            22
+          ],
+          "uvUp": [
+            24,
+            0,
+            34,
+            2
+          ],
+          "uvDown": [
+            34,
+            0,
+            44,
+            2
+          ],
+          "uvWest": [
+            22,
+            2,
+            24,
+            22
+          ],
+          "uvEast": [
+            34,
+            2,
+            36,
+            22
+          ]
+        },
+        {
+          "coordinates": [
+            -6.5,
+            23.5,
+            0.5,
+            13,
+            1.5,
+            2.6
+          ],
+          "uvNorth": [
+            36,
+            2,
+            46,
+            4
+          ],
+          "uvSouth": [
+            36,
+            2,
+            46,
+            4
+          ],
+          "uvUp": [
+            36,
+            2,
+            46,
+            4
+          ],
+          "uvDown": [
+            36,
+            2,
+            46,
+            4
+          ],
+          "uvWest": [
+            36,
+            2,
+            38,
+            4
+          ],
+          "uvEast": [
+            44,
+            2,
+            46,
+            4
+          ]
+        }
+      ],
+      "animations": [
+        {
+          "left_wing.rx": "torad(8 + limb_speed * 55 + sin(age * 0.1) * 2)",
+          "left_wing.ry": "0",
+          "left_wing.rz": "0",
+          "right_wing.rx": "0",
+          "right_wing.ry": "0",
+          "right_wing.rz": "0"
+        }
+      ]
+    },
+    {
+      "part": "right_wing",
+      "id": "aurora_cape_hidden_wing",
+      "attach": false,
+      "invertAxis": "xy",
+      "boxes": []
+    }
+  ]
+}

@@ -9,7 +9,7 @@ if '--tag' in sys.argv: args.remove(tag)
 dest = os.path.abspath(os.path.expanduser(args[0] if args else '~/ref63'))
 FOLDERS = ['assets/minecraft/' + p for p in (
     'atlases', 'equipment', 'items', 'models/item', 'shaders',
-    'textures/block', 'textures/entity/equipment', 'textures/gui', 'textures/item', 'textures/misc')]
+    'textures/block', 'textures/entity/equipment', 'textures/entity/player/wide', 'textures/gui', 'textures/item', 'textures/misc')]
 
 tmp = tempfile.mkdtemp()
 try:

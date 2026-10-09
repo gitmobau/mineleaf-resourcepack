@@ -110,7 +110,17 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
 - Logros: el usuario NO quiere que se toquen. Ventana de progresos y toast de progreso vuelven a vanilla.
 - Netherita puesta: la "túnica galáctica" no gustaba nada. Ahora se recolorea la textura vanilla (y los élitros para la
   capa) con el estilo del icono: ciruela oscuro, contorno violeta, reflejos iridiscentes y algún destello.
-- Pendiente ofrecido: versión 3D de las armaduras con Entity Model Features / Entity Texture Features.
+- Versión 3D de la netherita hecha (ver Aurora EMF).
+
+### Aurora EMF (sesión del 2026-10-09)
+- Pack opcional para Entity Model Features 3.3.x (tiene versión 26.3 Fabric/NeoForge) + Entity Texture Features.
+- Revisado en el código de EMF (github Traben-0/Entity_Model_Features, master): nombres `player_outer_armor`,
+  `player_inner_armor`, `player_slim_*`, `elytra`; variantes sin .jem base permitidas por defecto (la 1 = vanilla);
+  piezas `attach` = hijas de la parte vanilla, posicionadas con la fórmula del exportador de EMF; `rx` se asigna tal cual
+  a xRot (positivo = la capa se abre hacia atrás); la propiedad `items=` de ETF mira armadura y manos.
+- Sin verificar en el juego: que los pivotes de la armadura de la 26.3 sigan siendo los de HumanoidModel
+  (cabeza/cuerpo 0,0,0; brazos ±5,2,0; piernas ±1.9,12,0) y el ala del élitro (5,0,0). Si algo sale desplazado, se
+  corrige en `PIVOT` de `emf.py`.
 
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
