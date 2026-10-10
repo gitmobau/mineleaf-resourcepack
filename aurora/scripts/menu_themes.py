@@ -1,5 +1,5 @@
 # Drawing helpers and the per-screen themes of Aurora HUD XL (used by menus_xl.py).
-# A theme gives the frame band, panel background, slot / plaque colours, how vanilla decorations are recoloured
+# A theme gives the frame band, panel background, slot colours, how vanilla decorations are recoloured
 # and the ornaments that stick out of the vanilla rectangle (crests, corner pieces, side details).
 import math, random
 from PIL import Image, ImageDraw
@@ -56,7 +56,6 @@ class Theme:
     pads = (14, 20, 14, 10)
     band = [OUT, (150, 140, 200), (210, 205, 240), WHITE, (120, 110, 170), OUT]
     slot = ((70, 60, 120), (225, 220, 250), (40, 32, 80), (28, 22, 60))      # rim tl, rim br, inner top, inner bottom
-    plaque = ((235, 230, 250), (120, 105, 175))                             # fill, line
     def bg(self, x, y, w, h): return (60, 50, 100)
     def feature(self, l, x, w): return mix(cyc(x / w), WHITE, max(0, l - 0.5))
     def window(self, img, cells): pass
@@ -67,7 +66,6 @@ class Theme:
 class Observatory(Theme):
     band = [OUT, (110, 120, 190), (190, 200, 245), (245, 248, 255), (150, 160, 220), (70, 70, 140), OUT]
     slot = ((70, 70, 140), (200, 205, 250), (36, 30, 84), (22, 18, 56))
-    plaque = ((226, 228, 250), (96, 96, 170))
     def bg(self, x, y, w, h):
         c = grad([(58, 46, 120), (36, 28, 86), (22, 18, 58)], y / h)
         a = abs(y - (h * 0.42 + 9 * math.sin(x / 23)))
@@ -94,7 +92,6 @@ class Observatory(Theme):
 class Fabricator(Theme):
     band = [(70, 40, 20), (190, 130, 60), (245, 205, 120), (255, 235, 170), (215, 160, 80), (140, 90, 40), (70, 40, 20)]
     slot = ((60, 66, 84), (200, 205, 220), (88, 98, 120), (70, 78, 100))
-    plaque = ((250, 240, 214), (150, 100, 50))
     def bg(self, x, y, w, h):
         c = grad([(160, 200, 245), (130, 175, 235)], y / h)
         if x % 8 == 0 or y % 8 == 0: c = mix(c, WHITE, 0.25)
@@ -127,7 +124,6 @@ class Inferno(Theme):
     pads = (14, 22, 14, 10)
     band = [(90, 20, 50), (220, 120, 60), (255, 215, 120), (255, 250, 220), (255, 180, 110), (180, 60, 80), (90, 20, 50)]
     slot = ((90, 30, 50), (255, 210, 150), (70, 22, 46), (48, 14, 36))
-    plaque = ((255, 244, 220), (190, 110, 60))
     def bg(self, x, y, w, h):
         c = grad([(255, 196, 170), (240, 130, 140), (160, 50, 100), (100, 24, 72)], y / h)
         if (x * 11 + y * 7) % 83 == 0: c = mix(c, (255, 240, 180), 0.8)
@@ -181,7 +177,6 @@ class Inferno(Theme):
 class Supernova(Theme):
     band = [(20, 20, 40), (90, 100, 130), (170, 180, 205), (120, 255, 250), (170, 180, 205), (80, 86, 115), (20, 20, 40)]
     slot = ((40, 44, 64), (130, 240, 255), (54, 58, 80), (36, 38, 58))
-    plaque = ((215, 222, 236), (70, 80, 110))
     def bg(self, x, y, w, h):
         c = grad([(78, 82, 104), (52, 56, 76)], y / h)
         if x % 44 == 0 or y % 30 == 0: c = mix(c, (24, 26, 40), 0.6)
@@ -213,7 +208,6 @@ class Clouds(Theme):
     pads = (14, 22, 14, 10)
     band = [(120, 100, 170), (230, 215, 245), (255, 250, 255), (250, 235, 245), (210, 190, 230), (120, 100, 170)]
     slot = ((170, 150, 210), (255, 255, 255), (238, 230, 252), (222, 212, 246))
-    plaque = ((255, 255, 255), (150, 130, 200))
     def bg(self, x, y, w, h):
         c = grad([(205, 215, 255), (235, 210, 245), (255, 220, 215)], y / h)
         for (ox, oy, r) in ((30, 40, 14), (140, 70, 18), (80, 130, 16), (20, 110, 10)):
@@ -244,7 +238,6 @@ class Vault(Theme):
     pads = (14, 20, 14, 12)
     band = [(70, 40, 10), (200, 150, 60), (255, 220, 120), (255, 245, 190), (230, 180, 80), (150, 100, 30), (70, 40, 10)]
     slot = ((60, 24, 70), (240, 200, 120), (64, 30, 82), (48, 20, 64))
-    plaque = ((255, 246, 215), (170, 120, 50))
     def bg(self, x, y, w, h):
         yy = y % 18                                            # period 18: the chest is cut between rows
         c = (88, 38, 104) if (yy < 9) else (80, 34, 96)
@@ -279,7 +272,6 @@ class Vault(Theme):
 class EndShell(Theme):
     band = [(40, 20, 60), (140, 90, 160), (200, 150, 215), (235, 205, 245), (170, 120, 190), (100, 60, 125), (40, 20, 60)]
     slot = ((50, 30, 80), (210, 180, 240), (30, 18, 54), (20, 12, 40))
-    plaque = ((236, 222, 248), (130, 90, 160))
     def bg(self, x, y, w, h):
         c = grad([(46, 26, 76), (24, 14, 46), (14, 8, 30)], y / h)
         n = math.sin(x / 13 + y / 21) + math.sin(x / 7 - y / 17)
@@ -347,7 +339,6 @@ STONE = [(36, 32, 44), (110, 104, 125), (170, 165, 185), (222, 218, 235), (140, 
 class Smithy(Theme):                      # anvil: celestial blacksmith
     band = [(30, 28, 44), (110, 108, 135), (175, 175, 200), (232, 232, 245), (140, 138, 165), (80, 78, 100), (30, 28, 44)]
     slot = ((50, 48, 66), (205, 205, 225), (72, 70, 94), (56, 54, 76))
-    plaque = ((236, 236, 246), (90, 88, 120))
     def bg(self, x, y, w, h):
         c = grad([(128, 126, 160), (92, 90, 122)], y / h)
         if (x * 3 + y * 5) % 23 == 0: c = mix(c, (170, 168, 200), 0.6)
@@ -374,7 +365,6 @@ class Lighthouse(Theme):                  # beacon: sanctuary of light
     pads = (12, 22, 12, 12)
     band = [(60, 50, 100), (200, 180, 110), (255, 238, 160), (255, 255, 240), (150, 225, 255), (90, 140, 200), (60, 50, 100)]
     slot = ((80, 100, 150), (240, 246, 255), (205, 218, 245), (182, 198, 236))
-    plaque = ((245, 248, 255), (100, 120, 180))
     def bg(self, x, y, w, h):
         c = grad([(232, 240, 255), (242, 230, 252), (252, 240, 226)], y / h)
         if (x + y) % 40 < 3: c = mix(c, cyc((x + y) / 300), 0.25)
@@ -399,7 +389,6 @@ class Lighthouse(Theme):                  # beacon: sanctuary of light
 class Alchemy(Theme):                     # brewing stand: alchemist's lab
     band = [(30, 40, 50), (80, 160, 150), (150, 230, 210), (230, 255, 248), (110, 190, 180), (50, 100, 110), (30, 40, 50)]
     slot = ((30, 50, 60), (175, 240, 225), (42, 66, 80), (30, 50, 64))
-    plaque = ((236, 252, 247), (70, 140, 130))
     def bg(self, x, y, w, h):
         c = grad([(70, 92, 124), (52, 60, 102), (42, 42, 84)], y / h)
         for (ox, oy, rr) in ((30, 120, 5), (150, 100, 4), (20, 40, 3), (160, 30, 3), (120, 140, 6)):
@@ -427,7 +416,6 @@ class Alchemy(Theme):                     # brewing stand: alchemist's lab
 class Cartographer(Theme):                # cartography table: explorer's map desk
     band = [(60, 36, 20), (150, 96, 56), (205, 150, 95), (242, 210, 155), (170, 110, 60), (110, 70, 35), (60, 36, 20)]
     slot = ((120, 85, 50), (252, 238, 205), (226, 206, 166), (210, 188, 146))
-    plaque = ((255, 251, 238), (150, 100, 55))
     def bg(self, x, y, w, h):
         c = grad([(247, 234, 202), (234, 216, 176)], y / h)
         if abs(y - (h * 0.55 + 10 * math.sin(x / 17) + 4 * math.sin(x / 5))) < 0.7: c = mix(c, (120, 160, 200), 0.6)
@@ -453,7 +441,6 @@ class Cartographer(Theme):                # cartography table: explorer's map de
 class Automaton(Theme):                   # crafter: redstone automaton workshop
     band = [(30, 20, 26), (110, 60, 70), (190, 110, 120), (255, 170, 180), (140, 70, 80), (80, 40, 50), (30, 20, 26)]
     slot = ((40, 30, 36), (245, 175, 185), (66, 52, 60), (50, 38, 46))
-    plaque = ((250, 238, 242), (150, 70, 90))
     def bg(self, x, y, w, h):
         c = grad([(78, 66, 80), (54, 46, 60)], y / h)
         if (x % 16 == 8 and (y // 8) % 3 != 1) or (y % 16 == 8 and (x // 8) % 3 != 1): c = mix(c, (255, 110, 140), 0.45)
@@ -484,7 +471,6 @@ class Automaton(Theme):                   # crafter: redstone automaton workshop
 class Launcher(Theme):                    # dispenser / dropper: archery launcher
     band = [(40, 40, 50), (120, 120, 135), (180, 180, 196), (228, 228, 238), (150, 150, 166), (90, 90, 106), (40, 40, 50)]
     slot = ((70, 70, 86), (228, 228, 242), (152, 152, 172), (136, 136, 158))
-    plaque = ((246, 246, 252), (100, 100, 125))
     def bg(self, x, y, w, h):
         row = y // 7; xx = x + (3 if row % 2 else 0)
         c = (196, 192, 216) if (xx // 9 + row) % 3 else (184, 180, 206)
@@ -513,7 +499,6 @@ class Launcher(Theme):                    # dispenser / dropper: archery launche
 class Arcane(Theme):                      # enchanting table: arcane library
     band = [(20, 14, 40), (90, 60, 150), (160, 120, 220), (255, 232, 160), (120, 90, 190), (60, 40, 110), (20, 14, 40)]
     slot = ((40, 28, 70), (205, 175, 255), (50, 38, 92), (36, 26, 72))
-    plaque = ((242, 234, 255), (110, 80, 170))
     GLYPHS = [(0, 0), (1, 1), (2, 0), (0, 2), (2, 2), (1, 0), (1, 2), (0, 1), (2, 1)]
     def bg(self, x, y, w, h):
         c = grad([(60, 44, 108), (40, 28, 78), (26, 20, 56)], y / h)
@@ -548,7 +533,6 @@ class Arcane(Theme):                      # enchanting table: arcane library
 class Grinder(Theme):                     # grindstone: moonstone grinder
     band = [(40, 30, 30), (130, 100, 80), (190, 160, 130), (236, 216, 192), (150, 120, 95), (90, 70, 55), (40, 30, 30)]
     slot = ((70, 66, 80), (232, 228, 242), (172, 170, 188), (152, 150, 170))
-    plaque = ((252, 248, 242), (130, 100, 80))
     def bg(self, x, y, w, h):
         c = grad([(200, 196, 218), (180, 176, 200)], y / h)
         if (x * 13 + y * 7) % 17 == 0: c = mix(c, (150, 146, 172), 0.6)
@@ -568,7 +552,6 @@ class Grinder(Theme):                     # grindstone: moonstone grinder
 class StarHopper(Theme):                  # hopper: star collector
     band = [(24, 24, 36), (80, 84, 104), (140, 145, 170), (208, 212, 232), (110, 114, 140), (60, 62, 80), (24, 24, 36)]
     slot = ((40, 40, 56), (195, 205, 232), (58, 60, 84), (44, 46, 66))
-    plaque = ((238, 242, 252), (80, 86, 120))
     def bg(self, x, y, w, h):
         c = grad([(56, 54, 104), (36, 34, 74)], y / h)
         if (x - y // 2) % 37 == 0 and y % 13 < 6: c = mix(c, (255, 240, 200), 0.6)
@@ -588,7 +571,6 @@ class StarHopper(Theme):                  # hopper: star collector
 class Stable(Theme):                      # horse: meadow stable
     band = WOOD
     slot = ((110, 75, 45), (252, 238, 208), (232, 217, 188), (215, 198, 168))
-    plaque = ((255, 250, 238), (140, 95, 60))
     def bg(self, x, y, w, h):
         c = grad([(210, 236, 255), (222, 242, 214), (192, 226, 172)], y / h)
         if (x * 11 + y * 7) % 61 == 0: c = (255, 170, 200)
@@ -624,7 +606,6 @@ class Stable(Theme):                      # horse: meadow stable
 class Weaver(Theme):                      # loom: weaver's workshop
     band = [(50, 30, 60), (170, 110, 170), (232, 172, 222), (255, 236, 250), (190, 130, 190), (110, 70, 120), (50, 30, 60)]
     slot = ((110, 70, 120), (255, 236, 250), (242, 222, 246), (228, 206, 238))
-    plaque = ((255, 250, 255), (150, 90, 160))
     def feature(self, l, x, w): return grad([(110, 70, 120), (230, 170, 215), (255, 240, 250)], l)
     def bg(self, x, y, w, h):
         c = (238, 222, 246) if (x // 2 + y // 2) % 2 else (226, 206, 238)
@@ -654,7 +635,6 @@ class Weaver(Theme):                      # loom: weaver's workshop
 class Reef(Theme):                        # nautilus: abyssal reef
     band = [(20, 40, 60), (60, 140, 160), (130, 210, 220), (222, 250, 250), (90, 170, 190), (40, 90, 120), (20, 40, 60)]
     slot = ((20, 50, 70), (175, 242, 242), (32, 72, 104), (24, 54, 84))
-    plaque = ((238, 252, 252), (60, 130, 150))
     def bg(self, x, y, w, h):
         c = grad([(118, 206, 224), (64, 136, 194), (38, 72, 144)], y / h)
         if (x + y * 0.6) % 34 < 5: c = mix(c, WHITE, 0.12)
@@ -686,7 +666,6 @@ class Reef(Theme):                        # nautilus: abyssal reef
 class Armory(Theme):                      # smithing table: royal armory
     band = [(20, 14, 24), (70, 56, 70), (120, 100, 120), (255, 216, 125), (90, 72, 90), (50, 40, 52), (20, 14, 24)]
     slot = ((30, 24, 34), (242, 208, 135), (54, 46, 60), (40, 34, 46))
-    plaque = ((255, 246, 226), (160, 120, 60))
     def bg(self, x, y, w, h):
         c = grad([(76, 64, 88), (48, 40, 58)], y / h)
         if abs((x % 24) - 12) + abs((y % 24) - 12) == 11: c = mix(c, (230, 190, 110), 0.5)
@@ -710,7 +689,6 @@ class Armory(Theme):                      # smithing table: royal armory
 class Geode(Theme):                       # stonecutter: geode mason
     band = STONE
     slot = ((60, 50, 80), (222, 204, 252), (102, 92, 128), (86, 76, 112))
-    plaque = ((246, 242, 252), (110, 90, 140))
     def bg(self, x, y, w, h):
         c = grad([(178, 172, 196), (150, 144, 172)], y / h)
         if abs((y - 0.4 * x) % 53 - 26) < 0.7 or abs((y + 0.7 * x) % 71 - 35) < 0.6: c = mix(c, (200, 140, 255), 0.6)
@@ -731,7 +709,6 @@ class Market(Theme):                      # villager: trading market
     pads = (14, 22, 14, 10)
     band = WOOD
     slot = ((110, 75, 45), (252, 238, 208), (234, 218, 190), (216, 198, 168))
-    plaque = ((255, 250, 238), (140, 95, 60))
     def bg(self, x, y, w, h):
         c = grad([(252, 242, 222), (240, 224, 196)], y / h)
         if y % 12 == 0: c = mix(c, (200, 160, 110), 0.35)
@@ -763,7 +740,6 @@ class Creator(Theme):                     # creative inventory: creator's studio
     band = [OUT, (150, 140, 220), (222, 204, 255), (255, 255, 255), (170, 150, 230), (100, 80, 170), OUT]
     def feature(self, l, x, w): return grad([(24, 18, 50), (54, 44, 100), (150, 140, 220)], l)   # dark: the game writes white here
     slot = ((70, 60, 120), (230, 225, 252), (48, 40, 94), (36, 30, 74))
-    plaque = ((240, 236, 252), (110, 100, 170))
     def bg(self, x, y, w, h):
         c = grad([(84, 68, 146), (62, 50, 118)], y / h)
         if abs((x - y) % 60 - 30) < 4: c = mix(c, cyc((x + y) / 200), 0.25)

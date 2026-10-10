@@ -196,6 +196,9 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   usuario escribe las etiquetas en el gris oscuro vanilla (0x404040), así que lo del pack de modo oscuro era una
   suposición equivocada. Las placas pasan a claras (perla con borde del color del tema) y la vista previa escribe
   los títulos en gris oscuro, como el juego.
+- Después el usuario pidió quitarlas del todo: ya no se dibuja ninguna placa. `label_rects()` (antes `plaque_rects`)
+  solo reserva esas zonas para que no caigan adornos encima. Consecuencia aceptada: en temas oscuros el título se lee
+  poco. Alternativa ofrecida si lo echa de menos: un halo claro suave detrás del texto, sin borde.
 - `menus_xl.py`: los píxeles gris de casilla (139) que el detector no reconoce (casillas unidas a tubos, como las
   tres botellas del soporte) se pintan como el interior de casilla del tema, no con la rampa de detalles.
 

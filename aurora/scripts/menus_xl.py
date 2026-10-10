@@ -21,13 +21,12 @@ def ref(rel):
 
 
 # ------------------------------------------------------------------ containers
-# Each screen: theme, label plaques in vanilla coords (x0, y0, x1, y1), how it is blitted, and the label texts
+# Each screen: theme, label areas in vanilla coords (x0, y0, x1, y1), how it is blitted, and the label texts
 # used by the preview (text, x, y; x None = centred). The vanilla texture gives size and slot layout.
-# Plaques: a light plate with a rim in the theme's colour behind every title: the game draws container labels in
-# dark grey (0x404040), which disappears on the dark panels of most themes.
-HEAD = 'head'                                    # full-width title strip (5, 3, w - 6, 16)
-def S(theme, plaques=(HEAD, 'inv'), kind='single', title=None, inv=True, origin=(0, 0)):
-    return dict(theme=theme, plaques=plaques, kind=kind, title=title, inv=inv, origin=origin)
+# Label areas only keep motifs away from the titles; no plate is drawn behind them (the user did not want the bars).
+HEAD = 'head'                                    # full-width title area (5, 3, w - 6, 16)
+def S(theme, labels=(HEAD, 'inv'), kind='single', title=None, inv=True, origin=(0, 0)):
+    return dict(theme=theme, labels=labels, kind=kind, title=title, inv=inv, origin=origin)
 SCREENS = {
     'inventory':         S(Observatory(), [(94, 5, 170, 17)], title=('Fabricación', 97, 8), inv=False),
     'crafting_table':    S(Fabricator(), [(26, 3, 112, 16), 'inv'], title=('Fabricación', 29, 6)),
@@ -85,9 +84,9 @@ def write_markers(img, kind, w, h, pads, origin=(0, 0)):
             img.putpixel((x, y), (px_, py_, MARK, role))
             img.putpixel((x + (1 if role in (1, 3) else -1), y), (du, dv, SHIFT, role))
 
-def plaque_rects(cfg, w, h):
+def label_rects(cfg, w, h):
     out = []
-    for p in cfg['plaques']:
+    for p in cfg['labels']:
         if p == HEAD: out.append((5, 3, w - 6, 16))
         elif p == 'inv': out.append((5, h - 97, 90, h - 85))
         else: out.append(p)
@@ -117,15 +116,8 @@ def build(name):
             if a == 0: used.add((x, y)); continue
             c = theme.bg(x - l, y - t, w, h)
             art.putpixel((x, y), C(c) if a == 255 else C(*theme.translucent(c, a)))
-    # label plaques first: slots and vanilla decorations are drawn over them, never hidden
-    for (px0, py0, px1, py1) in plaque_rects(cfg, w, h):
-        light, accent = theme.plaque
-        fill = mix(light, accent, 0.14)                    # light plate: the game writes the labels in dark grey
-        rim = mix(accent, (18, 10, 36), 0.35)
-        m = rect(art.size, l + px0, t + py0, l + px1, t + py1)
-        m -= {(l + px0, t + py0), (l + px1, t + py0), (l + px0, t + py1), (l + px1, t + py1)}
-        paint(art, m, lambda x, y: mix(fill, WHITE, 0.6) if y == t + py0 + 1 else
-              mix(fill, accent, 0.12) if y == t + py1 - 1 else fill, line=rim, bevel=False)
+    # label areas stay clear of motifs so the game's dark-grey titles keep a calm background (no plate drawn)
+    for (px0, py0, px1, py1) in label_rects(cfg, w, h):
         used |= rect(art.size, l + px0 - 2, t + py0 - 2, l + px1 + 2, t + py1 + 2)
     # entity window (black area of the vanilla texture)
     blk = [(x + l, y + t) for y in range(h) for x in range(w) if magic.is_rgb(v.getpixel((x, y)), 0)]

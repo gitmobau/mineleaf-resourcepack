@@ -49,7 +49,7 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 - `hud_xl.py`: texturas de Aurora HUD XL (hotbar con alas de cristal, selección con corona y halo, mano secundaria con aguja, fondo de las barras de jefe con gemas en los extremos) y previsualización del HUD en `previews/`.
 - `menus_xl.py`: menús temáticos de Aurora HUD XL (ver abajo): lista de pantallas, construcción de cada fondo y una emulación del shader que comprueba que cada pantalla sale al píxel. Genera `previews/menus_xl.png` y `menus_xl_2.png`.
 - `screens.py`: pantallas sin contenedor, retocadas en su sitio (sin shader): libro (cuero violeta, papel perla, cinta y amuleto), carteles y carteles colgantes de las 13 maderas en pastel, fondos de opciones y menús, separadores, botones y demás controles (deslizadores, campos de texto, casillas, pestañas, barras), tooltips, iconos del selector de modo y el logo del título. También las barras de jefe (los 7 colores en pastel, progreso con brillo animado y muescas violeta) y los toasts (recetas a medida, sistema, tutorial y "sonando ahora" por luminancia; iconos grises del tutorial en Aurora). Los logros (ventana de progresos y su toast) se dejan vanilla a propósito. Genera `previews/pantallas.png`.
-- `menu_themes.py`: utilidades de dibujo y los 25 temas (marco, fondo, casillas, placas y adornos que sobresalen).
+- `menu_themes.py`: utilidades de dibujo y los 25 temas (marco, fondo, casillas y adornos que sobresalen).
 - `emf.py`: pack Aurora EMF (modelos `.jem` de EMF para la netherita, con sus `.properties`) y vista 3D en `previews/emf_netherite.png` con un pequeño renderizador propio.
 - `celestial.py`: pack Aurora Celestial (modelos `.jem` animados por pieza, texturas casi transparentes con capa emisiva `_e.png`) y vista previa animada en `previews/celestial.gif`.
 - `validate.py`: validación estática contra la 26.3. Revisa JSON, tamaños y frames de las animaciones, nine-slice, referencias de modelos y texturas, definiciones de items, capas de equipamiento, compilación de los shaders en las 5 variantes OIT con `glslangValidator` y que las salidas del vsh coincidan con las entradas del fsh.
@@ -86,8 +86,9 @@ Recursos externos útiles (espejos de assets, esquemas, shaders, EMF/ETF y pixel
 | Libro de recetas (panel) | Recetario estelar: libro abierto con estrellas, esquinas doradas y cintas marcapáginas colgando |
 | Selector de modo de juego (F3+F4) | Portal de modos: estrella portal arriba y flecos de cristal abajo |
 
-Los títulos de los menús los pinta el juego en gris oscuro (no se puede cambiar con un resource pack), así que
-cada tema pone una placa clara (perla con borde del color del tema) detrás de cada título para que se lea.
+Los títulos de los menús los pinta el juego en gris oscuro (no se puede cambiar con un resource pack). No hay placas
+detrás (al usuario no le gustaban las franjas): la zona del título solo se deja sin adornos. En los temas oscuros el
+título se lee poco.
 
 ## Aurora HUD XL: cómo sobresalen los marcos
 El juego siempre mete un sprite de la GUI en su rectángulo fijo (la hotbar ocupa 182×22 pase lo que pase), así que una
