@@ -149,6 +149,10 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   `enforceOptifineVariationRequiresDefaultModel_v2` es false por defecto, así que las variantes sin .jem base valen.
 - Captura del creativo con cristales a ambos lados y casillas corridas = el usuario tenía un Aurora HUD XL anterior al
   arreglo del 2026-10-08 (le dije que ese zip no había cambiado en la sesión; había que reinstalarlo igualmente).
+- Tercera prueba: con solo los nombres genéricos (`helmet2.jem`...) el 3D seguía sin salir. La lista de modelos de EMF
+  del usuario muestra `player_helmet.jem`, `player_slim_helmet.jem`, etc., así que ahora el pack trae también esos
+  nombres exactos (sin depender del respaldo). Si aún no sale: pedir captura del detalle de `player_helmet.jem` en
+  los ajustes de EMF, o activar "log model creation data" y mirar el log.
 
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs

@@ -106,7 +106,7 @@ textura más grande solo se vería aplastada. Para que sobresalga:
 ## Aurora EMF: netherita en 3D
 - Desde la 1.21.9 la armadura es un modelo por pieza: `helmet`, `chestplate`, `leggings` y `boots` (EMF busca
   `player_helmet.jem`… y si no existe usa `helmet.jem`; los nombres viejos `player_outer_armor`/`player_inner_armor` ya
-  no se usan). El pack trae `helmet2.jem` + `helmet.properties`, etc. Cada `.properties` elige la variante 2 solo
+  no se usan). El pack trae `player_helmet2.jem`, `player_slim_helmet2.jem` y `helmet2.jem` (respaldo para mobs), cada uno con su `.properties`, y lo mismo para las demás piezas. Cada `.properties` elige la variante 2 solo
   mientras se lleva esa pieza de netherita (`items=netherite_helmet`, ...); si no, EMF usa el modelo vanilla. Vale para
   el jugador (normal y slim) y para cualquier mob bípedo con netherita. Las demás armaduras no cambian.
 - Las piezas nuevas se añaden a las partes vanilla (`attach: true`) y sus caras usan UV por cara sobre "muestras de

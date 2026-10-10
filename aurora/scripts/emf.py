@@ -119,8 +119,8 @@ def write(name, obj):
         else: f.write(obj)
 
 # Since MC 1.21.9 the armour is one model per slot (layers player_helmet, player_chestplate, ...). EMF looks for
-# "<mob>_<slot>.jem" and falls back to "<slot>.jem", so the generic names cover the player (normal and slim) and any
-# other biped. The old player_outer_armor / player_inner_armor names are ignored by EMF on 26.x.
+# "<mob>_<slot>.jem" and falls back to "<slot>.jem". The pack ships the exact player names (player_helmet,
+# player_slim_helmet, ...) and the generic ones for every other biped. The old player_outer_armor / player_inner_armor names are ignored by EMF on 26.x.
 PIECES = {   # slot file -> (parts, netherite item that switches it on)
     'helmet': ({'head': OUTER['head']}, 'netherite_helmet'),
     'chestplate': ({k: OUTER[k] for k in ('body', 'right_arm', 'left_arm')}, 'netherite_chestplate'),
@@ -130,7 +130,8 @@ PIECES = {   # slot file -> (parts, netherite item that switches it on)
 
 def build():
     shutil.rmtree(PACK + '/assets', ignore_errors=True)
-    for slot, (pieces, item) in PIECES.items():
+    for (slot, (pieces, item)), who in ((p, w) for p in PIECES.items() for w in ('player_', 'player_slim_', '')):
+        slot = who + slot                    # exact player names (as EMF lists them) + the generic fallback for mobs
         write('%s2.jem' % slot, jem(pieces))
         write('%s.properties' % slot,
               '# variant 2 (Aurora 3D netherite) only while wearing the netherite piece; otherwise vanilla\n'
