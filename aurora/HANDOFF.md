@@ -141,6 +141,24 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   coplanar con la del pecho), no de la textura: ahora usa LEQUAL como el juego.
 - Prompt de traspaso para Codex en `PROMPT_CODEX.md`.
 
+### Armas y objetos de combate (2026-10-10, codex/aurora-armas)
+- Nuevo `extras.py`, ejecutado justo después de `icons.py`: 19 texturas estáticas en Aurora Pack
+  (4 de arco, 6 de ballesta, maza, tótem, 4 capas de flechas, perla y 2 bases del escudo).
+- Importa `cyc`, `mix`, `C`, `hsv`, `P`, `VIVID` y `crystal_px` de `gear.py`, sin modificarlo.
+  Arco y ballesta usan una transformación por color vanilla independiente de la posición/estado para
+  mantener la coherencia al tensar. Comprueba tamaño y canal alpha completo en cada textura.
+- `tipped_arrow_head` queda perla casi neutra: el motor multiplica esa capa por el color de la poción.
+  `tipped_arrow_base` lleva el astil lavanda. Se conservan modelos y tintes vanilla.
+- Referencia comprobada: `atlases/shield_patterns.json` de `misode/mcmeta`, tag `26.3-assets`.
+  Las bases están dentro de `textures/entity/shield/`, añadida a `FOLDERS` de `fetch_ref.py`.
+  Los patrones de estandarte del escudo siguen vanilla; solo se repintan sus dos texturas base.
+- Vista previa antes/después: `previews/extras.png`. Para instalar este cambio basta `dist/Aurora Pack.zip`.
+- Verificado con Python 3.12 y Pillow 11.3.0 en Ubuntu: `validate.py` da `0 errors, 0 warnings`
+  con glslangValidator; la emulación de los 27 menús pasa y dos builds completas dan MD5 idénticos
+  en los cuatro ZIP. MD5 de Aurora Pack: `cd022d54d6d5acfae95bc8941a8d6c51`.
+  Sus archivos anteriores son idénticos byte a byte; solo añade las 19 texturas. Vista previa revisada.
+- Pendiente de comprobación visual dentro del juego; la lámina no sustituye una prueba del escudo con estandarte.
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
   (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar aura, borde, menús y HUD XL con capturas.

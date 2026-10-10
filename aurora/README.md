@@ -34,13 +34,14 @@ No están en el repo porque son assets de Mojang. Para conseguirlas:
 `ref63/` del zip de traspaso y genera exactamente los mismos zips. También vale el
 `versions/26.3/26.3.jar`.
 
-`build.py` borra y regenera `packs/Aurora Pack`, ejecuta `gen.py → magic.py → gear.py → icons.py → screens.py` (en ese
-orden, porque los últimos sobrescriben a los primeros), luego `hud_xl.py → menus_xl.py`, pasa `validate.py` y crea los zips.
+`build.py` borra y regenera `packs/Aurora Pack`, ejecuta `gen.py → magic.py → gear.py → icons.py → extras.py → screens.py` (en ese
+orden, porque los últimos sobrescriben a los primeros), luego `hud_xl.py → menus_xl.py → emf.py`, pasa `validate.py` y crea los zips.
 La salida es determinista: con la misma entrada salen los mismos bytes.
 
 ### Qué hace cada script
 - `gen.py`: base v1 (agua, mira, fondo de la barra de XP, indicadores de ataque, `pack.png` y `pack.mcmeta`).
 - `icons.py`: corazones con la paleta Aurora (cada estado con sus colores: veneno, wither, congelado, absorción, montura, hardcore) y la comida convertida en estrellas, todo animado y sincronizado.
+- `extras.py`: arco (4 estados), ballesta (6 estados), maza, tótem, flechas, perla de ender y las dos bases de escudo en Aurora. Reutiliza los pintores de `gear.py`, mantiene exactamente tamaños y canales alpha vanilla y comprueba esa igualdad al generar. Texturas estáticas; madera/cuerda lavanda-perla y cristal iridiscente. La punta de la flecha con poción queda casi neutra para conservar el tinte del juego; también se recolorea su astil. Genera `previews/extras.png` con comparaciones vanilla/Aurora. Solo requiere volver a copiar `dist/Aurora Pack.zip`.
 - `magic.py`: "Marco mágico". Menús (inventario, mesa de crafteo, hornos, cofre grande y shulker) y sprites animados (hotbar, selección, casilla resaltada, botón del libro de recetas, fuego y flecha del horno, XP).
 - `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (ópalo claro, iconos y armadura puesta con el mismo estilo: contorno lavanda, ribete iridiscente pastel por dentro y metal perla en 4 tonos suaves sobre la silueta vanilla), también puestas en bebés, caballos y nautilus. Sin capa.
 - `hud_xl.py`: texturas de Aurora HUD XL (hotbar con alas de cristal, selección con corona y halo, mano secundaria con aguja, fondo de las barras de jefe con gemas en los extremos) y previsualización del HUD en `previews/`.
@@ -49,7 +50,7 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 - `menu_themes.py`: utilidades de dibujo y los 25 temas (marco, fondo, casillas, placas y adornos que sobresalen).
 - `emf.py`: pack Aurora EMF (modelos `.jem` de EMF para la netherita, con sus `.properties`) y vista 3D en `previews/emf_netherite.png` con un pequeño renderizador propio.
 - `validate.py`: validación estática contra la 26.3. Revisa JSON, tamaños y frames de las animaciones, nine-slice, referencias de modelos y texturas, definiciones de items, capas de equipamiento, compilación de los shaders en las 5 variantes OIT con `glslangValidator` y que las salidas del vsh coincidan con las entradas del fsh.
-- `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta.
+- `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta, incluida `textures/entity/shield/` (en la 26.3 contiene `shield_base.png` y `shield_base_nopattern.png`).
 
 Recursos externos útiles (espejos de assets, esquemas, shaders, EMF/ETF y pixel art): ver `RECURSOS.md`.
 
