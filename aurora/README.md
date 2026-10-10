@@ -58,6 +58,10 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 Recursos externos útiles (espejos de assets, esquemas, shaders, EMF/ETF y pixel art): ver `RECURSOS.md`.
 
 ## Aurora HUD XL: menús temáticos
+Estilo "nubes" (el favorito del usuario, nacido en el ahumador): degradado pastel, nubes suaves de fondo, casillas
+claras, marco perla y nubes que sobresalen; cada pantalla tiene su tono de cielo y un emblema de su función arriba.
+El inventario, la mesa de crafteo, el crafteador y los hornos conservan su tema propio (petición del usuario).
+
 | Pantalla | Estética |
 |---|---|
 | Inventario | Observatorio estelar: lunas en las esquinas, rosa de los vientos, cielo nocturno y ventana de aurora |
@@ -65,22 +69,22 @@ Recursos externos útiles (espejos de assets, esquemas, shaders, EMF/ETF y pixel
 | Horno | Infierno celestial: llamas pastel con núcleo dorado, halo, alas de ángel y brasas |
 | Alto horno | Forja de supernova: estallido estelar, pernos, rejillas de plasma y grietas brillantes |
 | Ahumador | Ahumador de nubes: nubes esponjosas, bocanadas de humo, luna y cielo pastel |
-| Cofre (todos los tamaños) | Bóveda del tesoro: candado, gemas, montones de monedas y terciopelo |
-| Caja de shulker | Caparazón del End: cúpula de concha, shulker asomándose, flores coral y vacío estrellado |
-| Yunque | Herrería celestial: yunque con martillo y chispas, remaches y cadenas colgando |
+| Cofre (todos los tamaños) | Nubes (cielo crema → rosa → lila) con candado dorado |
+| Caja de shulker | Nubes (cielo lila) con el caparazón del shulker |
+| Yunque | Nubes (cielo perla lavanda) con un yunque |
 | Baliza | Santuario del faro: haz de luz hacia arriba, pirámides de bloques y gemas |
-| Soporte para pociones | Laboratorio alquímico: matraces, burbujas y estantes con viales |
+| Soporte para pociones | Nubes (cielo menta → azul → lila) con un matraz |
 | Mesa de cartografía | Mesa del cartógrafo: rosa de los vientos, mapas enrollados y pergamino con rutas |
 | Crafteador | Taller autómata: antorchas de redstone, repetidor, pistones y circuitos |
-| Dispensador y soltador | Lanzadera: diana con flechas clavadas y flechas saliendo por los lados |
-| Mesa de encantamientos | Biblioteca arcana: libro abierto brillante, estanterías, velas y runas |
-| Afiladora | Piedra lunar del afilador: rueda de piedra con chispas y clavijas de madera |
-| Tolva | Recolector de estrellas: embudo con estrellas cayendo y cielo nocturno |
-| Caballo | Caballeriza: herradura de la suerte, balas de paja, valla y ventana al atardecer |
+| Dispensador y soltador | Nubes (cielo azul) con una flecha |
+| Mesa de encantamientos | Nubes (cielo violeta → rosa) con un libro abierto y una estrella |
+| Afiladora | Nubes (cielo perla rosado) con una rueda de piedra |
+| Tolva | Nubes (cielo azul lavanda) con un embudo y estrellas |
+| Caballo | Nubes (cielo verde prado → crema) con una herradura |
 | Telar | Taller de la tejedora: banderines, ovillos, carretes y tela tejida |
-| Nautilus | Arrecife abisal: concha en espiral, corales, burbujas y océano |
-| Mesa de herrería | Armería real: escudo con espadas cruzadas, oro y filigrana |
-| Cortapiedras | Geoda del cantero: sierra circular y racimos de amatista |
+| Nautilus | Nubes (cielo de mar) con una concha de nautilus |
+| Mesa de herrería | Nubes (cielo dorado → lila) con una corona |
+| Cortapiedras | Nubes (cielo lila → azul) con una gema |
 | Aldeano | Mercado: toldo de rayas festoneado, esmeralda y cajas |
 | Inventario creativo (3 pestañas) | Estudio del creador: cristales arcoíris por la derecha (arriba y abajo van las pestañas, y el juego vuelve a dibujar la rejilla recortando la textura, así que el dibujo vanilla no se puede desplazar) |
 | Libro de recetas (panel) | Recetario estelar: libro abierto con estrellas, esquinas doradas y cintas marcapáginas colgando |
