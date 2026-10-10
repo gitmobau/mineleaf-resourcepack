@@ -1,13 +1,11 @@
-# Aurora EMF: 3D netherite armour + a real cape, for Entity Model Features (+ Entity Texture Features, required by EMF).
+# Aurora EMF: 3D netherite armour for Entity Model Features (+ Entity Texture Features, required by EMF).
 # Optional pack; without the mods nothing changes.
 #
-# - Models are EMF "variant 2" of the player armour / elytra models. The .properties files pick variant 2 only while the
+# - Models are EMF "variant 2" of the player armour models. The .properties files pick variant 2 only while the
 #   entity wears the netherite piece (ETF "items=" rule); otherwise variant 1 = vanilla model (EMF default when there is
-#   no base .jem). So diamond/iron/... armour and real elytra keep their vanilla shape.
+#   no base .jem). So diamond/iron/... armour keeps its vanilla shape.
 # - Extra pieces are boxes attached to the vanilla parts ("attach": true keeps the vanilla armour boxes). Their faces use
 #   per-face UVs pointing at material swatches that gear.py paints into texels no vanilla armour box ever samples.
-# - The cape replaces the elytra wings (our netherite equipment draws its cloak with the elytra model) and swings with
-#   walking speed.
 # Box positions are written like EMF's own exporter: translate = (px, py - 24, -pz) and
 # coordinates = (-mx - sx - px, -my - sy - (py - 24), mz + pz, sx, sy, sz) with invertAxis "xy", where p is the vanilla
 # part pivot and m/s the box min/size in the vanilla part's local space (y down, front = -z).
@@ -26,7 +24,7 @@ PREVIEWS = os.environ.get('AURORA_PREVIEWS', PACK)
 
 # vanilla part pivots (HumanoidModel / ElytraModel)
 PIVOT = {'head': (0, 0, 0), 'body': (0, 0, 0), 'right_arm': (-5, 2, 0), 'left_arm': (5, 2, 0),
-         'right_leg': (-1.9, 12, 0), 'left_leg': (1.9, 12, 0), 'left_wing': (5, 0, 0), 'right_wing': (-5, 0, 0)}
+         'right_leg': (-1.9, 12, 0), 'left_leg': (1.9, 12, 0)}
 
 # extra pieces: part -> [(min xyz, size xyz, swatch)] in the part's vanilla local space
 OUTER = {   # helmet, chestplate, boots (outer armour is inflated by 1)
@@ -55,15 +53,6 @@ INNER = {   # leggings (inner armour is inflated by 0.5)
     'left_leg': [((-2.7, -0.6, -3.2), (5.4, 5.5, 0.7), 'metal'), ((-2.7, 4.7, -3.25), (5.4, 0.8, 0.75), 'trim'),
                  ((2.5, -0.6, -2.7), (0.7, 6, 5.4), 'dark'), ((-2, 6, -3.1), (4, 2, 0.6), 'metal')],
 }
-# cape on the elytra model (texture = our cloak, vanilla elytra layout: wing box at 22,0 size 10x20x2)
-CAPE_UV = {'uvNorth': [24, 2, 34, 22], 'uvSouth': [36, 2, 46, 22], 'uvUp': [24, 0, 34, 2], 'uvDown': [34, 0, 44, 2],
-           'uvWest': [22, 2, 24, 22], 'uvEast': [34, 2, 36, 22]}
-COLLAR_UV = {'uvNorth': [36, 2, 46, 4], 'uvSouth': [36, 2, 46, 4], 'uvUp': [36, 2, 46, 4], 'uvDown': [36, 2, 46, 4],
-             'uvWest': [36, 2, 38, 4], 'uvEast': [44, 2, 46, 4]}
-CAPE = [((-11, 0, 2), (12, 19, 1), CAPE_UV), ((-11.5, -1, 0.5), (13, 1.5, 2.6), COLLAR_UV)]
-CAPE_ANIM = {'left_wing.rx': 'torad(8 + limb_speed * 55 + sin(age * 0.1) * 2)', 'left_wing.ry': '0', 'left_wing.rz': '0',
-             'right_wing.rx': '0', 'right_wing.ry': '0', 'right_wing.rz': '0'}
-
 def swatch_uv(name, w, h, d):
     """per-face UVs on a material swatch: faces bigger than the swatch stretch it (keeps the outline), smaller ones
     take the centre at 1:1 so thin edges show the material, not the outline"""
@@ -102,17 +91,11 @@ def build():
             write('%s_%s.properties' % (who, base),
                   '# variant 2 (Aurora 3D netherite) only while wearing the netherite piece; otherwise vanilla\n'
                   'models.1=2\nitems.1=%s\n' % item)
-    cape = {'textureSize': [64, 32], 'models': [
-        dict(cem_part('left_wing', CAPE, attach=False, pid='aurora_cape'), animations=[CAPE_ANIM]),
-        {'part': 'right_wing', 'id': 'aurora_cape_hidden_wing', 'attach': False, 'invertAxis': 'xy', 'boxes': []}]}
-    write('elytra2.jem', cape)
-    write('elytra.properties', '# the Aurora cloak (netherite chestplate) becomes a cape; real elytra stay vanilla\n'
-                               'models.1=2\nitems.1=netherite_chestplate\n')
     if os.path.exists(RP + '/Aurora Pack/pack.png'):
         shutil.copyfile(RP + '/Aurora Pack/pack.png', PACK + '/pack.png')
     with open(PACK + '/pack.mcmeta', 'w') as f:
         json.dump({'pack': {'description': ['', {'text': 'Aurora EMF ', 'color': '#B9B9F8'},
-                                            {'text': '· netherita 3D y capa (requiere EMF + ETF)', 'color': '#F8B0EA'}],
+                                            {'text': '· netherita 3D (requiere EMF + ETF)', 'color': '#F8B0EA'}],
                             'min_format': 84, 'max_format': 97}}, f, indent=2, ensure_ascii=False)
 
 # ------------------------------------------------------------------ preview: tiny software renderer (orthographic, z-buffer)
@@ -190,7 +173,7 @@ LIMBS = [('head', (0, 0, 0), (-4, -8, -4), (8, 8, 8), (0, 0), False), ('body', (
          ('right_leg', (-1.9, 12, 0), (-2, 0, -2), (4, 12, 4), (0, 16), False), ('left_leg', (1.9, 12, 0), (-2, 0, -2), (4, 12, 4), (0, 16), True)]
 SKIN_UV = {'head': (0, 0), 'body': (16, 16), 'right_arm': (40, 16), 'left_arm': (32, 48), 'right_leg': (0, 16), 'left_leg': (16, 48)}
 
-def render(view, emf, steve, hum, leg, cloak, W=230, H=350):
+def render(view, emf, steve, hum, leg, W=230, H=350):
     yaw = {'front': math.radians(-30), 'back': math.radians(150)}[view]
     sc = Scene(W, H, yaw, math.radians(12), 8, W / 2, 110)
     for name, piv, m, s, uv, mir in LIMBS:                    # skin
@@ -207,13 +190,6 @@ def render(view, emf, steve, hum, leg, cloak, W=230, H=350):
             for part, boxes in pieces.items():
                 for (m, s, swn) in boxes:
                     sc.box(PIVOT[part], 0, m, s, 0, tex, faces_from_cem(swatch_uv(swn, *s)))
-        # cape: elytra root sits 2 px behind the body; wing pivot (5, 0, 0); standing swing 8 degrees
-        for (m, s, uv) in CAPE:
-            sc.box((5, 0, 2), math.radians(8), m, s, 0, cloak, faces_from_cem(uv))
-    else:                                                      # 2D pack: the vanilla elytra-shaped wings
-        for side in (-1, 1):
-            m = (-10, 0, 0) if side > 0 else (0, 0, 0)
-            sc.box((5 * side, 0, 2), math.radians(15), m, (10, 20, 2), 1, cloak, box_uv_faces(22, 0, 10, 20, 2, mirror=side < 0))
     return sc.img
 
 def preview():
@@ -221,8 +197,7 @@ def preview():
     sp = REF_ROOT + '/assets/minecraft/textures/entity/player/wide/steve.png'     # fetched by fetch_ref.py
     steve = ref(sp) if os.path.exists(sp) else Image.new('RGBA', (64, 64), (200, 150, 120, 255))
     hum = ref(AURORA + 'entity/equipment/humanoid/netherite.png'); leg = ref(AURORA + 'entity/equipment/humanoid_leggings/netherite.png')
-    cloak = ref(AURORA + 'entity/equipment/wings/aurora_cloak.png')
-    tiles = [render(v, e, steve, hum, leg, cloak) for e in (False, True) for v in ('front', 'back')]
+    tiles = [render(v, e, steve, hum, leg) for e in (False, True) for v in ('front', 'back')]
     k = 2; W, H = tiles[0].size
     out = Image.new('RGBA', (4 * W * k + 50, H * k + 20), (34, 29, 52, 255))
     for i, t in enumerate(tiles):

@@ -1,4 +1,4 @@
-# Aurora gear: animated tools, enchantment aura, diamond crystal armor, netherite armor in the icon's style + 3D cloak.
+# Aurora gear: animated tools, enchantment aura, diamond crystal armor, light opal netherite armor.
 import os, math, json, random, colorsys
 from PIL import Image
 
@@ -286,19 +286,19 @@ def value_range(im):
     return min(vs), max(vs)
 
 def netherite_px(p, x, y, W, H, vrange, seed=0):
-    """netherite pixel -> the armour icon's look: plum metal, violet outline, iridescent highlights, a few sparkles.
-    vrange = (darkest, brightest) value of the source texture, so light sources (elytra) map the same way"""
+    """netherite pixel -> light opal armour: pearl / lavender metal, lavender outline, pastel iridescent highlights.
+    vrange = (darkest, brightest) value of the source texture"""
     t = max(0.0, min(1.0, (hsv(p)[2] - vrange[0]) / max(1e-6, vrange[1] - vrange[0])))
     if t < 0.3:
-        return mix((26, 14, 56), (40, 24, 80), t / 0.3)
+        return mix((146, 128, 202), (174, 160, 222), t / 0.3)
     if t < 0.6:
-        c = mix((44, 26, 88), (70, 42, 124), (t - 0.3) / 0.3)
+        c = mix((196, 186, 236), (226, 220, 250), (t - 0.3) / 0.3)
         if hsh(x, y, seed) % 41 == 0:
-            c = mix(cyc((x + y) / (W + H) * 2, VIVID), WHITE, 0.5)
+            c = mix(cyc((x + y) / (W + H) * 2, VIVID), WHITE, 0.6)
         return c
     if t < 0.82:
-        return mix((92, 62, 158), cyc((x + y) / (W + H) * 2, VIVID), 0.3)
-    return mix(cyc((x + y) / (W + H) * 2, VIVID), WHITE, 0.25)
+        return mix((240, 236, 255), cyc((x + y) / (W + H) * 2, VIVID), 0.3)
+    return mix(cyc((x + y) / (W + H) * 2, VIVID), WHITE, 0.45)
 
 # Material swatches for the optional Aurora EMF pack (3D netherite pieces). They live in texels that no vanilla armour
 # box ever samples (corners of the box layouts), so without Entity Model Features they are never drawn.
@@ -311,30 +311,27 @@ def paint_swatches(o):
         for j in range(h):
             for i in range(w):
                 edge = border and (i in (0, w - 1) or j in (0, h - 1))
-                o.putpixel((x0 + i, y0 + j), C(OUT if edge else fn(i, j, w, h)))
-    swatch('metal', lambda i, j, w, h: mix((96, 64, 160), (44, 26, 88), j / h) if j > 1 else (120, 90, 190))
-    swatch('trim', lambda i, j, w, h: mix(cyc((i + j) / (w + h) * 1.5, VIVID), WHITE, 0.25 if j > 1 else 0.6))
-    swatch('dark', lambda i, j, w, h: mix((44, 26, 88), (26, 14, 56), j / h))
-    swatch('trimv', lambda i, j, w, h: mix(cyc(j / h, VIVID), WHITE, 0.45 if i == 1 else 0.2))
+                o.putpixel((x0 + i, y0 + j), C((112, 92, 172) if edge else fn(i, j, w, h)))
+    swatch('metal', lambda i, j, w, h: mix((236, 232, 255), (196, 186, 236), j / h) if j > 1 else WHITE)
+    swatch('trim', lambda i, j, w, h: mix(cyc((i + j) / (w + h) * 1.5, VIVID), WHITE, 0.4 if j > 1 else 0.7))
+    swatch('dark', lambda i, j, w, h: mix((176, 162, 222), (140, 122, 196), j / h))
+    swatch('trimv', lambda i, j, w, h: mix(cyc(j / h, VIVID), WHITE, 0.6 if i == 1 else 0.35))
     for name, a, b in (('gem', (255, 170, 220), (210, 80, 170)), ('gem2', (170, 240, 255), (70, 150, 230)),
                        ('gold', (255, 236, 160), (210, 150, 60)), ('glow', (255, 255, 255), (220, 200, 255))):
         swatch(name, lambda i, j, w, h, a=a, b=b: WHITE if (i, j) == (0, 0) else mix(a, b, (i + j) / (w + h - 2)), border=False)
 
 def netherite_worn():
-    """player netherite armour + the cloak (wings layer), recoloured from the vanilla textures"""
+    """player netherite armour, recoloured from the vanilla textures"""
     out = []
-    for rel in ('entity/equipment/humanoid/netherite.png', 'entity/equipment/humanoid_leggings/netherite.png',
-                ('entity/equipment/wings/elytra.png', 'entity/equipment/wings/aurora_cloak.png')):
-        src, dst = rel if isinstance(rel, tuple) else (rel, rel)
-        im = ref(src); W, H = im.size; o = Image.new('RGBA', im.size)
+    for dst in ('entity/equipment/humanoid/netherite.png', 'entity/equipment/humanoid_leggings/netherite.png'):
+        im = ref(dst); W, H = im.size; o = Image.new('RGBA', im.size)
         vrange = value_range(im)
         for y in range(H):
             for x in range(W):
                 q = im.getpixel((x, y))
                 if q[3]:
                     o.putpixel((x, y), C(netherite_px(q, x, y, W, H, vrange), q[3]))
-        if 'humanoid' in dst:
-            paint_swatches(o)
+        paint_swatches(o)
         save_tex(o, dst); out.append(o)
     return tuple(out)
 
@@ -374,8 +371,8 @@ def other_worn():
     return out
 
 # ------------------------------------------------------------------ preview
-def player_preview(hum, leg, cloak, skin_front=None):
-    """flat front + back of the robe on a player silhouette, plus cloak panel"""
+def player_preview(hum, leg):
+    """flat front + back of the armour on a player silhouette"""
     def face(img, u, v, w, h, d, which):
         f = box_faces(u, v, w, h, d)[which]
         return img.crop((f[0], f[1], f[0] + f[2], f[1] + f[3]))
@@ -386,15 +383,11 @@ def player_preview(hum, leg, cloak, skin_front=None):
             for yy in range(h):
                 for xx in range(w):
                     c.putpixel((x + xx, y + yy), skin if y else (120, 80, 50, 255))
-        if which == 'back':
-            cl = cloak.crop((36, 2, 46, 22)).resize((14, 26), Image.NEAREST)
         for img, parts in ((leg, [((4, 20), (0, 16, 4, 12, 4)), ((8, 20), (0, 16, 4, 12, 4)), ((4, 8), (16, 16, 8, 12, 4))]),
                            (hum, [((4, 0), (0, 0, 8, 8, 8)), ((4, 8), (16, 16, 8, 12, 4)), ((0, 8), (40, 16, 4, 12, 4)),
                                   ((12, 8), (40, 16, 4, 12, 4)), ((4, 20), (0, 16, 4, 12, 4)), ((8, 20), (0, 16, 4, 12, 4))])):
             for at, (u, v, w, h, d) in parts:
                 c.alpha_composite(face(img, u, v, w, h, d, which), at)
-        if which == 'back':
-            c.alpha_composite(cl, (1, 8))
         return c
     out = Image.new('RGBA', (60, 40), (40, 34, 60, 255))
     out.alpha_composite(body('front'), (6, 4)); out.alpha_composite(body('back'), (34, 4))
@@ -403,7 +396,7 @@ def player_preview(hum, leg, cloak, skin_front=None):
 if __name__ == '__main__':
     t = tools(); glint()
     di = diamond_armor_icons(); ni = netherite_armor_icons()
-    hum, leg, cloak = netherite_worn(); diamond_worn(); ow = other_worn()
+    hum, leg = netherite_worn(); diamond_worn(); ow = other_worn()
     sheet = Image.new('RGBA', (760, 560), (60, 52, 84, 255))
     for i, n in enumerate(['diamond_sword', 'diamond_pickaxe', 'diamond_axe', 'netherite_sword', 'netherite_pickaxe', 'netherite_spear']):
         strip, au, sz = t[n]
@@ -414,9 +407,8 @@ if __name__ == '__main__':
                            'netherite_helmet', 'netherite_chestplate', 'netherite_leggings', 'netherite_boots']):
         s = (di.get(n) or ni.get(n))
         sheet.alpha_composite(s.crop((0, 0, 16, 16)).resize((64, 64), Image.NEAREST), (10 + i * 92, 200))
-    sheet.alpha_composite(player_preview(hum, leg, cloak), (10, 290))
+    sheet.alpha_composite(player_preview(hum, leg), (10, 290))
     sheet.alpha_composite(hum.resize((256, 128), Image.NEAREST), (390, 290))
-    sheet.alpha_composite(cloak.crop((22, 0, 46, 22)).resize((96, 88), Image.NEAREST), (650, 290))
     os.makedirs(PREVIEWS, exist_ok=True)
     sheet.save(PREVIEWS + '/preview_gear.png')
     # gif of tool animation + aura

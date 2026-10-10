@@ -11,7 +11,7 @@ Inspirado en la capa Aurora y la skin del usuario (skin_aurora_v2.png).
 - Scripts generadores: `Aurora_export\scripts\` (Python + Pillow)
   - `gen.py`   v1: HUD, agua, crosshair, herramientas (base)
   - `magic.py` "Marco mágico": menús (inventario, crafteo, hornos, cofres, shulker) + sprites animados
-  - `gear.py`  herramientas animadas, aura de encantamiento, armaduras (netherita con el estilo del icono) + capa
+  - `gear.py`  herramientas animadas, aura de encantamiento, armaduras (netherita en ópalo claro)
   - `outline_shaders/` rendertype_lines.vsh/.fsh (borde de bloque neón Aurora)
 - Referencias vanilla: extraer de `versions\26.3\26.3.jar` (el jar NO está ofuscado en 26.x).
   Los scripts esperan las texturas vanilla en `~/ref63/assets/minecraft/...`.
@@ -27,8 +27,7 @@ Inspirado en la capa Aurora y la skin del usuario (skin_aurora_v2.png).
 - Aura de encantamiento: `items/*.json` con condition `has_component` enchantments,
   `"ignore_default": true`, `composite` [modelo base, plano 24x24 animado], `"oversized_in_gui": true`,
   elemento con `light_emission: 15`.
-- Capa 3D sin mods: `equipment/netherite.json` + capa `"wings"` → `entity/equipment/wings/aurora_cloak.png`
-  (WingsLayer no comprueba GLIDER).
+- (Quitado el 2026-10-10) Capa sin mods con `equipment/netherite.json` + capa `"wings"`: el usuario no la quiere.
 - Armadura puesta no se anima (texturas de entidad fuera de atlas). Geometría extra → necesita mods
   Entity Model Features + Entity Texture Features (Fabric).
 - Detección de casillas: borde 55 arriba/izq (run de 17/25), relleno 139, blanco abajo/der (18 y 26 px).
@@ -122,10 +121,16 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   (cabeza/cuerpo 0,0,0; brazos ±5,2,0; piernas ±1.9,12,0) y el ala del élitro (5,0,0). Si algo sale desplazado, se
   corrige en `PIVOT` de `emf.py`.
 
+### Sin capa y netherita clara (sesión del 2026-10-10)
+- El usuario no quiere la capa: fuera la textura `wings/aurora_cloak.png` y la variante `elytra` de Aurora EMF.
+  (El `equipment/netherite.json` que la activaba ya se había perdido sin querer al quitar la túnica galáctica.)
+- Netherita puesta en ópalo claro: perla/lavanda, contorno lavanda, reflejos iridiscentes pastel; las muestras de EMF
+  también pasan a tonos claros. Los iconos de netherita siguen como estaban (ciruela oscuro).
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
-  (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar capa, aura, borde, menús y HUD XL con capturas.
-- Ideas pendientes ofrecidas: versión EMF/ETF de la túnica con vuelo 3D; ajustar intensidad/velocidad.
+  (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar aura, borde, menús y HUD XL con capturas.
+- Ideas pendientes ofrecidas: ajustar intensidad/velocidad de las animaciones.
 - Limpieza en el PC: sobra el archivo temporal `Aurora_export\ziJhG1Z5`. Las previews antiguas
   (`preview*.png`, `anim_*.gif`) que hay dentro de la carpeta instalada `Aurora Pack` se pueden borrar.
 
