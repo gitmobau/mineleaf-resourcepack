@@ -15,6 +15,7 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
 | `HANDOFF.md` | Contexto técnico completo, decisiones verificadas y pendientes |
 | `PROMPT_CODEX.md` | Prompt listo para pegar en Codex y seguir con el pack |
 | `PROMPT_CODEX_ARMAS.md` | Prompt para Codex: arco, ballesta, maza, tótem, flechas, perla y escudo en estilo Aurora |
+| `PROMPT_CODEX_AUREOLA.md` | Prompt para Codex: netherita "celestial" con aureola y anillos de luz (EMF + ETF) |
 
 ## Instalar
 1. Copia los zips de `dist/` a `%APPDATA%\.minecraft\resourcepacks`.
