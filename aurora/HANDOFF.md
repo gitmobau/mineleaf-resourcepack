@@ -172,6 +172,21 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   Sus archivos anteriores son idénticos byte a byte; solo añade las 19 texturas. Vista previa revisada.
 - Pendiente de comprobación visual dentro del juego; la lámina no sustituye una prueba del escudo con estandarte.
 
+### Prototipo Aurora Celestial (2026-10-10)
+- El usuario quiere una netherita que no parezca armadura (aureola, cosas sutiles) y lo mismo en oscuro para el
+  diamante. Codex tiene el encargo en `PROMPT_CODEX_AUREOLA.md`; esto es mi prototipo, en un pack aparte para no chocar.
+- `celestial.py`: modelos BASE (sin .properties) para player_/player_slim_/genérico de cada pieza. Cada cara apunta a
+  un texel de color del bloque 8x3 en (0,0) (esquina nunca muestreada); solo las texturas de netherita y diamante de
+  este pack lo pintan, así que en hierro, oro... las piezas son invisibles. Misma geometría para los dos materiales:
+  la paleta de cada textura decide (netherita pastel, diamante oscuro con cuentas 6/7 brillantes).
+- Anillos = segmentos tangentes, cada uno su propio submodelo girado 360/n; al girar el anillo los colores "fluyen".
+  Submodelos con `invertAxis: ""`: todo en espacio vanilla (y abajo, frente -z). Animaciones `ty` (px) y `ry` (rad)
+  con `torad(age * k)`, k en grados por tick que dividen 360 (el GIF de 180 ticks hace bucle).
+- Capa emisiva ETF `<textura>_e.png`: aureola y anillos de la netherita; en el diamante solo las cuentas brillantes.
+- Sin probar en el juego. Puntos a mirar: que la aureola quede centrada y no atraviese la cabeza, el sentido y la
+  velocidad de giro, si el emisivo funciona en la armadura con ETF en 26.3, y que el anillo de cadera no choque
+  con las manos al andar.
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
   (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar aura, borde, menús y HUD XL con capturas.

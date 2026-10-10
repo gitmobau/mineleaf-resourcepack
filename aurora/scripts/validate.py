@@ -7,7 +7,7 @@ from PIL import Image
 HOME = os.path.expanduser('~')
 REF = os.environ.get('AURORA_REF', HOME + '/ref63') + '/assets/minecraft/'
 RP = os.environ.get('AURORA_RP', HOME + '/mnt/.minecraft/resourcepacks') + '/'
-PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora HUD XL', RP + 'Aurora EMF']
+PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora HUD XL', RP + 'Aurora EMF', RP + 'Aurora Celestial']
 errors, warns = [], []
 # every model id referenced by a vanilla item definition is known to exist in the jar
 VANILLA_MODELS = set(re.findall(r'"model": "(minecraft:[^"]+)"',
@@ -255,6 +255,42 @@ if os.path.isdir(cem):
             for anim in mdl.get('animations', []):
                 for k in anim:
                     if k.split('.')[0] not in EMF_PARTS[kind]: err('EMF %s: animation of unknown part %s' % (f, k))
+
+# ---- Aurora Celestial: nested submodels, every face on the colour swatch block, animations name existing parts
+ccem = RP + 'Aurora Celestial/assets/minecraft/emf/cem/'
+if os.path.isdir(ccem):
+    from celestial import SW, PALETTES
+    sw_rect = (SW[0], SW[1], SW[0] + max(len(p) for p in PALETTES.values()), SW[1] + 3)
+    if any((x, y) in sampled for x in range(sw_rect[0], sw_rect[2]) for y in range(sw_rect[1], sw_rect[3])):
+        err('Celestial swatches overlap texels used by vanilla armour')
+    for f in sorted(os.listdir(ccem)):
+        if not f.endswith('.jem'): err('Celestial: unexpected file %s' % f); continue
+        j = json.load(open(ccem + f))
+        kind = next((k for k in EMF_PARTS if f.startswith(k) or ('_' + k) in f), None)
+        if kind is None: err('Celestial %s: unknown model' % f); continue
+        def walk(m, ids):
+            if m.get('id') in ids: err('Celestial %s: duplicate id %s' % (f, m.get('id')))
+            ids.add(m.get('id'))
+            for b in m.get('boxes', []):
+                if len(b.get('coordinates', [])) != 6: err('Celestial %s: box without 6 coordinates' % f)
+                for key in ('uvNorth', 'uvSouth', 'uvEast', 'uvWest', 'uvUp', 'uvDown'):
+                    r = b.get(key)
+                    if r is None or not (sw_rect[0] <= min(r[0], r[2]) and max(r[0], r[2]) <= sw_rect[2]
+                                         and sw_rect[1] <= min(r[1], r[3]) and max(r[1], r[3]) <= sw_rect[3]):
+                        err('Celestial %s: %s %s is not on the swatch block' % (f, key, r))
+            for sm in m.get('submodels', []): walk(sm, ids)
+        for mdl in j['models']:
+            if mdl.get('part') not in EMF_PARTS[kind]: err('Celestial %s: unknown part %s' % (f, mdl.get('part')))
+            ids = set(); walk(mdl, ids)
+            for anim in mdl.get('animations', []):
+                for k in anim:
+                    if k.split('.')[0] not in ids: err('Celestial %s: animation of unknown part %s' % (f, k))
+    for mat in ('netherite', 'diamond'):
+        for layer in ('humanoid', 'humanoid_leggings'):
+            t = RP + 'Aurora Celestial/assets/minecraft/textures/entity/equipment/%s/%s' % (layer, mat)
+            for suf in ('.png', '_e.png'):
+                if not os.path.exists(t + suf): err('Celestial: missing %s%s' % (t, suf))
+                elif Image.open(t + suf).size != (64, 32): err('Celestial: %s%s is not 64x32' % (t, suf))
 
 for w in warns: print('WARN ', w)
 for e in errors: print('ERROR', e)

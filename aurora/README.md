@@ -10,6 +10,7 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
 | `packs/Aurora Outline/` | Borde de bloque neón (core shader `rendertype_lines`). Escrito a mano |
 | `packs/Aurora HUD XL/` | Opcional: marcos del HUD y menús temáticos que sobresalen de su tamaño vanilla. Texturas generadas por `hud_xl.py` y `menus_xl.py` + core shader `position_tex_color` escrito a mano |
 | `packs/Aurora EMF/` | Opcional, necesita los mods **Entity Model Features** y **Entity Texture Features**: armadura de netherita en 3D (cresta y alas en el casco, joya en la frente y en el pecho, hombreras y faldones de láminas, cinturón, rodilleras, punteras). Generado por `emf.py` |
+| `packs/Aurora Celestial/` | Prototipo opcional (EMF + ETF), **en lugar de** Aurora EMF: la netherita y el diamante dejan de parecer armadura. Aureola que gira y flota, estrella en el pecho, anillo en la cadera y aros en los tobillos; netherita en luz pastel, diamante oscuro con puntos que brillan. Generado por `celestial.py` |
 | `scripts/` | Generadores en Python + Pillow, validador y `build.py` |
 | `previews/` | Capturas y GIFs para ver el resultado sin abrir el juego |
 | `HANDOFF.md` | Contexto técnico completo, decisiones verificadas y pendientes |
@@ -19,7 +20,7 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
 
 ## Instalar
 1. Copia los zips de `dist/` a `%APPDATA%\.minecraft\resourcepacks`.
-2. En el juego, actívalos en este orden (de arriba a abajo): **Aurora EMF**, **Aurora Outline**, **Aurora HUD XL**, **Aurora Pack**.
+2. En el juego, actívalos en este orden (de arriba a abajo): **Aurora EMF** (o **Aurora Celestial**, nunca los dos), **Aurora Outline**, **Aurora HUD XL**, **Aurora Pack**.
    Aurora EMF solo hace algo con los mods Entity Model Features + Entity Texture Features instalados (Fabric o NeoForge 26.3).
    Aurora HUD XL es opcional: si los marcos salen aplastados o raros, desactívalo y vuelves al HUD normal de Aurora.
 
@@ -50,6 +51,7 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 - `screens.py`: pantallas sin contenedor, retocadas en su sitio (sin shader): libro (cuero violeta, papel perla, cinta y amuleto), carteles y carteles colgantes de las 13 maderas en pastel, fondos de opciones y menús, separadores, botones y demás controles (deslizadores, campos de texto, casillas, pestañas, barras), tooltips, iconos del selector de modo y el logo del título. También las barras de jefe (los 7 colores en pastel, progreso con brillo animado y muescas violeta) y los toasts (recetas a medida, sistema, tutorial y "sonando ahora" por luminancia; iconos grises del tutorial en Aurora). Los logros (ventana de progresos y su toast) se dejan vanilla a propósito. Genera `previews/pantallas.png`.
 - `menu_themes.py`: utilidades de dibujo y los 25 temas (marco, fondo, casillas, placas y adornos que sobresalen).
 - `emf.py`: pack Aurora EMF (modelos `.jem` de EMF para la netherita, con sus `.properties`) y vista 3D en `previews/emf_netherite.png` con un pequeño renderizador propio.
+- `celestial.py`: pack Aurora Celestial (modelos `.jem` animados por pieza, texturas casi transparentes con capa emisiva `_e.png`) y vista previa animada en `previews/celestial.gif`.
 - `validate.py`: validación estática contra la 26.3. Revisa JSON, tamaños y frames de las animaciones, nine-slice, referencias de modelos y texturas, definiciones de items, capas de equipamiento, compilación de los shaders en las 5 variantes OIT con `glslangValidator` y que las salidas del vsh coincidan con las entradas del fsh.
 - `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta, incluida `textures/entity/shield/` (en la 26.3 contiene `shield_base.png` y `shield_base_nopattern.png`).
 

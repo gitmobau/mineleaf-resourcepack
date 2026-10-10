@@ -1,0 +1,17 @@
+{
+  "pack": {
+    "description": [
+      "",
+      {
+        "text": "Aurora Celestial ",
+        "color": "#B9B9F8"
+      },
+      {
+        "text": "· aureolas (EMF + ETF, en lugar de Aurora EMF)",
+        "color": "#F8B0EA"
+      }
+    ],
+    "min_format": 84,
+    "max_format": 97
+  }
+}
