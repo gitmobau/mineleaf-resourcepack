@@ -172,9 +172,53 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   Sus archivos anteriores son idénticos byte a byte; solo añade las 19 texturas. Vista previa revisada.
 - Pendiente de comprobación visual dentro del juego; la lámina no sustituye una prueba del escudo con estandarte.
 
+### Netherita celestial (2026-10-10, codex/aurora-aureola)
+- Base: última rama de Claude al iniciar, `8ca123e`. El usuario confirma que el 3D anterior funciona en Fabric 26.3;
+  no está determinado si era con Aurora EMF o Aurora EMF PRUEBA. Se generan ahora bases vacías explícitas y variantes 2
+  para los 12 nombres (jugador normal, slim y respaldo genérico; 4 piezas): no depende de permitir variantes sin base.
+- Sustituye placas, hombreras, faldones y casco por aureola (16 lados, grosor 0,22), estrella pequeña pulsante,
+  anillo de cintura (0,18) y tobillos (12 lados, 0,17). Ciclo de giro 320 ticks, flotación 80 ticks, pulso 40 ticks.
+- El padre mantiene la fórmula del exportador. Un anclaje estático cancela su traslación, y el efecto se anima en
+  coordenadas locales. No animar el padre exportado: haría orbitar las piezas alrededor del desplazamiento de 24.
+- Importante: `EMFJemData` solo recoge los bloques `animations` de los modelos principales; los destinos sí pueden
+  ser descendientes. `emf.py` eleva los bloques a ese nivel. `cem_math.py` replica inversión de ejes y T*Rz*Ry*Rx*S,
+  con un parser AST limitado a age/pi, sin/cos y operaciones aritméticas. No usa eval.
+- `gear.py`: solo cambia netherita humanoide puesta y muestras EMF. Más del 92 % de las UV vanilla quedan con alpha 0;
+  detalles opacos de un texel porque la armadura usa cutout. Iconos, herramientas, diamante y variantes animales intactos.
+  `_e.png` repite únicamente los detalles luminosos y las muestras; configuración ETF `suffix.emissive=_e`.
+- Reglas: `items.1=netherite_<pieza>` MÁS `nbt.1.equipment.<ranura>.id=minecraft:netherite_<pieza>`; fallback `models.2=1`.
+  El filtro NBT evita que una pieza sostenida en la mano active adornos sobre armadura de otro material.
+- PNG y GIF se renderizan leyendo los `.jem` emitidos. El GIF tiene 64 frames de 250 ms (16 s), paleta compartida y
+  bucle completo. La noche es simulada: ETF da brillo completo, no luz sobre bloques ni bloom.
+- `validate.py` conserva la comprobación de muestras fuera de las UV vanilla y valida recursivamente IDs, cajas,
+  UV, destinos/expresiones, ranuras NBT, bases vacías, nombres actuales y máscaras emisivas. `test_celestial.py`
+  comprueba pivotes, hueco bajo la aureola, tobillos, ciclo, bases y ubicación correcta de animaciones.
+- Verificación: 7 pruebas pasan; dos builds completas con `0 errors, 0 warnings` (incluido glslangValidator),
+  emulación de los 27 menús correcta y MD5 iguales para los cuatro ZIP y el GIF. PNG y fotogramas del GIF revisados.
+  Aurora Pack: `e166cba18c94f0b0f807db392412cd13`; Aurora EMF: `cff1769c38a1b70fad157976538c08fb`.
+  En el ZIP principal solo cambian las dos texturas humanoides de netherita; se añaden los dos `_e.png` y la
+  configuración ETF. Todos los demás archivos previos son idénticos byte a byte. Las dos texturas dejan transparentes
+  el 99,43 % y el 98,47 % de los texels de las cajas vanilla, respectivamente.
+
+#### Fuentes verificadas para esta implementación
+- EMF, commit `622a0cba8c2e3eeef896b5a9dbcb8d94600f3cd7`:
+  [EMFManager: nombres de piezas](https://github.com/Traben-0/Entity_Model_Features/blob/622a0cba8c2e3eeef896b5a9dbcb8d94600f3cd7/src/main/java/traben/entity_model_features/EMFManager.java),
+  [EMFPartData: submodelos e inversión](https://github.com/Traben-0/Entity_Model_Features/blob/622a0cba8c2e3eeef896b5a9dbcb8d94600f3cd7/src/main/java/traben/entity_model_features/models/jem_objects/EMFPartData.java),
+  [EMFJemData: bloques de animación](https://github.com/Traben-0/Entity_Model_Features/blob/622a0cba8c2e3eeef896b5a9dbcb8d94600f3cd7/src/main/java/traben/entity_model_features/models/jem_objects/EMFJemData.java),
+  [variables y funciones CEM](https://github.com/Traben-0/Entity_Model_Features/blob/622a0cba8c2e3eeef896b5a9dbcb8d94600f3cd7/.github/emf_animation.txt).
+- ETF, commit `ba6dfecca69672b1b5e91ad5d4c8ae1a5c8476d2`:
+  [configuración emisiva](https://github.com/Traben-0/Entity_Texture_Features/blob/ba6dfecca69672b1b5e91ad5d4c8ae1a5c8476d2/.github/README-assets/emissive.properties),
+  [ItemProperty incluye manos](https://github.com/Traben-0/Entity_Texture_Features/blob/ba6dfecca69672b1b5e91ad5d4c8ae1a5c8476d2/src/main/java/traben/entity_texture_features/features/property_reading/properties/etf_properties/ItemProperty.java),
+  [NBTProperty](https://github.com/Traben-0/Entity_Texture_Features/blob/ba6dfecca69672b1b5e91ad5d4c8ae1a5c8476d2/src/main/java/traben/entity_texture_features/features/property_reading/properties/optifine_properties/NBTProperty.java).
+  `MixinRenderLayer` intercepta armorCutoutNoCull; `MixinModelPart` y la ruta de submit de 26.2+ mantienen emisivos.
+  `ETFTexture` integra Animatica/MoreMcmeta, pero no se requiere ninguno: se animan geometría y colores estáticos.
+- [Mojang 1.21.5: equipment también para armadura de jugadores](https://www.minecraft.net/en-us/article/minecraft-java-edition-1-21-5).
+
 ## Estado / pendiente
-- Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
-  (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar aura, borde, menús y HUD XL con capturas.
+- El 3D anterior funciona según la prueba del usuario. Pendiente probar este rediseño celestial dentro del juego.
+  Sustituir Aurora Pack.zip y Aurora EMF.zip; desactivar Aurora EMF PRUEBA y duplicados. Probar cada pieza y equipos
+  mixtos, netherita sostenida con hierro/diamante puestos, modelo slim, movimiento/agacharse, mirar arriba/abajo,
+  emisivos en oscuridad y aspecto 2D con EMF desactivado. Mantener activa la actualización de variantes en EMF.
 - Ideas pendientes ofrecidas: ajustar intensidad/velocidad de las animaciones.
 - Limpieza en el PC: sobra el archivo temporal `Aurora_export\ziJhG1Z5`. Las previews antiguas
   (`preview*.png`, `anim_*.gif`) que hay dentro de la carpeta instalada `Aurora Pack` se pueden borrar.

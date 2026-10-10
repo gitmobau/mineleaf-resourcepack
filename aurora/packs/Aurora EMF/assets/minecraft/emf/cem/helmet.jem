@@ -1,0 +1,20 @@
+{
+  "textureSize": [
+    64,
+    32
+  ],
+  "models": [
+    {
+      "part": "head",
+      "id": "aurora_head",
+      "attach": true,
+      "invertAxis": "xy",
+      "translate": [
+        0,
+        -24,
+        0
+      ],
+      "boxes": []
+    }
+  ]
+}

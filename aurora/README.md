@@ -9,7 +9,7 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
 | `packs/Aurora Pack/` | Pack principal. Se genera entero con los scripts (no editar a mano) |
 | `packs/Aurora Outline/` | Borde de bloque neón (core shader `rendertype_lines`). Escrito a mano |
 | `packs/Aurora HUD XL/` | Opcional: marcos del HUD y menús temáticos que sobresalen de su tamaño vanilla. Texturas generadas por `hud_xl.py` y `menus_xl.py` + core shader `position_tex_color` escrito a mano |
-| `packs/Aurora EMF/` | Opcional, necesita los mods **Entity Model Features** y **Entity Texture Features**: armadura de netherita en 3D (cresta y alas en el casco, joya en la frente y en el pecho, hombreras y faldones de láminas, cinturón, rodilleras, punteras). Generado por `emf.py` |
+| `packs/Aurora EMF/` | Opcional, necesita los mods **Entity Model Features** y **Entity Texture Features**: netherita celestial: aureola flotante, estrella en el pecho y anillos finos en cintura y tobillos, animados. Generado por `emf.py` |
 | `scripts/` | Generadores en Python + Pillow, validador y `build.py` |
 | `previews/` | Capturas y GIFs para ver el resultado sin abrir el juego |
 | `HANDOFF.md` | Contexto técnico completo, decisiones verificadas y pendientes |
@@ -44,12 +44,14 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 - `icons.py`: corazones con la paleta Aurora (cada estado con sus colores: veneno, wither, congelado, absorción, montura, hardcore) y la comida convertida en estrellas, todo animado y sincronizado.
 - `extras.py`: arco (4 estados), ballesta (6 estados), maza, tótem, flechas, perla de ender y las dos bases de escudo en Aurora. Reutiliza los pintores de `gear.py`, mantiene exactamente tamaños y canales alpha vanilla y comprueba esa igualdad al generar. Texturas estáticas; madera/cuerda lavanda-perla y cristal iridiscente. La punta de la flecha con poción queda casi neutra para conservar el tinte del juego; también se recolorea su astil. Genera `previews/extras.png` con comparaciones vanilla/Aurora. Solo requiere volver a copiar `dist/Aurora Pack.zip`.
 - `magic.py`: "Marco mágico". Menús (inventario, mesa de crafteo, hornos, cofre grande y shulker) y sprites animados (hotbar, selección, casilla resaltada, botón del libro de recetas, fuego y flecha del horno, XP).
-- `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (ópalo claro, iconos y armadura puesta con el mismo estilo: contorno lavanda, ribete iridiscente pastel por dentro y metal perla en 4 tonos suaves sobre la silueta vanilla), también puestas en bebés, caballos y nautilus. Sin capa.
+- `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armadura de diamante (cristal), iconos de netherita en ópalo y texturas de netherita humanoide casi vacías, con trazos iridiscentes y capas emisivas `_e` para ETF. Mantiene el aspecto anterior de las armaduras de bebés, caballos y nautilus. Sin capa.
 - `hud_xl.py`: texturas de Aurora HUD XL (hotbar con alas de cristal, selección con corona y halo, mano secundaria con aguja, fondo de las barras de jefe con gemas en los extremos) y previsualización del HUD en `previews/`.
 - `menus_xl.py`: menús temáticos de Aurora HUD XL (ver abajo): lista de pantallas, construcción de cada fondo y una emulación del shader que comprueba que cada pantalla sale al píxel. Genera `previews/menus_xl.png` y `menus_xl_2.png`.
 - `screens.py`: pantallas sin contenedor, retocadas en su sitio (sin shader): libro (cuero violeta, papel perla, cinta y amuleto), carteles y carteles colgantes de las 13 maderas en pastel, fondos de opciones y menús, separadores, botones y demás controles (deslizadores, campos de texto, casillas, pestañas, barras), tooltips, iconos del selector de modo y el logo del título. También las barras de jefe (los 7 colores en pastel, progreso con brillo animado y muescas violeta) y los toasts (recetas a medida, sistema, tutorial y "sonando ahora" por luminancia; iconos grises del tutorial en Aurora). Los logros (ventana de progresos y su toast) se dejan vanilla a propósito. Genera `previews/pantallas.png`.
 - `menu_themes.py`: utilidades de dibujo y los 25 temas (marco, fondo, casillas, placas y adornos que sobresalen).
-- `emf.py`: pack Aurora EMF (modelos `.jem` de EMF para la netherita, con sus `.properties`) y vista 3D en `previews/emf_netherite.png` con un pequeño renderizador propio.
+- `emf.py`: netherita celestial por pieza; bases vacías, variantes y reglas por ranura. El renderizador lee los `.jem` generados, recorre submodelos y evalúa sus animaciones. Genera `previews/emf_netherite.png` (sin EMF, frente, espalda y noche simulada) y `previews/emf_netherite.gif` (vuelta completa de 16 segundos).
+- `cem_math.py`: subconjunto seguro de expresiones CEM y transformaciones usado por las vistas previas y el validador. No ejecuta código de las expresiones.
+- `test_celestial.py`: regresiones de pivotes, separación de la cabeza, posición de los tobillos, bucle de animación y bases vacías; ejecutar `python3 scripts/test_celestial.py`.
 - `validate.py`: validación estática contra la 26.3. Revisa JSON, tamaños y frames de las animaciones, nine-slice, referencias de modelos y texturas, definiciones de items, capas de equipamiento, compilación de los shaders en las 5 variantes OIT con `glslangValidator` y que las salidas del vsh coincidan con las entradas del fsh.
 - `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta, incluida `textures/entity/shield/` (en la 26.3 contiene `shield_base.png` y `shield_base_nopattern.png`).
 
@@ -105,16 +107,38 @@ textura más grande solo se vería aplastada. Para que sobresalga:
 - `validate.py` acepta un sprite de la GUI más grande que el vanilla solo si sus marcadores son coherentes en todos los
   frames, el tamaño es vanilla + márgenes, no usa nine-slice y el pack trae el shader.
 
-## Aurora EMF: netherita en 3D
-- Desde la 1.21.9 la armadura es un modelo por pieza: `helmet`, `chestplate`, `leggings` y `boots` (EMF busca
-  `player_helmet.jem`… y si no existe usa `helmet.jem`; los nombres viejos `player_outer_armor`/`player_inner_armor` ya
-  no se usan). El pack trae `player_helmet2.jem`, `player_slim_helmet2.jem` y `helmet2.jem` (respaldo para mobs), cada uno con su `.properties`, y lo mismo para las demás piezas. Cada `.properties` elige la variante 2 solo
-  mientras se lleva esa pieza de netherita (`items=netherite_helmet`, ...); si no, EMF usa el modelo vanilla. Vale para
-  el jugador (normal y slim) y para cualquier mob bípedo con netherita. Las demás armaduras no cambian.
-- Las piezas nuevas se añaden a las partes vanilla (`attach: true`) y sus caras usan UV por cara sobre "muestras de
-  material" (metal, ribete, gemas...) que `gear.py` pinta en las texturas de netherita, en texels que ninguna caja de
-  armadura vanilla usa. Sin EMF no se ven.
-- Las placas planas (hombreras, faldones, punteras) usan en sus cantos la muestra `lame` (brillo arriba, metal, contorno
-  abajo), así cada lámina se separa de la siguiente. Las piezas del lado izquierdo son el espejo de las del derecho.
-- `HUMANOID_BOXES`/`opal_regions()` en `gear.py`: los contornos solo se dibujan donde la placa termina dentro de una cara,
-  no en las costuras entre caras de la caja.
+## Aurora EMF: netherita celestial
+- Casco: aureola de 16 segmentos, separada de la cabeza, inclinada y flotante. Gira una vez cada 16 s;
+  oscila 0,25 unidades de modelo arriba/abajo cada 4 s.
+- Pechera: estrella pequeña flotando delante del pecho, con un pulso suave cada 2 s. Sin hombreras.
+- Grebas: anillo fino alrededor de la cintura, anclado al cuerpo y con giro inverso.
+- Botas: aros de 12 segmentos en los tobillos, que acompañan a cada pierna.
+- Sin EMF: la skin permanece visible; solo quedan una diadema mínima, un punto en el pecho, trazos de puños y
+  tobillos y una banda de cintura. Más del 92 % de los texels usados por las cajas vanilla son transparentes.
+  Se usan huecos alpha 0 y trazos opacos: el render cutout no garantiza translucidez gradual de una placa.
+- Los iconos mantienen el ópalo anterior para reconocer las piezas. Diamante, herramientas y armaduras animales
+  conservan su aspecto. El diseño no añade ninguna capa.
+
+### Selección y compatibilidad
+Hay modelos `player_<pieza>`, `player_slim_<pieza>` y `<pieza>` genéricos, para `helmet`, `chestplate`, `leggings`
+y `boots`. Cada nombre tiene un `.jem` base vacío (`attach: true`, sin cajas), una variante `2.jem` celestial y un
+`.properties`. La variante 1 conserva la geometría y la textura del material equipado.
+
+La regla exige tanto el objeto de netherita como su ranura NBT `equipment.head/chest/legs/feet.id`.
+`items` por sí solo también detecta objetos en la mano. Así, sostener un casco de netherita con casco de hierro
+no debe activar la aureola. La actualización depende de la frecuencia de modelos configurada en EMF.
+
+Los aros usan texels de `EMF_SWATCHES` que las cajas vanilla nunca leen. Las animaciones están en el modelo
+principal y apuntan a sus submodelos; los anclajes estáticos compensan el sistema de coordenadas del exportador.
+Las texturas son estáticas: el movimiento de los segmentos de color produce la iridiscencia sin otro mod.
+
+ETF usa `netherite_e.png` en `humanoid/` y `humanoid_leggings/`, con `assets/minecraft/etf/emissive.properties`.
+Hay que tener habilitadas las texturas emisivas en ETF. Brillo completo significa visible en la oscuridad;
+no ilumina bloques ni añade bloom por sí mismo. La vista nocturna es una simulación, no una captura del juego.
+
+### Instalar y probar esta versión
+Sustituye **Aurora Pack.zip** y **Aurora EMF.zip**, con Aurora EMF encima del principal.
+Desactiva **Aurora EMF PRUEBA** y cualquier copia anterior de Aurora EMF, para que no sobrescriban los modelos.
+Prueba cada pieza por separado, equipo mixto, hierro/diamante con netherita en la mano, caminar, agacharte,
+mirar arriba/abajo y entrar en una zona oscura. Comprueba además el modelo slim y que sin EMF siga viéndose la skin.
+La geometría anterior ya fue confirmada en el juego; este rediseño necesita esa comprobación visual final.

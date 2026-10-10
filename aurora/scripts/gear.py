@@ -1,4 +1,4 @@
-# Aurora gear: animated tools, enchantment aura, diamond crystal armor, light opal netherite armor.
+# Aurora gear: animated tools, enchantment aura, diamond crystal armor, celestial humanoid netherite.
 import os, math, json, random, colorsys
 from PIL import Image
 
@@ -253,7 +253,7 @@ def value_range(im):
     vs = [hsv(im.getpixel((x, y)))[2] for y in range(im.height) for x in range(im.width) if im.getpixel((x, y))[3]]
     return min(vs), max(vs)
 
-# Light opal netherite. One painter for icons and worn armour so they match: dark lavender outline where the plate
+# Light opal netherite icons and animal armour: dark lavender outline where the plate
 # ends, a pastel iridescent rim just inside it, and smooth pearl metal (4 posterised tones) inside. The vanilla
 # brightness only decides which tone a pixel gets, after a light smoothing, so the netherite noise disappears.
 OPAL_LINE = (112, 90, 178)          # plate outline on worn armour
@@ -354,45 +354,59 @@ def netherite_armor_icons():
 
 # Material swatches for the optional Aurora EMF pack (3D netherite pieces). They live in texels that no vanilla armour
 # box ever samples (corners of the box layouts), so without Entity Model Features they are never drawn.
-EMF_SWATCHES = {'metal': (0, 0, 8, 8), 'trim': (24, 0, 8, 8), 'dark': (32, 0, 8, 8), 'gem': (56, 0, 4, 4),
-                'gem2': (60, 0, 4, 4), 'gold': (56, 4, 4, 4), 'glow': (60, 4, 4, 4), 'trimv': (56, 16, 8, 16),
-                'lame': (36, 16, 8, 3)}   # thin plate edge: highlight / metal / outline, for the sides of flat plates
+EMF_SWATCHES = {'light': (0, 0, 8, 8)}
+
 
 def paint_swatches(o):
-    def swatch(name, fn, border=True):
-        x0, y0, w, h = EMF_SWATCHES[name]
-        for j in range(h):
-            for i in range(w):
-                edge = border and (i in (0, w - 1) or j in (0, h - 1))
-                o.putpixel((x0 + i, y0 + j), C(OPAL_LINE if edge else fn(i, j, w, h)))
-    swatch('metal', lambda i, j, w, h: OPAL_TONES[3] if j == 1 else OPAL_TONES[2 if j < h // 2 else 1])
-    swatch('trim', lambda i, j, w, h: mix(cyc((i + j) / (w + h) * 1.5, VIVID), WHITE, 0.4 if j > 1 else 0.7))
-    swatch('dark', lambda i, j, w, h: OPAL_TONES[2] if j == 1 else OPAL_TONES[1 if j < h - 3 else 0])
-    swatch('lame', lambda i, j, w, h: OPAL_TONES[3] if j == 0 else OPAL_TONES[2] if j == 1 else OPAL_LINE, border=False)
-    for j in range(3):
-        for i in (0, 7):
-            o.putpixel((36 + i, 16 + j), C(OPAL_LINE))
-    swatch('trimv', lambda i, j, w, h: mix(cyc(j / h, VIVID), WHITE, 0.6 if i == 1 else 0.35))
-    for name, a, b in (('gem', (255, 170, 220), (210, 80, 170)), ('gem2', (170, 240, 255), (70, 150, 230)),
-                       ('gold', (255, 236, 160), (210, 150, 60)), ('glow', (255, 255, 255), (220, 200, 255))):
-        swatch(name, lambda i, j, w, h, a=a, b=b: WHITE if (i, j) == (0, 0) else mix(a, b, (i + j) / (w + h - 2)), border=False)
+    # Ocho muestras pastel y un filo blanco; todas fuera de las UV vanilla.
+    x0, y0, w, h = EMF_SWATCHES['light']
+    for j in range(h):
+        for i in range(w):
+            o.putpixel((x0+i, y0+j), C(WHITE if j == 0 else mix(cyc(i / w), WHITE, 0.25)))
+
 
 HUMANOID_BOXES = [(0, 0, 8, 8, 8), (32, 0, 8, 8, 8), (16, 16, 8, 12, 4), (40, 16, 4, 12, 4), (0, 16, 4, 12, 4)]
 
+
 def netherite_worn():
-    """player netherite armour, repainted in light opal over the vanilla shapes"""
+    """Luz sobre la skin: huecos alpha 0 y detalles de un texel, sin placas.
+
+    La armadura usa cutout: bajar el alpha de una placa no da transparencia
+    gradual fiable. Quitamos su superficie y dejamos solo unos trazos opacos.
+    Los iconos, herramientas, diamante y armaduras animales conservan su pintor.
+    """
     out = []
-    for dst in ('entity/equipment/humanoid/netherite.png', 'entity/equipment/humanoid_leggings/netherite.png'):
-        im = ref(dst); reg = opal_regions(im.size, HUMANOID_BOXES)
-        if 'leggings' not in dst:                     # shoulder plates end on a straight line (no 1-2 px teeth)
-            for y in range(20, 32):
-                for x in range(40, 56):
-                    if y > 25: im.putpixel((x, y), (0, 0, 0, 0))
-                    elif not im.getpixel((x, y))[3]: im.putpixel((x, y), im.getpixel((x, y - 1)))
-        o = opal_paint(opal_clean(im, reg), reg)
+    for layer in ('humanoid', 'humanoid_leggings'):
+        dst = 'entity/equipment/%s/netherite.png' % layer
+        o = Image.new('RGBA', ref(dst).size)
+
+        def dot(x, y, phase=0):
+            o.putpixel((x, y), C(mix(cyc(phase), WHITE, 0.4)))
+
+        def band(box, row):
+            for side in ('right', 'front', 'left', 'back'):
+                x, y, w, h = box_faces(*box)[side]
+                for i in range(w): dot(x+i, y+row, (x+i)/32)
+
+        if layer == 'humanoid':
+            # Diadema mínima encima de los ojos, gema plana y dos puños.
+            for x in range(10, 14): dot(x, 9, (x-10)/5)
+            dot(23, 23, 0.05)
+            for x in (45, 46): dot(x, 29, 0.25)  # puños: solo la cara frontal
+            for x in (5, 6): dot(x, 29, 0.05)    # tobillos libres para el aro EMF
+        else:
+            band((16, 16, 8, 12, 4), 10)
         paint_swatches(o)
-        save_tex(o, dst); out.append(o)
+        save_tex(o, dst)
+        # ETF _e: la misma máscara, incluidas las muestras usadas por las piezas 3D.
+        save_tex(o.copy(), dst[:-4] + '_e.png')
+        out.append(o)
+    emissive = PACK + 'etf/emissive.properties'
+    os.makedirs(os.path.dirname(emissive), exist_ok=True)
+    with open(emissive, 'w', encoding='utf-8') as f:
+        f.write('suffix.emissive=_e\n')
     return tuple(out)
+
 
 def diamond_worn():
     out = []

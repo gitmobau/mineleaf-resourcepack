@@ -225,36 +225,88 @@ if os.path.isdir(cem):
         if any((x, y) in sampled for x in range(x0, x0 + sw) for y in range(y0, y0 + sh)):
             err('EMF swatch %s overlaps texels used by vanilla armour' % name)
     swatch_rects = [(x0, y0, x0 + sw, y0 + sh) for (x0, y0, sw, sh) in EMF_SWATCHES.values()]
-    for f in sorted(os.listdir(cem)):
-        if 'outer_armor' in f or 'inner_armor' in f:
-            err('EMF %s: pre-1.21.9 armour name, EMF on 26.x uses helmet/chestplate/leggings/boots' % f); continue
+    from cem_math import walk as walk_cem, states, PROPERTIES
+    from emf import SLOTS
+    import math
+    expected = {prefix + slot + suffix for slot in SLOTS
+                for prefix in ('player_', 'player_slim_', '') for suffix in ('.jem', '2.jem', '.properties')}
+    actual = set(os.listdir(cem))
+    for missing in sorted(expected - actual): err('EMF missing ' + missing)
+    for unexpected in sorted(actual - expected): err('EMF unexpected/legacy file ' + unexpected)
+    for f in sorted(actual & expected):
+        stem = f.replace('player_slim_', '').replace('player_', '').split('.')[0].removesuffix('2')
+        slot, item, parts = SLOTS[stem]
         if f.endswith('.properties'):
             props = dict(l.split('=', 1) for l in open(cem + f).read().splitlines() if '=' in l and not l.startswith('#'))
-            for k, val in props.items():
-                if k.startswith('models.'):
-                    for n in val.split():
-                        if n != '1' and not os.path.exists(cem + f[:-11] + n + '.jem'): err('EMF %s: variant %s.jem missing' % (f, f[:-11] + n))
+            required = {'models.1': '2', 'items.1': item,
+                        'nbt.1.equipment.' + slot + '.id': 'minecraft:' + item, 'models.2': '1'}
+            if props != required: err('EMF %s: incorrect equipment-slot rule or vanilla fallback' % f)
             continue
-        if not f.endswith('.jem'): continue
-        j = json.load(open(cem + f))
-        kind = next((k for k in EMF_PARTS if f.startswith(k) or ('_' + k) in f), None)
-        if kind is None: err('EMF %s: unknown model' % f); continue
-        tw, th = j.get('textureSize', [64, 32])
-        for mdl in j['models']:
-            if mdl.get('part') not in EMF_PARTS[kind]: err('EMF %s: unknown part %s' % (f, mdl.get('part')))
-            for b in mdl.get('boxes', []):
-                if len(b.get('coordinates', [])) != 6: err('EMF %s: box without 6 coordinates' % f)
-                for key in ('uvNorth', 'uvSouth', 'uvEast', 'uvWest', 'uvUp', 'uvDown'):
-                    r = b.get(key)
-                    if r is None: err('EMF %s: box without %s' % (f, key)); continue
-                    if not (0 <= min(r[0], r[2]) and max(r[0], r[2]) <= tw and 0 <= min(r[1], r[3]) and max(r[1], r[3]) <= th):
-                        err('EMF %s: %s outside the texture' % (f, key))
-                    if kind != 'elytra' and not any(a <= min(r[0], r[2]) and max(r[0], r[2]) <= c and bb <= min(r[1], r[3]) and max(r[1], r[3]) <= d_
-                                                     for (a, bb, c, d_) in swatch_rects):
-                        err('EMF %s: %s %s is not on a material swatch' % (f, key, r))
-            for anim in mdl.get('animations', []):
-                for k in anim:
-                    if k.split('.')[0] not in EMF_PARTS[kind]: err('EMF %s: animation of unknown part %s' % (f, k))
+        try:
+            j = json.load(open(cem + f))
+            nodes = list(walk_cem(j['models']))
+            ids = [n.get('id') for n in nodes]
+            if any(not i for i in ids) or len(ids) != len(set(ids)):
+                raise ValueError('missing or duplicate submodel id')
+            if j.get('textureSize') != [64, 32] or 'texture' in j:
+                raise ValueError('must inherit the equipped material texture at 64x32')
+            if {n.get('part') for n in j['models']} != set(parts):
+                raise ValueError('incorrect vanilla parts for slot')
+            active = f.endswith('2.jem')
+            for mdl in j['models']:
+                if mdl.get('attach') is not True: err('EMF %s: must preserve vanilla geometry' % f)
+            for n in nodes:
+                if n not in j['models'] and n.get('animations'):
+                    err('EMF %s: animation blocks must be on top-level models, with descendant targets' % f)
+                if not active and (n.get('boxes') or n.get('submodels') or n.get('animations')):
+                    err('EMF %s: base variant must be empty and unanimated' % f)
+                for prop in ('translate', 'rotate'):
+                    values = n.get(prop, [0, 0, 0])
+                    if len(values) != 3 or not all(isinstance(v, (int, float)) and math.isfinite(v) for v in values):
+                        err('EMF %s: invalid %s' % (f, prop))
+                for box in n.get('boxes', []):
+                    coords = box.get('coordinates', [])
+                    if len(coords) != 6 or not all(isinstance(v, (int, float)) and math.isfinite(v) for v in coords) or min(coords[3:]) <= 0:
+                        err('EMF %s: invalid cuboid' % f)
+                    for key in ('uvNorth', 'uvSouth', 'uvEast', 'uvWest', 'uvUp', 'uvDown'):
+                        r = box.get(key)
+                        if not r or len(r) != 4 or not all(math.isfinite(v) for v in r):
+                            err('EMF %s: invalid %s' % (f, key)); continue
+                        if not (0 <= min(r[0], r[2]) < max(r[0], r[2]) <= 64 and
+                                0 <= min(r[1], r[3]) < max(r[1], r[3]) <= 32):
+                            err('EMF %s: %s outside texture or degenerate' % (f, key))
+                        if not any(a <= min(r[0], r[2]) and max(r[0], r[2]) <= c and
+                                   bb <= min(r[1], r[3]) and max(r[1], r[3]) <= d_
+                                   for a, bb, c, d_ in swatch_rects):
+                            err('EMF %s: nested %s outside material swatches' % (f, key))
+                for group in n.get('animations', []):
+                    for target, expr in group.items():
+                        ident, prop = target.rsplit('.', 1)
+                        if ident not in ids or prop not in PROPERTIES:
+                            err('EMF %s: animation target not a custom submodel: %s' % (f, target))
+            # Strictly parse ALL expressions, including nested models, and check runtime ranges.
+            for tick in (0, 20, 40, 80, 160, 240, 320, 1000000):
+                for state in states(j, tick).values():
+                    if any(state[k] <= 0 for k in ('sx', 'sy', 'sz')):
+                        err('EMF %s: non-positive animated scale' % f)
+        except (ValueError, TypeError, KeyError, SyntaxError, ZeroDivisionError) as exc:
+            err('EMF %s: %s' % (f, exc))
+    # Transparent 2D surface and matching emissive mask; swatches remain outside vanilla UVs.
+    for layer in ('humanoid', 'humanoid_leggings'):
+        path = RP + 'Aurora Pack/assets/minecraft/textures/entity/equipment/' + layer + '/netherite'
+        try:
+            base = Image.open(path + '.png').convert('RGBA')
+            glow = Image.open(path + '_e.png').convert('RGBA')
+            if base.size != (64, 32) or base.size != glow.size: err('celestial texture/emissive size mismatch')
+            elif base.tobytes() != glow.tobytes(): err('celestial emissive must match light pixels exactly')
+            coverage = sum(base.getpixel(p)[3] != 0 for p in sampled) / len(sampled)
+            if not 0 < coverage < 0.08: err('celestial 2D armour must leave >92% of the vanilla surface transparent')
+            if os.path.exists(path + '.png.mcmeta') or os.path.exists(path + '_e.png.mcmeta'):
+                err('celestial equipment textures must not use mcmeta animation')
+        except FileNotFoundError as exc: err(str(exc))
+    config = RP + 'Aurora Pack/assets/minecraft/etf/emissive.properties'
+    if not os.path.isfile(config) or open(config).read().strip() != 'suffix.emissive=_e':
+        err('ETF emissive configuration missing or incorrect')
 
 for w in warns: print('WARN ', w)
 for e in errors: print('ERROR', e)

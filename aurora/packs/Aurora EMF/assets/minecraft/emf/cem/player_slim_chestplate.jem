@@ -1,0 +1,44 @@
+{
+  "textureSize": [
+    64,
+    32
+  ],
+  "models": [
+    {
+      "part": "body",
+      "id": "aurora_body",
+      "attach": true,
+      "invertAxis": "xy",
+      "translate": [
+        0,
+        -24,
+        0
+      ],
+      "boxes": []
+    },
+    {
+      "part": "right_arm",
+      "id": "aurora_right_arm",
+      "attach": true,
+      "invertAxis": "xy",
+      "translate": [
+        -5,
+        -22,
+        0
+      ],
+      "boxes": []
+    },
+    {
+      "part": "left_arm",
+      "id": "aurora_left_arm",
+      "attach": true,
+      "invertAxis": "xy",
+      "translate": [
+        5,
+        -22,
+        0
+      ],
+      "boxes": []
+    }
+  ]
+}
