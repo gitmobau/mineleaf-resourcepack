@@ -127,6 +127,20 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
 - Netherita puesta en ópalo claro: perla/lavanda, contorno lavanda, reflejos iridiscentes pastel; las muestras de EMF
   también pasan a tonos claros. Los iconos de netherita siguen como estaban (ciruela oscuro).
 
+### Iconos a juego y 3D pulido (sesión del 2026-10-10, 2)
+- Un solo pintor (`opal_paint` en `gear.py`) para iconos y armadura puesta: contorno donde acaba la placa, ribete
+  iridiscente pastel justo dentro y metal perla en 4 tonos (`OPAL_TONES`) según el brillo vanilla suavizado + degradado
+  de arriba a abajo. Se acabaron las manchas de colores al azar. Iconos: 12 frames, el ribete se desplaza y 3 destellos.
+- Hombreras sin dientes sueltos de 1-2 px (las caras del brazo terminan en línea recta en la fila 25); `opal_clean()`
+  quita píxeles colgando y rellena muescas.
+- Aurora EMF rehecho: cresta escalonada iridiscente, alas de 4 plumas en los lados del casco, joya en la frente con
+  engaste dorado, pecho con joya, cuello, espina dorsal y omóplatos; hombreras de tapa + 2 láminas + ribete + gema;
+  cinturón que da la vuelta con hebilla; faldones de 2 láminas, placa lateral y rodillera con gema; punteras y alas
+  en los tobillos. Nueva muestra `lame` (36,16,8,3), libre en la textura vanilla.
+- Las "manchitas" raras que salían en el pecho de las vistas previas eran z-fighting del renderizador (cara del brazo
+  coplanar con la del pecho), no de la textura: ahora usa LEQUAL como el juego.
+- Prompt de traspaso para Codex en `PROMPT_CODEX.md`.
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
   (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar aura, borde, menús y HUD XL con capturas.

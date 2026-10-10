@@ -26,42 +26,77 @@ PREVIEWS = os.environ.get('AURORA_PREVIEWS', PACK)
 PIVOT = {'head': (0, 0, 0), 'body': (0, 0, 0), 'right_arm': (-5, 2, 0), 'left_arm': (5, 2, 0),
          'right_leg': (-1.9, 12, 0), 'left_leg': (1.9, 12, 0)}
 
-# extra pieces: part -> [(min xyz, size xyz, swatch)] in the part's vanilla local space
-OUTER = {   # helmet, chestplate, boots (outer armour is inflated by 1)
-    'head': [((-0.5, -11.5, -4.5), (1, 2.6, 9), 'trimv'),                 # crest
-             ((-4.5, -9.8, -5.6), (9, 1, 0.6), 'trim'),                    # crown band
-             ((-3.5, -11, -5.6), (1, 1.3, 0.6), 'gem'), ((-0.5, -12.2, -5.6), (1, 2.5, 0.6), 'gem2'),
-             ((2.5, -11, -5.6), (1, 1.3, 0.6), 'gem'),
-             ((5, -8, -1), (0.8, 3, 4), 'trim'), ((5, -10, 0), (0.8, 2, 2), 'trim'),          # side fins
-             ((-5.8, -8, -1), (0.8, 3, 4), 'trim'), ((-5.8, -10, 0), (0.8, 2, 2), 'trim')],
-    'body': [((-1.5, 1.5, -3.5), (3, 3, 0.5), 'gold'), ((-1, 2, -3.8), (2, 2, 0.8), 'gem2'),   # chest gem
-             ((-4.5, -1.6, -3.6), (9, 1.2, 0.6), 'trim'), ((-4.5, -1.6, 3), (9, 1.2, 0.6), 'trim'),   # collar
-             ((-1, 1, 3), (2, 2, 0.8), 'metal'), ((-1, 4, 3), (2, 2, 0.8), 'metal'), ((-1, 7, 3), (2, 2, 0.8), 'metal')],
-    'right_arm': [((-5, -4.2, -3.6), (6.5, 3, 7.2), 'metal'), ((-5.3, -1.4, -3.8), (6.8, 0.8, 7.6), 'trim'),
-                  ((-3.5, -6.2, -0.5), (1, 2, 1), 'gem')],                 # pauldron
-    'left_arm': [((-1.5, -4.2, -3.6), (6.5, 3, 7.2), 'metal'), ((-1.5, -1.4, -3.8), (6.8, 0.8, 7.6), 'trim'),
-                 ((2.5, -6.2, -0.5), (1, 2, 1), 'gem')],
-    'right_leg': [((-3.8, 7.5, -1.5), (0.8, 3, 3), 'trim'), ((-3.8, 6, -0.5), (0.8, 1.5, 1.5), 'trim'),
-                  ((-3.2, 11, -3.8), (6.4, 2, 0.8), 'metal')],             # boot fins + toe cap
-    'left_leg': [((3, 7.5, -1.5), (0.8, 3, 3), 'trim'), ((3, 6, -0.5), (0.8, 1.5, 1.5), 'trim'),
-                 ((-3.2, 11, -3.8), (6.4, 2, 0.8), 'metal')],
-}
-INNER = {   # leggings (inner armour is inflated by 0.5)
-    'body': [((-4.6, 10.2, -3), (9.2, 1.2, 0.5), 'trim'), ((-1, 9.8, -3.2), (2, 2, 0.7), 'gem')],   # belt + gem
-    'right_leg': [((-2.7, -0.6, -3.2), (5.4, 5.5, 0.7), 'metal'), ((-2.7, 4.7, -3.25), (5.4, 0.8, 0.75), 'trim'),
-                  ((-3.2, -0.6, -2.7), (0.7, 6, 5.4), 'dark'), ((-2, 6, -3.1), (4, 2, 0.6), 'metal')],
-    'left_leg': [((-2.7, -0.6, -3.2), (5.4, 5.5, 0.7), 'metal'), ((-2.7, 4.7, -3.25), (5.4, 0.8, 0.75), 'trim'),
-                 ((2.5, -0.6, -2.7), (0.7, 6, 5.4), 'dark'), ((-2, 6, -3.1), (4, 2, 0.6), 'metal')],
-}
+# extra pieces: part -> [(min xyz, size xyz, swatch)] in the part's vanilla local space. Right-side pieces are written
+# once; mirror() builds the left side (the right/left arm and leg boxes are mirror images around local x = 0).
+def mirror(boxes):
+    return [((-m[0] - s[0], m[1], m[2]), s, sw) for (m, s, sw) in boxes]
+
+def sym(boxes):                      # piece on the entity's right (-x) plus its mirror on the left
+    return boxes + mirror(boxes)
+
+# helmet (outer armour, inflated by 1: head shell spans x/z -5..5, y -9..1)
+HELM = ([((-0.5, -10.4, -4.2), (1, 1.4, 8.4), 'trim'),            # crest, rising towards the back
+         ((-0.5, -11.4, -1.5), (1, 1.0, 5.5), 'trim'),
+         ((-0.5, -12.2, 1.5), (1, 0.8, 2.8), 'trim'),
+         ((-1.5, -8.7, -5.35), (3, 2.2, 0.35), 'gold'),          # brow jewel in a gold setting
+         ((-0.9, -8.2, -5.65), (1.8, 1.2, 0.35), 'gem2'),
+         ((-5, -9.4, -5.3), (10, 0.7, 0.3), 'trim')]              # brow band
+        + sym([((-5.55, -6.0, -2.4), (0.55, 1.3, 3.0), 'trim'),   # side wings: stepped feathers sweeping up and back
+               ((-5.65, -7.4, -0.9), (0.65, 1.5, 3.0), 'trim'),
+               ((-5.75, -9.0, 0.6), (0.75, 1.7, 3.0), 'trim'),
+               ((-5.65, -10.6, 2.2), (0.65, 1.7, 2.2), 'trim')]))
+
+# chestplate (body shell x -5..5, y -1..13, z -3..3)
+CHEST = [((-1.6, 1.4, -3.4), (3.2, 3.2, 0.4), 'gold'), ((-1.0, 2.0, -3.8), (2, 2, 0.5), 'gem2'),   # chest jewel
+         ((-4.6, -1.5, -3.5), (9.2, 1.0, 0.5), 'trim'), ((-4.6, -1.5, 3.0), (9.2, 1.0, 0.5), 'trim'),  # collar
+         ((-0.5, 0.5, 3.0), (1, 10, 0.5), 'trimv'),                                                   # back spine
+         ((-3.5, 2.0, 3.0), (2.4, 3.2, 0.45), 'metal'), ((1.1, 2.0, 3.0), (2.4, 3.2, 0.45), 'metal')]  # shoulder blades
+
+# pauldron on the right arm (arm shell x -4..2, y -3..11, z -3..3): a cap and two lames stepping down and outwards
+PAULDRON = [((-4.4, -3.9, -3.3), (5.4, 1.0, 6.6), 'metal'),
+            ((-4.9, -3.0, -3.6), (5.9, 1.5, 7.2), 'metal'),
+            ((-5.4, -1.6, -3.9), (5.6, 1.4, 7.8), 'metal'),
+            ((-5.5, -0.3, -4.0), (5.5, 0.45, 8.0), 'trim'),
+            ((-5.8, -2.6, -0.6), (0.4, 1.2, 1.2), 'gem')]
+
+# boots (leg shell x -3..3, y -1..13, z -3..3; the boot covers y 7..13)
+BOOT = [((-2.8, 11.2, -3.6), (5.6, 1.8, 0.6), 'metal'),           # toe cap
+        ((-3.5, 9.4, -1.6), (0.5, 1.4, 2.6), 'trim'),             # ankle wing on the outer side
+        ((-3.6, 8.2, -0.4), (0.6, 1.4, 2.2), 'trim')]
+
+OUTER = {'head': HELM, 'body': CHEST, 'right_arm': PAULDRON, 'left_arm': mirror(PAULDRON),
+         'right_leg': BOOT, 'left_leg': mirror(BOOT)}
+
+# leggings (inner armour, inflated by 0.5: body shell x -4.5..4.5 z -2.5..2.5, leg shell x/z -2.5..2.5 y -0.5..12.5)
+BELT = [((-4.75, 10.0, -2.75), (9.5, 1.2, 5.5), 'trim'),          # belt wraps all the way round
+        ((-1.2, 9.7, -3.05), (2.4, 1.8, 0.3), 'gold'), ((-0.6, 10.1, -3.3), (1.2, 1.0, 0.3), 'gem')]
+TASSET = [((-2.5, -0.3, -2.95), (5.0, 2.4, 0.45), 'metal'),       # two lames over the thigh
+          ((-2.3, 1.9, -3.1), (4.6, 2.1, 0.45), 'metal'),
+          ((-2.3, 3.85, -3.15), (4.6, 0.45, 0.45), 'trim'),
+          ((-2.95, -0.3, -2.0), (0.45, 3.6, 4.0), 'dark'),        # side plate
+          ((-1.6, 5.6, -2.9), (3.2, 2.0, 0.4), 'metal'),          # knee guard
+          ((-0.45, 6.15, -3.15), (0.9, 0.9, 0.3), 'gem')]
+INNER = {'body': BELT, 'right_leg': TASSET, 'left_leg': mirror(TASSET)}
+
 def swatch_uv(name, w, h, d):
-    """per-face UVs on a material swatch: faces bigger than the swatch stretch it (keeps the outline), smaller ones
-    take the centre at 1:1 so thin edges show the material, not the outline"""
+    """per-face UVs on a material swatch: a side of the face that is at least half the swatch stretches the whole
+    swatch (outline included) so plates keep a crisp rim; thinner sides take a 1:1 strip just inside the top/left
+    border, which shows the highlight row like a bevelled edge"""
     u0, v0, sw, sh = EMF_SWATCHES[name]
+    def span(f, size):
+        if f >= size / 2: return (0, size)
+        a = min(1, (size - f) / 2)
+        return (a, a + f)
     def r(fw, fh):
-        a = (0, sw) if fw >= sw else ((sw - fw) / 2, (sw + fw) / 2)
-        b = (0, sh) if fh >= sh else ((sh - fh) / 2, (sh + fh) / 2)
+        a, b = span(fw, sw), span(fh, sh)
         return [round(u0 + a[0], 3), round(v0 + b[0], 3), round(u0 + a[1], 3), round(v0 + b[1], 3)]
-    return {'uvNorth': r(w, h), 'uvSouth': r(w, h), 'uvEast': r(d, h), 'uvWest': r(d, h), 'uvUp': r(w, d), 'uvDown': r(w, d)}
+    uv = {'uvNorth': r(w, h), 'uvSouth': r(w, h), 'uvEast': r(d, h), 'uvWest': r(d, h), 'uvUp': r(w, d), 'uvDown': r(w, d)}
+    if name == 'metal' and h < 4:            # sides of a flat plate: highlight on top, outline underneath
+        lu, lv, lw, lh = EMF_SWATCHES['lame']
+        for k, fw in (('uvNorth', w), ('uvSouth', w), ('uvEast', d), ('uvWest', d)):
+            a = (0, lw) if fw >= lw / 2 else ((lw - fw) / 2, (lw + fw) / 2)
+            uv[k] = [round(lu + a[0], 3), lv, round(lu + a[1], 3), lv + lh]
+    return uv
 
 def cem_box(part, m, s, uv):
     px, py, pz = PIVOT[part]
@@ -143,7 +178,7 @@ class Scene:
                     l3 = 1 - l1 - l2
                     if min(l1, l2, l3) < -1e-6: continue
                     depth = l1 * az + l2 * bz + l3 * qz
-                    if depth <= self.z[yy][xx]: continue
+                    if depth < self.z[yy][xx] - 1e-4: continue          # LEQUAL like the game: coplanar faces drawn later win
                     u = l1 * uv[tri[0]][0] + l2 * uv[tri[1]][0] + l3 * uv[tri[2]][0]
                     v = l1 * uv[tri[0]][1] + l2 * uv[tri[1]][1] + l3 * uv[tri[2]][1]
                     c = tex.getpixel((min(tex.width - 1, max(0, int(u))), min(tex.height - 1, max(0, int(v)))))
