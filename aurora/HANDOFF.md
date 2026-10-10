@@ -183,6 +183,10 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   Submodelos con `invertAxis: ""`: todo en espacio vanilla (y abajo, frente -z). Animaciones `ty` (px) y `ry` (rad)
   con `torad(age * k)`, k en grados por tick que dividen 360 (el GIF de 180 ticks hace bucle).
 - Capa emisiva ETF `<textura>_e.png`: aureola y anillos de la netherita; en el diamante solo las cuentas brillantes.
+- 2ª versión tras verlo en el juego ("el colgante me gusta pero sobresale demasiado, los aros muy mejorables"; también
+  vio la versión de Codex, rama `codex/aurora-aureola`, aros de 0.2 px): aros finos y redondos (24/28/16 segmentos,
+  0.22-0.32 px) con degradado suave de 12 tonos y cuentas brillantes; el colgante pasa a 1 px y pegado al pecho
+  (sobresale ~1.6 px en vez de ~3.5), con las motas girando en el plano frontal. Bloque de muestras 8x6 (16 colores).
 - Sin probar en el juego. Puntos a mirar: que la aureola quede centrada y no atraviese la cabeza, el sentido y la
   velocidad de giro, si el emisivo funciona en la armadura con ETF en 26.3, y que el anillo de cadera no choque
   con las manos al andar.

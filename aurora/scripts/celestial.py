@@ -28,24 +28,31 @@ TEX = PACK + '/assets/minecraft/textures/entity/equipment/'
 PREVIEWS = os.environ.get('AURORA_PREVIEWS', PACK)
 
 # ------------------------------------------------------------------ palettes
-# 8 colours x (light, base, dark). The model only stores colour indices; each material paints its own palette into
+# 16 colours x (light, base, dark). The model only stores colour indices; each material paints its own palette into
 # the swatch block, so the same geometry is pastel on netherite and dark on diamond.
-SW = (0, 0)                                   # swatch block: 8x3 texels at the head-top corner (never sampled)
+#   0..11 = smooth gradient used around the rings, 12/13 = beads, 14/15 = pendant
+SW = (0, 0)                                   # swatch block: 8x6 texels at the head-top corner (never sampled)
+NGRAD = 12
 def ramp(c, light=0.55, dark=0.25, ink=(30, 18, 60)):
     return (mix(c, WHITE, light), c, mix(c, ink, dark))
+DARK = [(58, 30, 108), (40, 34, 118), (30, 46, 120), (22, 62, 96), (40, 30, 100), (84, 28, 92)]
 PALETTES = {
-    'netherite': [ramp(mix(VIVID[k], WHITE, 0.35)) for k in (0, 1, 2, 4, 6, 9)]
-                 + [ramp((255, 255, 255), 0, 0.12), ramp((255, 226, 150), 0.4, 0.25)],
-    'diamond': [ramp(c, 0.25, 0.4, (8, 4, 16)) for c in ((58, 30, 108), (38, 36, 112), (84, 28, 88), (22, 62, 86),
-                                                          (100, 30, 80), (30, 46, 120))]
-               + [ramp((255, 96, 224), 0.35, 0.2), ramp((100, 232, 255), 0.35, 0.2)],
+    'netherite': [ramp(mix(cyc(i / NGRAD, VIVID), WHITE, 0.4)) for i in range(NGRAD)]
+                 + [ramp((255, 255, 255), 0, 0.1), ramp((255, 228, 160), 0.45, 0.2),
+                    ramp((255, 255, 255), 0, 0.1), ramp((214, 200, 255), 0.5, 0.2)],
+    'diamond': [ramp(cyc(i / NGRAD, DARK), 0.22, 0.45, (8, 4, 16)) for i in range(NGRAD)]
+               + [ramp((255, 96, 224), 0.35, 0.2), ramp((100, 232, 255), 0.35, 0.2),
+                  ramp((255, 120, 230), 0.4, 0.2), ramp((70, 36, 120), 0.3, 0.4, (8, 4, 16))],
 }
-GLOW = {'netherite': set(range(8)), 'diamond': {6, 7}}      # indices that also go to the emissive layer
+GLOW = {'netherite': set(range(16)), 'diamond': {12, 13, 14}}   # indices that also go to the emissive layer
 LINE = {'netherite': lambda t: mix(cyc(t, VIVID), WHITE, 0.35), 'diamond': lambda t: (52, 26, 96)}
 SPARK = {'netherite': lambda t: WHITE, 'diamond': lambda t: (255, 96, 224) if int(t * 10) % 2 else (100, 232, 255)}
 
+def texel(idx, row):
+    return SW[0] + idx % 8, SW[1] + (idx // 8) * 3 + row
+
 def uv(idx, row):
-    u, v = SW[0] + idx, SW[1] + row
+    u, v = texel(idx, row)
     return [u + 0.25, v + 0.25, u + 0.75, v + 0.75]        # inside one texel: a solid colour, no bleeding
 
 def box(m, s, idx):
@@ -57,59 +64,62 @@ def sub(pid, translate=(0, 0, 0), rotate=(0, 0, 0), boxes=(), subs=()):
     return {'id': pid, 'invertAxis': '', 'translate': list(translate), 'rotate': list(rotate),
             'boxes': list(boxes), 'submodels': list(subs)}
 
-def ring(pid, radius, n, thick, height, pattern):
-    """n tangent segments around the y axis (each one its own submodel turned by 360/n degrees)"""
-    seg = 2 * radius * math.tan(math.pi / n) + 0.04
-    return sub(pid, subs=[sub('%s_%d' % (pid, i), rotate=(0, 360 * i / n, 0),
-                              boxes=[box((-seg / 2, -height / 2, -radius - thick / 2), (seg, height, thick),
-                                         pattern[i % len(pattern)])]) for i in range(n)])
-
 def cube(c, size, idx):
     return box((c[0] - size / 2, c[1] - size / 2, c[2] - size / 2), (size, size, size), idx)
 
+def ring(pid, radius, n, thick, beads=(), bead=0.5, shift=0):
+    """thin closed hoop around the y axis: n tangent segments (each one its own submodel turned by 360/n degrees)
+    coloured along the gradient, plus beads (angle in degrees, colour index) sitting on the hoop"""
+    seg = 2 * radius * math.tan(math.pi / n) + 0.03
+    subs = [sub('%s_%d' % (pid, i), rotate=(0, 360 * i / n, 0),
+                boxes=[box((-seg / 2, -thick / 2, -radius - thick / 2), (seg, thick, thick),
+                           (i * NGRAD // n + shift) % NGRAD)]) for i in range(n)]
+    subs += [sub('%s_b%d' % (pid, k), rotate=(0, a, 0), boxes=[cube((0, 0, -radius), bead, idx)])
+             for k, (a, idx) in enumerate(beads)]
+    return sub(pid, subs=subs)
+
+def top(part, pid, subs, anims):
+    return {'part': part, 'id': pid, 'attach': True, 'invertAxis': '', 'translate': [0, 0, 0],
+            'submodels': subs, 'animations': [anims]}
+
 # ------------------------------------------------------------------ the pieces
-# Animation rates are whole degrees per tick dividing 360, so the preview GIF loops (180 ticks = 9 s).
-HALO = [0, 1, 6, 2, 3, 7, 4, 5, 6, 0, 2, 7]                  # pastel ring with white/gold beads (dark: glowing beads)
+# Rates are whole degrees per tick dividing 360, so the preview GIF loops (180 ticks = 9 s).
 def helmet():
-    halo = ring('halo', 4.6, 12, 0.7, 0.55, HALO)
-    tilt = sub('halo_tilt', translate=(0, -12, 0), rotate=(12, 0, 0), subs=[halo])
-    return [{'part': 'head', 'id': 'cel_head', 'attach': True, 'invertAxis': '', 'translate': [0, 0, 0],
-             'submodels': [tilt],
-             'animations': [{'halo_tilt.ty': '-12 + sin(torad(age * 4)) * 0.5',
-                             'halo.ry': 'torad(age * 2)'}]}]
+    halo = ring('halo', 4.3, 24, 0.32, beads=((0, 12), (120, 13), (240, 12)), bead=0.55)
+    tilt = sub('halo_tilt', translate=(0, -11.5, 0), rotate=(10, 0, -4), subs=[halo])
+    return [top('head', 'cel_head', [tilt], {'halo_tilt.ty': '-11.5 + sin(torad(age * 4)) * 0.35',
+                                             'halo.ry': 'torad(age * 2)'})]
 
 def chestplate():
-    star = sub('star', rotate=(0, 0, 45), boxes=[cube((0, 0, 0), 1.8, 6)],
-               subs=[sub('star_x', rotate=(45, 0, 0), boxes=[cube((0, 0, 0), 1.3, 7)])])
-    motes = sub('star_orbit', subs=[sub('mote_%d' % i, rotate=(0, a, 0), boxes=[cube((0, 0, -2.6), 0.45, 6 if i else 7)])
-                                    for i, a in enumerate((0, 180))])
-    pos = sub('star_pos', translate=(0, 5.5, -5.2), subs=[star, motes])
-    return [{'part': 'body', 'id': 'cel_body', 'attach': True, 'invertAxis': '', 'translate': [0, 0, 0],
-             'submodels': [pos],
-             'animations': [{'star_pos.ty': '5.5 + sin(torad(age * 6)) * 0.35',
-                             'star_pos.ry': 'torad(age * 6)',
-                             'star.sx': '1 + sin(torad(age * 8)) * 0.15', 'star.sy': '1 + sin(torad(age * 8)) * 0.15',
-                             'star.sz': '1 + sin(torad(age * 8)) * 0.15',
-                             'star_orbit.ry': 'torad(age * -12)'}]}]
+    # pendant hanging from the necklace: a small diamond close to the chest (it barely sticks out), slowly turning,
+    # with two motes circling in front of it (vertical orbit, so they never go into the chest)
+    star = sub('star', rotate=(0, 0, 45), boxes=[cube((0, 0, 0), 1.05, 14)],
+               subs=[sub('star_x', rotate=(45, 0, 0), boxes=[cube((0, 0, 0), 0.75, 15)])])
+    motes = sub('star_orbit', translate=(0, 0, -0.35),
+                subs=[sub('mote_%d' % i, rotate=(0, 0, a), boxes=[cube((0, -1.35, 0), 0.28, 12 + i)])
+                      for i, a in enumerate((0, 180))])
+    pos = sub('star_pos', translate=(0, 5.4, -3.85), subs=[star, motes])
+    return [top('body', 'cel_body', [pos], {'star_pos.ty': '5.4 + sin(torad(age * 6)) * 0.15',
+                                            'star.ry': 'torad(age * 4)',
+                                            'star.sx': '1 + sin(torad(age * 8)) * 0.1',
+                                            'star.sy': '1 + sin(torad(age * 8)) * 0.1',
+                                            'star.sz': '1 + sin(torad(age * 8)) * 0.1',
+                                            'star_orbit.rz': 'torad(age * -6)'})]
 
-WAIST = [0, 1, 2, 3, 4, 5, 6]
 def leggings():
-    hips = ring('waist', 6.0, 14, 0.5, 0.4, WAIST)
-    tilt = sub('waist_tilt', translate=(0, 13.5, 0), rotate=(0, 0, 4), subs=[hips])
-    return [{'part': 'body', 'id': 'cel_waist', 'attach': True, 'invertAxis': '', 'translate': [0, 0, 0],
-             'submodels': [tilt],
-             'animations': [{'waist_tilt.ty': '13.5 + sin(torad(age * 4 + 90)) * 0.3',
-                             'waist.ry': 'torad(age * -2)'}]}]
+    hips = ring('waist', 5.4, 28, 0.26, beads=((90, 13), (270, 12)), bead=0.42, shift=6)
+    tilt = sub('waist_tilt', translate=(0, 12.6, 0), rotate=(6, 0, 3), subs=[hips])
+    return [top('body', 'cel_waist', [tilt], {'waist_tilt.ty': '12.6 + sin(torad(age * 4 + 90)) * 0.25',
+                                              'waist.ry': 'torad(age * -2)'})]
 
-ANKLE = [2, 6, 3, 1, 7, 4, 0, 5, 6, 2]
 def boots():
     out = []
     for side, sgn in (('right', 1), ('left', -1)):
-        hoop = ring('ankle_' + side, 4.3, 10, 0.45, 0.4, ANKLE)
-        out.append({'part': side + '_leg', 'id': 'cel_' + side + '_leg', 'attach': True, 'invertAxis': '',
-                    'translate': [0, 0, 0], 'submodels': [sub('ankle_%s_pos' % side, translate=(0, 8.6, 0), subs=[hoop])],
-                    'animations': [{'ankle_%s_pos.ty' % side: '8.6 + sin(torad(age * 8 + %d)) * 0.25' % (90 * (1 - sgn)),
-                                    'ankle_%s.ry' % side: 'torad(age * %d)' % (4 * sgn)}]})
+        hoop = ring('ankle_' + side, 3.1, 16, 0.22, beads=((0, 12 if sgn > 0 else 13),), bead=0.36, shift=3 * (1 - sgn))
+        pos = sub('ankle_%s_pos' % side, translate=(0, 9.2, 0), rotate=(0, 0, 5 * sgn), subs=[hoop])
+        out.append(top(side + '_leg', 'cel_%s_leg' % side, [pos],
+                       {'ankle_%s_pos.ty' % side: '9.2 + sin(torad(age * 8 + %d)) * 0.2' % (90 * (1 - sgn)),
+                        'ankle_%s.ry' % side: 'torad(age * %d)' % (4 * sgn)}))
     return out
 
 SLOTS = {'helmet': helmet, 'chestplate': chestplate, 'leggings': leggings, 'boots': boots}
@@ -142,9 +152,9 @@ def worn(mat):
     for img, emi in ((hum, hum_e), (leg, leg_e)):
         for idx, (light, base, dark) in enumerate(pal):
             for row, c in enumerate((light, base, dark)):
-                img.putpixel((SW[0] + idx, SW[1] + row), C(c))
+                img.putpixel(texel(idx, row), C(c))
                 if idx in GLOW[mat]:
-                    emi.putpixel((SW[0] + idx, SW[1] + row), C(c))
+                    emi.putpixel(texel(idx, row), C(c))
         if mat == 'netherite':                                  # light lines glow softly too
             for y in range(8, 32):
                 for x in range(64):

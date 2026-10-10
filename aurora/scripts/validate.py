@@ -260,7 +260,8 @@ if os.path.isdir(cem):
 ccem = RP + 'Aurora Celestial/assets/minecraft/emf/cem/'
 if os.path.isdir(ccem):
     from celestial import SW, PALETTES
-    sw_rect = (SW[0], SW[1], SW[0] + max(len(p) for p in PALETTES.values()), SW[1] + 3)
+    n = max(len(p) for p in PALETTES.values())
+    sw_rect = (SW[0], SW[1], SW[0] + min(n, 8), SW[1] + 3 * ((n + 7) // 8))
     if any((x, y) in sampled for x in range(sw_rect[0], sw_rect[2]) for y in range(sw_rect[1], sw_rect[3])):
         err('Celestial swatches overlap texels used by vanilla armour')
     for f in sorted(os.listdir(ccem)):
