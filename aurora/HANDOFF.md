@@ -191,7 +191,14 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   velocidad de giro, si el emisivo funciona en la armadura con ETF en 26.3, y que el anillo de cadera no choque
   con las manos al andar.
 
-## Estado / pendiente
+### Placas de los títulos claras (2026-10-10)
+- Captura del soporte para pociones: las placas oscuras salían como "franjas gris azulado" vacías. El juego del
+  usuario escribe las etiquetas en el gris oscuro vanilla (0x404040), así que lo del pack de modo oscuro era una
+  suposición equivocada. Las placas pasan a claras (perla con borde del color del tema) y la vista previa escribe
+  los títulos en gris oscuro, como el juego.
+- `menus_xl.py`: los píxeles gris de casilla (139) que el detector no reconoce (casillas unidas a tubos, como las
+  tres botellas del soporte) se pintan como el interior de casilla del tema, no con la rampa de detalles.
+
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
   (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar aura, borde, menús y HUD XL con capturas.
 - Ideas pendientes ofrecidas: ajustar intensidad/velocidad de las animaciones.

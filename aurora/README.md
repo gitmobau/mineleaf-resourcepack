@@ -87,7 +87,7 @@ Recursos externos útiles (espejos de assets, esquemas, shaders, EMF/ETF y pixel
 | Selector de modo de juego (F3+F4) | Portal de modos: estrella portal arriba y flecos de cristal abajo |
 
 Los títulos de los menús los pinta el juego en gris oscuro (no se puede cambiar con un resource pack), así que
-cada tema pone una placa oscura con borde claro detrás de cada título (los títulos salen en blanco con un pack de modo oscuro).
+cada tema pone una placa clara (perla con borde del color del tema) detrás de cada título para que se lea.
 
 ## Aurora HUD XL: cómo sobresalen los marcos
 El juego siempre mete un sprite de la GUI en su rectángulo fijo (la hotbar ocupa 182×22 pase lo que pase), así que una
