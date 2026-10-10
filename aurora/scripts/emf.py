@@ -1,9 +1,9 @@
 # Aurora EMF: 3D netherite armour for Entity Model Features (+ Entity Texture Features, required by EMF).
 # Optional pack; without the mods nothing changes.
 #
-# - Models are EMF "variant 2" of the player armour models. The .properties files pick variant 2 only while the
-#   entity wears the netherite piece (ETF "items=" rule); otherwise variant 1 = vanilla model (EMF default when there is
-#   no base .jem). So diamond/iron/... armour keeps its vanilla shape.
+# - Models are EMF "variant 2" of the per-slot armour models (helmet, chestplate, leggings, boots). The .properties
+#   files pick variant 2 only while the entity wears that netherite piece (ETF "items=" rule); otherwise variant 1 =
+#   vanilla model (EMF default when there is no base .jem). So diamond/iron/... armour keeps its vanilla shape.
 # - Extra pieces are boxes attached to the vanilla parts ("attach": true keeps the vanilla armour boxes). Their faces use
 #   per-face UVs pointing at material swatches that gear.py paints into texels no vanilla armour box ever samples.
 # Box positions are written like EMF's own exporter: translate = (px, py - 24, -pz) and
@@ -118,14 +118,23 @@ def write(name, obj):
         if name.endswith('.jem'): json.dump(obj, f, indent=2)
         else: f.write(obj)
 
+# Since MC 1.21.9 the armour is one model per slot (layers player_helmet, player_chestplate, ...). EMF looks for
+# "<mob>_<slot>.jem" and falls back to "<slot>.jem", so the generic names cover the player (normal and slim) and any
+# other biped. The old player_outer_armor / player_inner_armor names are ignored by EMF on 26.x.
+PIECES = {   # slot file -> (parts, netherite item that switches it on)
+    'helmet': ({'head': OUTER['head']}, 'netherite_helmet'),
+    'chestplate': ({k: OUTER[k] for k in ('body', 'right_arm', 'left_arm')}, 'netherite_chestplate'),
+    'leggings': (INNER, 'netherite_leggings'),
+    'boots': ({k: OUTER[k] for k in ('right_leg', 'left_leg')}, 'netherite_boots'),
+}
+
 def build():
     shutil.rmtree(PACK + '/assets', ignore_errors=True)
-    for base, pieces, item in (('outer_armor', OUTER, 'netherite_chestplate'), ('inner_armor', INNER, 'netherite_leggings')):
-        for who in ('player', 'player_slim'):                 # normal and slim (Alex) skins
-            write('%s_%s2.jem' % (who, base), jem(pieces))
-            write('%s_%s.properties' % (who, base),
-                  '# variant 2 (Aurora 3D netherite) only while wearing the netherite piece; otherwise vanilla\n'
-                  'models.1=2\nitems.1=%s\n' % item)
+    for slot, (pieces, item) in PIECES.items():
+        write('%s2.jem' % slot, jem(pieces))
+        write('%s.properties' % slot,
+              '# variant 2 (Aurora 3D netherite) only while wearing the netherite piece; otherwise vanilla\n'
+              'models.1=2\nitems.1=%s\n' % item)
     if os.path.exists(RP + '/Aurora Pack/pack.png'):
         shutil.copyfile(RP + '/Aurora Pack/pack.png', PACK + '/pack.png')
     with open(PACK + '/pack.mcmeta', 'w') as f:

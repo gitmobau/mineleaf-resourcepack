@@ -60,8 +60,9 @@ DETALLES TÉCNICOS CLAVE (ya comprobados)
   título son oscuras con borde claro.
 - Netherita (gear.py): un único pintor `opal_paint` para iconos y armadura puesta, en ópalo claro: contorno lavanda,
   ribete iridiscente por dentro y metal perla en 4 tonos (OPAL_TONES).
-- Aurora EMF (emf.py): variantes 2 de player_outer_armor / player_inner_armor (y player_slim_*). El .properties elige
-  la variante 2 solo con la pieza de netherita puesta (models.1=2, items.1=netherite_chestplate / netherite_leggings).
+- Aurora EMF (emf.py): en 26.x la armadura es un modelo por pieza; el pack trae helmet2.jem, chestplate2.jem,
+  leggings2.jem y boots2.jem con su .properties (models.1=2, items.1=netherite_<pieza>). NO uses los nombres viejos
+  player_outer_armor / player_inner_armor: EMF los ignora desde la 1.21.9.
   Las piezas son cajas con "attach": true colgadas de las partes vanilla, colocadas con la fórmula del exportador de
   EMF: translate = (px, py-24, -pz) y coordinates = (-mx-sx-px, -my-sy-(py-24), mz+pz, sx, sy, sz), con
   invertAxis "xy". Los pivotes vanilla son: cabeza y cuerpo (0,0,0), brazos (±5,2,0), piernas (±1.9,12,0).

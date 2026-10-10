@@ -208,8 +208,9 @@ for pack in PACKS:
                     if outs.get(loc) != (ty, nm): err('%s: fsh in %s %s@%s not written by vsh' % (base, ty, nm, loc))
 
 # ---- Aurora EMF (Entity Model Features): .jem syntax, part names, UVs on free swatches, .properties -> variant .jem
-EMF_PARTS = {'outer_armor': {'head', 'headwear', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg'},
-             'inner_armor': {'head', 'headwear', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg'},
+# 26.x armour = one model per slot (EMF: <mob>_<slot>.jem, fallback <slot>.jem); each keeps only its own parts
+EMF_PARTS = {'helmet': {'head', 'headwear'}, 'chestplate': {'body', 'left_arm', 'right_arm'},
+             'leggings': {'body', 'left_leg', 'right_leg'}, 'boots': {'left_leg', 'right_leg'},
              'elytra': {'left_wing', 'right_wing'}}
 cem = RP + 'Aurora EMF/assets/minecraft/emf/cem/'
 if os.path.isdir(cem):
@@ -225,6 +226,8 @@ if os.path.isdir(cem):
             err('EMF swatch %s overlaps texels used by vanilla armour' % name)
     swatch_rects = [(x0, y0, x0 + sw, y0 + sh) for (x0, y0, sw, sh) in EMF_SWATCHES.values()]
     for f in sorted(os.listdir(cem)):
+        if 'outer_armor' in f or 'inner_armor' in f:
+            err('EMF %s: pre-1.21.9 armour name, EMF on 26.x uses helmet/chestplate/leggings/boots' % f); continue
         if f.endswith('.properties'):
             props = dict(l.split('=', 1) for l in open(cem + f).read().splitlines() if '=' in l and not l.startswith('#'))
             for k, val in props.items():

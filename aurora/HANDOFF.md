@@ -141,6 +141,15 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   coplanar con la del pecho), no de la textura: ahora usa LEQUAL como el juego.
 - Prompt de traspaso para Codex en `PROMPT_CODEX.md`.
 
+### Segunda prueba en el juego (2026-10-10)
+- El 3D no salía: desde la 1.21.9 la armadura es un modelo por pieza (capas `player_helmet`, `player_chestplate`,
+  `player_leggings`, `player_boots`) y EMF busca `<capa>.jem` con respaldo `helmet.jem`, etc. (EMFManager, rama
+  `MC >= 12109`). Los `player_outer_armor*.jem` de antes se ignoraban. Ahora: `helmet2.jem`, `chestplate2.jem`,
+  `leggings2.jem`, `boots2.jem` + sus `.properties`; validate.py rechaza los nombres viejos.
+  `enforceOptifineVariationRequiresDefaultModel_v2` es false por defecto, así que las variantes sin .jem base valen.
+- Captura del creativo con cristales a ambos lados y casillas corridas = el usuario tenía un Aurora HUD XL anterior al
+  arreglo del 2026-10-08 (le dije que ese zip no había cambiado en la sesión; había que reinstalarlo igualmente).
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
   (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar aura, borde, menús y HUD XL con capturas.
