@@ -316,7 +316,25 @@ def preview(path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     sheet.convert('RGB').save(path)
 
+# ------------------------------------------------------------------ no titles
+# The user does not want the menu titles nor the "Inventory" label: blank their language keys (only these keys are
+# overridden; everything else comes from the game's own language file). Titles that are entity or tab names (horse,
+# villager, creative tabs) cannot be blanked without hiding those names everywhere, so they stay.
+TITLE_KEYS = ('barrel', 'blast_furnace', 'brewing', 'cartography_table', 'chest', 'chestDouble', 'crafter', 'crafting',
+              'dispenser', 'dropper', 'enchant', 'enderchest', 'furnace', 'grindstone_title', 'hopper', 'inventory',
+              'loom', 'repair', 'shulkerBox', 'smoker', 'stonecutter', 'upgrade')
+LANGS = ('en_us', 'en_gb', 'es_es', 'es_mx', 'es_ar', 'es_cl', 'es_uy', 'es_ve')
+
+def hide_titles():
+    d = RP + '/Aurora Pack/assets/minecraft/lang/'
+    os.makedirs(d, exist_ok=True)
+    for lang in LANGS:
+        with open(d + lang + '.json', 'w', encoding='utf-8') as f:
+            json.dump({'container.' + k: '' for k in TITLE_KEYS}, f, indent=2, sort_keys=True)
+    return len(TITLE_KEYS)
+
 if __name__ == '__main__':
+    print('titles hidden', hide_titles())
     print('widgets', widgets())
     tooltip(); backgrounds(); book(); logo(); bossbars(); toasts()
     print('signs', signs())

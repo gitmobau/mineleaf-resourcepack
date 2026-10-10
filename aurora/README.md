@@ -48,7 +48,7 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 - `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (ópalo claro, iconos y armadura puesta con el mismo estilo: contorno lavanda, ribete iridiscente pastel por dentro y metal perla en 4 tonos suaves sobre la silueta vanilla), también puestas en bebés, caballos y nautilus. Sin capa.
 - `hud_xl.py`: texturas de Aurora HUD XL (hotbar con alas de cristal, selección con corona y halo, mano secundaria con aguja, fondo de las barras de jefe con gemas en los extremos) y previsualización del HUD en `previews/`.
 - `menus_xl.py`: menús temáticos de Aurora HUD XL (ver abajo): lista de pantallas, construcción de cada fondo y una emulación del shader que comprueba que cada pantalla sale al píxel. Genera `previews/menus_xl.png` y `menus_xl_2.png`.
-- `screens.py`: pantallas sin contenedor, retocadas en su sitio (sin shader): libro (cuero violeta, papel perla, cinta y amuleto), carteles y carteles colgantes de las 13 maderas en pastel, fondos de opciones y menús, separadores, botones y demás controles (deslizadores, campos de texto, casillas, pestañas, barras), tooltips, iconos del selector de modo y el logo del título. También las barras de jefe (los 7 colores en pastel, progreso con brillo animado y muescas violeta) y los toasts (recetas a medida, sistema, tutorial y "sonando ahora" por luminancia; iconos grises del tutorial en Aurora). Los logros (ventana de progresos y su toast) se dejan vanilla a propósito. Genera `previews/pantallas.png`.
+- `screens.py`: quita los títulos de los menús (claves de idioma vacías), pantallas sin contenedor, retocadas en su sitio (sin shader): libro (cuero violeta, papel perla, cinta y amuleto), carteles y carteles colgantes de las 13 maderas en pastel, fondos de opciones y menús, separadores, botones y demás controles (deslizadores, campos de texto, casillas, pestañas, barras), tooltips, iconos del selector de modo y el logo del título. También las barras de jefe (los 7 colores en pastel, progreso con brillo animado y muescas violeta) y los toasts (recetas a medida, sistema, tutorial y "sonando ahora" por luminancia; iconos grises del tutorial en Aurora). Los logros (ventana de progresos y su toast) se dejan vanilla a propósito. Genera `previews/pantallas.png`.
 - `menu_themes.py`: utilidades de dibujo y los 25 temas (marco, fondo, casillas y adornos que sobresalen).
 - `emf.py`: pack Aurora EMF (modelos `.jem` de EMF para la netherita, con sus `.properties`) y vista 3D en `previews/emf_netherite.png` con un pequeño renderizador propio.
 - `celestial.py`: pack Aurora Celestial (modelos `.jem` animados por pieza, texturas casi transparentes con capa emisiva `_e.png`) y vista previa animada en `previews/celestial.gif`.
@@ -90,9 +90,10 @@ El inventario, la mesa de crafteo, el crafteador y los hornos conservan su tema 
 | Libro de recetas (panel) | Recetario estelar: libro abierto con estrellas, esquinas doradas y cintas marcapáginas colgando |
 | Selector de modo de juego (F3+F4) | Portal de modos: estrella portal arriba y flecos de cristal abajo |
 
-Los títulos de los menús los pinta el juego en gris oscuro (no se puede cambiar con un resource pack). No hay placas
-detrás (al usuario no le gustaban las franjas): la zona del título solo se deja sin adornos. En los temas oscuros el
-título se lee poco.
+Sin títulos: Aurora Pack trae `lang/en_us.json`, `es_es.json` (y variantes) que dejan vacíos los títulos de los
+menús y el rótulo "Inventario" (`container.chest`, `container.inventory`...; lo genera `screens.py`). Siguen los
+títulos que son nombres de entidad o de pestaña (caballo, nautilus, aldeano, pestañas del creativo), porque vaciarlos
+borraría esos nombres en todo el juego.
 
 ## Aurora HUD XL: cómo sobresalen los marcos
 El juego siempre mete un sprite de la GUI en su rectángulo fijo (la hotbar ocupa 182×22 pase lo que pase), así que una

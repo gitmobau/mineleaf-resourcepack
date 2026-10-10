@@ -23,39 +23,41 @@ def ref(rel):
 # ------------------------------------------------------------------ containers
 # Each screen: theme, label areas in vanilla coords (x0, y0, x1, y1), how it is blitted, and the label texts
 # used by the preview (text, x, y; x None = centred). The vanilla texture gives size and slot layout.
-# Label areas only keep motifs away from the titles; no plate is drawn behind them (the user did not want the bars).
+# The user wanted no titles: screens.py blanks the container title keys in the language files. Only titles the
+# game still writes (entity names of the horse / nautilus / villager, creative tab names) keep a label area, which
+# just keeps motifs away from the text; no plate is drawn behind it.
 HEAD = 'head'                                    # full-width title area (5, 3, w - 6, 16)
-def S(theme, labels=(HEAD, 'inv'), kind='single', title=None, inv=True, origin=(0, 0)):
+def S(theme, labels=(), kind='single', title=None, inv=False, origin=(0, 0)):
     return dict(theme=theme, labels=labels, kind=kind, title=title, inv=inv, origin=origin)
 SCREENS = {
-    'inventory':         S(Observatory(), [(94, 5, 170, 17)], title=('Fabricación', 97, 8), inv=False),
-    'crafting_table':    S(Fabricator(), [(26, 3, 112, 16), 'inv'], title=('Fabricación', 29, 6)),
-    'furnace':           S(Inferno(), [(38, 3, 138, 16), 'inv'], title=('Horno', None, 6)),
-    'blast_furnace':     S(Supernova(), [(38, 3, 138, 16), 'inv'], title=('Alto horno', None, 6)),
-    'smoker':            S(Clouds(), [(38, 3, 138, 16), 'inv'], title=('Ahumador', None, 6)),
-    'generic_54':        S(Cloudy([(255, 238, 212), (250, 228, 232), (238, 224, 250)], em_lock, 5), [(5, 3, 100, 16), (5, 127, 90, 139)], kind='chest', title=('Cofre grande', 8, 6)),
-    'shulker_box':       S(Cloudy([(228, 212, 255), (240, 220, 246), (250, 230, 240)], em_shell, 6), [(5, 3, 100, 16), 'inv'], title=('Caja de shulker', 8, 6)),
-    'anvil':             S(Cloudy([(222, 222, 245), (234, 228, 250), (246, 238, 250)], em_anvil, 7), [(57, 3, 170, 16), 'inv'], title=('Reparar y renombrar', 60, 6)),
-    'beacon':            S(Lighthouse(), [], title=None, inv=False),
-    'brewing_stand':     S(Cloudy([(208, 244, 234), (214, 234, 250), (234, 224, 250)], em_flask, 8), title=('Soporte para pociones', None, 6)),
-    'cartography_table': S(Cartographer(), [(5, 1, 170, 13), 'inv'], title=('Mesa de cartografía', 8, 4)),
-    'crafter':           S(Automaton(), title=('Crafteador', None, 6)),
-    'dispenser':         S(Cloudy([(208, 228, 255), (224, 228, 250), (240, 234, 250)], em_arrow, 10), title=('Dispensador', None, 6)),
-    'enchanting_table':  S(Cloudy([(224, 208, 255), (240, 214, 250), (255, 226, 240)], em_book, 11), title=('Encantar', 12, 5)),
-    'grindstone':        S(Cloudy([(238, 228, 246), (232, 234, 250), (250, 234, 236)], em_wheel, 12), title=('Reparar y desencantar', 8, 6)),
-    'hopper':            S(Cloudy([(212, 218, 255), (228, 220, 250), (244, 230, 250)], em_funnel, 13), title=('Tolva', 8, 6)),
-    'horse':             S(Cloudy([(218, 244, 222), (234, 244, 230), (255, 240, 220)], em_horseshoe, 14), title=('Caballo', 8, 6)),
-    'loom':              S(Weaver(), [(5, 1, 170, 13), 'inv'], title=('Telar', 8, 4)),
-    'nautilus':          S(Cloudy([(204, 238, 250), (210, 228, 255), (226, 224, 255)], em_nautilus, 15), title=('Nautilus', 8, 6)),
-    'smithing':          S(Cloudy([(255, 240, 214), (250, 232, 222), (240, 228, 246)], em_crown, 16), [(40, 12, 130, 25), 'inv'], title=('Mejorar equipo', 44, 15)),
-    'stonecutter':       S(Cloudy([(230, 218, 255), (222, 234, 255), (240, 230, 250)], em_gem, 17), title=('Cortapiedras', 8, 6)),
-    'villager':          S(Market(), [HEAD, (104, 69, 190, 81)], title=('Granjero - Aprendiz', None, 6), inv=(107, 72)),
-    'creative_inventory/tab_items':       S(Creator(), [(5, 3, 120, 16)], title=('Buscar objetos', 8, 6), inv=False),
-    'creative_inventory/tab_item_search': S(Creator(), [(5, 3, 85, 16)], title=('Buscar objetos', 8, 6), inv=False),
-    'creative_inventory/tab_inventory':   S(Creator(), [], title=None, inv=False),
+    'inventory':         S(Observatory()),
+    'crafting_table':    S(Fabricator()),
+    'furnace':           S(Inferno()),
+    'blast_furnace':     S(Supernova()),
+    'smoker':            S(Clouds()),
+    'generic_54':        S(Cloudy([(255, 238, 212), (250, 228, 232), (238, 224, 250)], em_lock, 5), kind='chest'),
+    'shulker_box':       S(Cloudy([(228, 212, 255), (240, 220, 246), (250, 230, 240)], em_shell, 6)),
+    'anvil':             S(Cloudy([(222, 222, 245), (234, 228, 250), (246, 238, 250)], em_anvil, 7)),
+    'beacon':            S(Lighthouse()),
+    'brewing_stand':     S(Cloudy([(208, 244, 234), (214, 234, 250), (234, 224, 250)], em_flask, 8)),
+    'cartography_table': S(Cartographer()),
+    'crafter':           S(Automaton()),
+    'dispenser':         S(Cloudy([(208, 228, 255), (224, 228, 250), (240, 234, 250)], em_arrow, 10)),
+    'enchanting_table':  S(Cloudy([(224, 208, 255), (240, 214, 250), (255, 226, 240)], em_book, 11)),
+    'grindstone':        S(Cloudy([(238, 228, 246), (232, 234, 250), (250, 234, 236)], em_wheel, 12)),
+    'hopper':            S(Cloudy([(212, 218, 255), (228, 220, 250), (244, 230, 250)], em_funnel, 13)),
+    'horse':             S(Cloudy([(218, 244, 222), (234, 244, 230), (255, 240, 220)], em_horseshoe, 14), [HEAD], title=('Caballo', 8, 6)),
+    'loom':              S(Weaver()),
+    'nautilus':          S(Cloudy([(204, 238, 250), (210, 228, 255), (226, 224, 255)], em_nautilus, 15), [HEAD], title=('Nautilus', 8, 6)),
+    'smithing':          S(Cloudy([(255, 240, 214), (250, 232, 222), (240, 228, 246)], em_crown, 16)),
+    'stonecutter':       S(Cloudy([(230, 218, 255), (222, 234, 255), (240, 230, 250)], em_gem, 17)),
+    'villager':          S(Market(), [HEAD], title=('Granjero - Aprendiz', None, 6)),
+    'creative_inventory/tab_items':       S(Creator(), [(5, 3, 120, 16)], title=('Buscar objetos', 8, 6)),
+    'creative_inventory/tab_item_search': S(Creator(), [(5, 3, 85, 16)], title=('Buscar objetos', 8, 6)),
+    'creative_inventory/tab_inventory':   S(Creator()),
     # not containers, but drawn the same way (one blit of a fixed window)
-    '../recipe_book':    S(Cookbook(), [], title=None, inv=False, origin=(1, 1)),
-    'gamemode_switcher': S(ModePortal(), [], title=None, inv=False),
+    '../recipe_book':    S(Cookbook(), origin=(1, 1)),
+    'gamemode_switcher': S(ModePortal()),
 }
 
 def geometry(name):
