@@ -7,7 +7,7 @@ from PIL import Image
 HOME = os.path.expanduser('~')
 REF = os.environ.get('AURORA_REF', HOME + '/ref63') + '/assets/minecraft/'
 RP = os.environ.get('AURORA_RP', HOME + '/mnt/.minecraft/resourcepacks') + '/'
-PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora HUD XL', RP + 'Aurora EMF', RP + 'Aurora Celestial']
+PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora HUD XL', RP + 'Aurora EMF'] + [RP + 'Aurora Celestial %d' % v for v in range(1, 5)]
 errors, warns = [], []
 # every model id referenced by a vanilla item definition is known to exist in the jar
 VANILLA_MODELS = set(re.findall(r'"model": "(minecraft:[^"]+)"',
@@ -257,14 +257,14 @@ if os.path.isdir(cem):
                     if k.split('.')[0] not in EMF_PARTS[kind]: err('EMF %s: animation of unknown part %s' % (f, k))
 
 # ---- Aurora Celestial: nested submodels, every face on the colour swatch block, animations name existing parts
-for cpack in [RP + 'Aurora Celestial/']:
+for cpack in [RP + 'Aurora Celestial %d/' % v for v in range(1, 5)]:
   ccem = cpack + 'assets/minecraft/emf/cem/'
   if os.path.isdir(ccem):
-      from celestial import SW, PALETTES
-      n = max(len(p) for p in PALETTES.values())
-      sw_rect = (SW[0], SW[1], SW[0] + min(n, 8), SW[1] + 3 * ((n + 7) // 8))
-      if any((x, y) in sampled for x in range(sw_rect[0], sw_rect[2]) for y in range(sw_rect[1], sw_rect[3])):
-          err('Celestial swatches overlap texels used by vanilla armour')
+      from celestial import SW, SW2
+      sw_rects = [(SW[0], SW[1], SW[0] + 8, SW[1] + 6), (SW2[0], SW2[1], SW2[0] + 8, SW2[1] + 3)]
+      for r_ in sw_rects:
+          if any((x, y) in sampled for x in range(r_[0], r_[2]) for y in range(r_[1], r_[3])):
+              err('Celestial swatches overlap texels used by vanilla armour')
       for f in sorted(os.listdir(ccem)):
           if not f.endswith('.jem'): err('Celestial: unexpected file %s' % f); continue
           j = json.load(open(ccem + f))
@@ -277,8 +277,8 @@ for cpack in [RP + 'Aurora Celestial/']:
                   if len(b.get('coordinates', [])) != 6: err('Celestial %s: box without 6 coordinates' % f)
                   for key in ('uvNorth', 'uvSouth', 'uvEast', 'uvWest', 'uvUp', 'uvDown'):
                       r = b.get(key)
-                      if r is None or not (sw_rect[0] <= min(r[0], r[2]) and max(r[0], r[2]) <= sw_rect[2]
-                                           and sw_rect[1] <= min(r[1], r[3]) and max(r[1], r[3]) <= sw_rect[3]):
+                      if r is None or not any(q[0] <= min(r[0], r[2]) and max(r[0], r[2]) <= q[2]
+                                              and q[1] <= min(r[1], r[3]) and max(r[1], r[3]) <= q[3] for q in sw_rects):
                           err('Celestial %s: %s %s is not on the swatch block' % (f, key, r))
               for sm in m.get('submodels', []): walk(sm, ids)
           for mdl in j['models']:

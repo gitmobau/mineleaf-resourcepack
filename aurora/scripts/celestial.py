@@ -17,7 +17,7 @@
 import os, sys, json, math, shutil
 from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # build.py runs scripts with -I
-from gear import cyc, mix, C, WHITE, VIVID, box_faces, HUMANOID_BOXES
+from gear import cyc, mix, C, WHITE, VIVID
 
 HOME = os.path.expanduser('~')
 REF_ROOT = os.environ.get('AURORA_REF', HOME + '/ref63')
@@ -28,8 +28,10 @@ PREVIEWS = os.environ.get('AURORA_PREVIEWS', PACK)
 # ------------------------------------------------------------------ palettes
 # 16 colours x (light, base, dark). The model only stores colour indices; each material paints its own palette into
 # the swatch block, so the same geometry is pastel on netherite and dark on diamond.
-#   0..11 = smooth gradient used around the rings, 12/13 = beads, 14/15 = pendant
+#   0..11 = smooth gradient used around the rings, 12/13 = beads, 14/15 = light / lavender
+#   16 fur, 17 fur patches, 18 eyes, 19 nose / inner ears, 20 bag, 21 straps, 22 gold, 23 white
 SW = (0, 0)                                   # swatch block: 8x6 texels at the head-top corner (never sampled)
+SW2 = (32, 0)                                 # colours 16..23: 8x3 texels at the hat's top-left corner (never sampled)
 NGRAD = 12
 def ramp(c, light=0.55, dark=0.25, ink=(30, 18, 60)):
     return (mix(c, WHITE, light), c, mix(c, ink, dark))
@@ -42,11 +44,19 @@ PALETTES = {
                + [ramp((255, 96, 224), 0.35, 0.2), ramp((100, 232, 255), 0.35, 0.2),
                   ramp((255, 120, 230), 0.4, 0.2), ramp((70, 36, 120), 0.3, 0.4, (8, 4, 16))],
 }
-GLOW = {'netherite': set(range(16)), 'diamond': {12, 13, 14}}   # indices that also go to the emissive layer
-LINE = {'netherite': lambda t: mix(cyc(t, VIVID), WHITE, 0.35), 'diamond': lambda t: (52, 26, 96)}
-SPARK = {'netherite': lambda t: WHITE, 'diamond': lambda t: (255, 96, 224) if int(t * 10) % 2 else (100, 232, 255)}
+PALETTES['netherite'] += [ramp((250, 246, 255), 0.5, 0.12), ramp((214, 196, 248), 0.4, 0.2), ramp((70, 46, 120), 0.2, 0.2),
+                          ramp((255, 170, 205), 0.4, 0.2), ramp((255, 204, 228), 0.45, 0.2), ramp((190, 170, 240), 0.4, 0.25),
+                          ramp((255, 226, 150), 0.45, 0.2), ramp((255, 255, 255), 0, 0.1)]
+PALETTES['diamond'] += [ramp((44, 38, 62), 0.3, 0.3, (8, 4, 16)), ramp((72, 62, 98), 0.3, 0.3, (8, 4, 16)),
+                        ramp((130, 255, 205), 0.35, 0.2), ramp((255, 150, 200), 0.3, 0.2),
+                        ramp((76, 44, 118), 0.3, 0.35, (8, 4, 16)), ramp((116, 74, 166), 0.3, 0.3, (8, 4, 16)),
+                        ramp((255, 210, 120), 0.4, 0.2), ramp((235, 225, 255), 0.2, 0.15)]
+# indices that also go to the emissive layer (netherite: everything light; diamond: only the glowing bits)
+GLOW = {'netherite': set(range(16)) | {16, 17, 19, 20, 21, 22, 23}, 'diamond': {12, 13, 14, 18, 22}}
 
 def texel(idx, row):
+    if idx >= 16:
+        return SW2[0] + idx % 8, SW2[1] + row
     return SW[0] + idx % 8, SW[1] + (idx // 8) * 3 + row
 
 def uv(idx, row):
@@ -124,16 +134,87 @@ def helmet():
         anims.update({'spark_%d.sx' % k: ex, 'spark_%d.sy' % k: ex, 'spark_%d.sz' % k: ex})
     return [top('head', 'cel_head', [tilt], anims)]
 
-def chestplate():
-    # pendant: a FLAT jewel lying on the chest under the necklace (barely 0.45 px in front of it), swinging softly
-    # like a pendulum from the bottom of the V and gently pulsing
-    jewel = sub('pend', translate=(0, 1.25, 0), rotate=(0, 0, 45),
-                boxes=[box((-0.6, -0.6, -0.12), (1.2, 1.2, 0.24), 15), box((-0.33, -0.33, -0.26), (0.66, 0.66, 0.14), 14),
-                       cube((0.55, -0.55, -0.2), 0.22, 13)])
-    pivot = sub('pend_pivot', translate=(0, 4.2, -3.2), subs=[jewel])
-    return [top('body', 'cel_body', [pivot], {'pend_pivot.rz': 'torad(sin(torad(age * 4)) * 7)',
-                                             'pend.sx': '1 + sin(torad(age * 8)) * 0.07',
-                                             'pend.sy': '1 + sin(torad(age * 8)) * 0.07'})]
+# ---- chestplate: cat prototypes (the necklace and pendant are gone: the user did not like them)
+FUR, PATCH, EYE, PINK, BAG, STRAP, GOLD = 16, 17, 18, 19, 20, 21, 22
+
+def cat_head(asleep=False):
+    """cat head boxes around a neck pivot at (0, 0, 0), facing the front (-z); about 3 x 2.6 px"""
+    b = [box((-1.5, -2.6, -1.4), (3.0, 2.6, 2.4), FUR),
+         box((-1.45, -3.45, -0.55), (0.85, 0.9, 0.5), FUR), box((0.6, -3.45, -0.55), (0.85, 0.9, 0.5), FUR),
+         box((-1.25, -3.2, -0.62), (0.45, 0.5, 0.1), PINK), box((0.8, -3.2, -0.62), (0.45, 0.5, 0.1), PINK),
+         box((-0.2, -1.0, -1.5), (0.4, 0.3, 0.12), PINK)]
+    if asleep:
+        b += [box((-1.1, -1.5, -1.5), (0.6, 0.15, 0.12), EYE), box((0.5, -1.5, -1.5), (0.6, 0.15, 0.12), EYE)]
+    else:
+        b += [box((-1.05, -1.75, -1.5), (0.55, 0.55, 0.12), EYE), box((0.5, -1.75, -1.5), (0.55, 0.55, 0.12), EYE)]
+    return b
+
+def straps():
+    """backpack straps over both shoulders and down the chest, with little gold buckles"""
+    out = []
+    for x in (-3.0, 2.1):
+        out += [box((x, -0.25, -2.25), (0.9, 0.3, 4.5), STRAP), box((x, 0, -2.3), (0.9, 5.0, 0.25), STRAP),
+                box((x + 0.15, 3.6, -2.45), (0.6, 0.6, 0.2), GOLD)]
+    return out
+
+def scaled(part, k, root=True):
+    """the same submodel tree k times bigger around its own pivot"""
+    out = dict(part)
+    if not root:
+        out['translate'] = [round(c * k, 4) for c in part['translate']]
+    out['boxes'] = [dict(b, coordinates=[round(c * k, 4) for c in b['coordinates']]) for b in part['boxes']]
+    out['submodels'] = [scaled(sp, k, False) for sp in part['submodels']]
+    return out
+
+def chest_cat_shoulder():
+    """1. a little cat sitting on the right shoulder, wagging its tail and looking around"""
+    head = sub('cat_head', translate=(0, -3.0, -0.1), boxes=cat_head())
+    tail = sub('cat_tail', translate=(0, -0.5, 2.2), rotate=(55, 0, 0),      # curled up behind
+               boxes=[box((-0.3, -0.3, 0), (0.6, 0.6, 2.2), FUR), box((-0.3, -0.3, 2.2), (0.6, 0.6, 1.0), PATCH)])
+    cat = sub('cat', translate=(-6.6, 0, 0.3), subs=[head, tail],
+              boxes=[box((-1.2, -3.1, -0.9), (2.4, 3.1, 2.4), FUR), box((-1.4, -1.3, -0.4), (2.8, 1.3, 2.8), FUR),
+                     box((-0.65, -2.6, -0.98), (1.3, 1.6, 0.1), PATCH),
+                     box((-1.0, -0.6, -1.45), (0.7, 0.6, 0.7), FUR), box((0.3, -0.6, -1.45), (0.7, 0.6, 0.7), FUR)])
+    return [top('body', 'cel_body', [scaled(cat, 1.3)], {'cat_tail.ry': 'torad(sin(torad(age * 8)) * 25)',
+                                           'cat_head.ry': 'torad(sin(torad(age * 2)) * 20)'})]
+
+def chest_cat_sleeping():
+    """2. a cat asleep lying on the left shoulder, breathing slowly, tail hanging down the back"""
+    body = sub('cat_body', translate=(6, 0, 0.2),
+               boxes=[box((-1.3, -1.8, -2.4), (2.6, 1.8, 5.0), FUR), box((-0.9, -1.85, -1.2), (1.8, 0.1, 2.0), PATCH),
+                      box((-1.15, -0.6, -3.1), (0.7, 0.6, 0.8), FUR), box((0.45, -0.6, -3.1), (0.7, 0.6, 0.8), FUR)])
+    head = sub('cat_head', translate=(6, 0.2, -2.0), rotate=(0, 0, 8), boxes=cat_head(asleep=True))
+    tail = sub('cat_tail', translate=(6, -0.8, 2.7), rotate=(-65, 0, 0),     # hanging down the back
+               boxes=[box((-0.3, -0.3, 0), (0.6, 0.6, 2.6), FUR), box((-0.3, -0.3, 2.6), (0.6, 0.6, 1.1), PATCH)])
+    k = 1.12
+    body, head, tail = (dict(scaled(p_, k), translate=p_['translate']) for p_ in (body, head, tail))
+    return [top('body', 'cel_body', [body, head, tail], {'cat_body.sy': '1 + sin(torad(age * 4)) * 0.05',
+                                                        'cat_tail.rz': 'torad(sin(torad(age * 4)) * 15)'})]
+
+def chest_cat_backpack():
+    """3. a backpack shaped like a cat's face (ears on top, face on the back), straps over the shoulders"""
+    bag = sub('bag', translate=(0, 4.5, 2.0),
+              boxes=[box((-2.6, -2.6, 0.05), (5.2, 5.4, 2.2), BAG), box((-2.2, -3.2, 0.15), (4.4, 0.7, 2.0), BAG),
+                     box((-2.5, -4.2, 0.6), (1.3, 1.1, 1.0), BAG), box((1.2, -4.2, 0.6), (1.3, 1.1, 1.0), BAG),
+                     box((-2.2, -3.95, 1.6), (0.65, 0.55, 0.12), PINK), box((1.55, -3.95, 1.6), (0.65, 0.55, 0.12), PINK),
+                     box((-1.5, -0.9, 2.25), (0.75, 0.75, 0.12), EYE), box((0.75, -0.9, 2.25), (0.75, 0.75, 0.12), EYE),
+                     box((-0.25, 0.0, 2.25), (0.5, 0.35, 0.12), PINK),
+                     box((-2.05, 0.25, 2.25), (0.6, 0.4, 0.1), PINK), box((1.45, 0.25, 2.25), (0.6, 0.4, 0.1), PINK),
+                     box((-2.65, 1.7, 0.05), (5.3, 0.5, 2.27), STRAP)])
+    return [top('body', 'cel_body', [bag, sub('straps', boxes=straps())], {'bag.ty': '4.5 + sin(torad(age * 8)) * 0.12'})]
+
+def chest_cat_peek():
+    """4. a backpack with a cat peeking out of the top, looking around"""
+    head = sub('cat_head', translate=(0, -2.3, 1.3), rotate=(0, 180, 0), boxes=cat_head())
+    bag = sub('bag', translate=(0, 5.2, 2.0), subs=[head],
+              boxes=[box((-2.4, -2.2, 0.05), (4.8, 5.0, 2.4), BAG), box((-2.6, -2.5, -0.05), (5.2, 0.6, 2.6), STRAP),
+                     box((-1.6, 0.6, 2.45), (3.2, 1.8, 0.15), STRAP), box((-0.35, 1.15, 2.6), (0.7, 0.7, 0.1), GOLD),
+                     box((-1.3, -2.95, 1.9), (0.7, 0.5, 0.7), FUR), box((0.6, -2.95, 1.9), (0.7, 0.5, 0.7), FUR)])
+    return [top('body', 'cel_body', [bag, sub('straps', boxes=straps())],
+                {'cat_head.ry': 'torad(180 + sin(torad(age * 3)) * 45)', 'cat_head.ty': '-2.3 + sin(torad(age * 6)) * 0.15'})]
+
+CHESTS = [chest_cat_shoulder, chest_cat_sleeping, chest_cat_backpack, chest_cat_peek]
+PROTOS = {1: 'gato en el hombro', 2: 'gato dormido en el hombro', 3: 'mochila cara de gato', 4: 'mochila con gato asomado'}
 
 # ---- leggings: ribbon sash (the user's pick among 4 prototypes, asked bigger)
 def leggings():
@@ -164,32 +245,16 @@ def boots():
         out.append(top('%s_leg' % side, 'cel_%s_leg' % side, subs, anims))
     return out
 
-SLOTS = {'helmet': helmet, 'chestplate': chestplate, 'leggings': leggings, 'boots': boots}
+def slots(v):
+    return {'helmet': helmet, 'chestplate': CHESTS[v - 1], 'leggings': leggings, 'boots': boots}
 
 # ------------------------------------------------------------------ textures
-def faces_of(boxes):
-    out = []
-    for (u, v, w, h, d) in boxes:
-        f = box_faces(u, v, w, h, d)
-        out.append(f)
-    return out
-
-def hline(img, x0, x1, y, col, a=255):
-    for x in range(x0, x1):
-        img.putpixel((x, y), C(col(x), a))
-
 def worn(mat):
     """(humanoid, humanoid_leggings, and their emissive layers) for one material"""
-    pal = PALETTES[mat]; line = LINE[mat]; spark = SPARK[mat]
+    pal = PALETTES[mat]
     hum = Image.new('RGBA', (64, 32)); leg = Image.new('RGBA', (64, 32))
     hum_e = Image.new('RGBA', (64, 32)); leg_e = Image.new('RGBA', (64, 32))
-    head, hat, body, arm, legb = faces_of(HUMANOID_BOXES)
-    col = lambda x: line(x / 32)
-    # neckline: a thin V on the chest front, one spark at the bottom
-    fx, fy = body['front'][:2]
-    for i in range(4):
-        hum.putpixel((fx + i, fy + i), C(col(fx + i))); hum.putpixel((fx + 7 - i, fy + i), C(col(fx + 7 - i)))
-    hum.putpixel((fx + 3, fy + 4), C(spark(0.3))); hum.putpixel((fx + 4, fy + 4), C(spark(0.3)))
+    # the 2D armour is fully transparent: everything is in the 3D pieces (no necklace: the user did not like it)
     # swatches + emissive copies
     for img, emi in ((hum, hum_e), (leg, leg_e)):
         for idx, (light, base, dark) in enumerate(pal):
@@ -197,14 +262,6 @@ def worn(mat):
                 img.putpixel(texel(idx, row), C(c))
                 if idx in GLOW[mat]:
                     emi.putpixel(texel(idx, row), C(c))
-        if mat == 'netherite':                                  # light lines glow softly too
-            for y in range(8, 32):
-                for x in range(64):
-                    p = img.getpixel((x, y))
-                    if p[3]: emi.putpixel((x, y), p)
-        else:                                                   # dark lines; only the sparks glow
-            for (x, y) in ((fx + 3, fy + 4), (fx + 4, fy + 4)):
-                if img is hum: emi.putpixel((x, y), img.getpixel((x, y)))
     return hum, leg, hum_e, leg_e
 
 # ------------------------------------------------------------------ build
@@ -213,11 +270,11 @@ def write_json(path, obj):
     with open(path, 'w') as f:
         json.dump(obj, f, indent=2)
 
-def build():
-    pack = PACK
+def build(v):
+    pack = '%s %d' % (PACK, v)
     cem, tex = pack + '/assets/minecraft/emf/cem/', pack + '/assets/minecraft/textures/entity/equipment/'
     shutil.rmtree(pack + '/assets', ignore_errors=True)
-    for slot, fn in SLOTS.items():
+    for slot, fn in slots(v).items():
         model = {'textureSize': [64, 32], 'models': fn()}
         for who in ('player_', 'player_slim_', ''):             # exact player names + generic fallback for mobs
             write_json(cem + who + slot + '.jem', model)
@@ -233,8 +290,8 @@ def build():
     if os.path.exists(src):
         shutil.copyfile(src, pack + '/pack.png')
     with open(pack + '/pack.mcmeta', 'w') as f:
-        json.dump({'pack': {'description': ['', {'text': 'Aurora Celestial ', 'color': '#B9B9F8'},
-                                            {'text': '· aureola, colgante, cinturón y nubes (EMF + ETF)', 'color': '#F8B0EA'}],
+        json.dump({'pack': {'description': ['', {'text': 'Aurora Celestial %d ' % v, 'color': '#B9B9F8'},
+                                            {'text': '· %s (EMF + ETF)' % PROTOS[v], 'color': '#F8B0EA'}],
                             'min_format': 84, 'max_format': 97}}, f, indent=2, ensure_ascii=False)
     return out
 
@@ -283,7 +340,7 @@ def draw_part(scene, tex, part, M, T, anims, age):
 
 PIVOTS = {'head': (0, 0, 0), 'body': (0, 0, 0), 'right_leg': (-1.9, 12, 0), 'left_leg': (1.9, 12, 0)}
 
-def render(mat, textures, steve, age, yaw):
+def render(mat, textures, steve, age, yaw, proto):
     from emf import Scene, LIMBS, SKIN_UV, box_uv_faces
     hum, leg = textures
     sc = Scene(230, 360, math.radians(yaw), math.radians(12), 8, 115, 120)
@@ -296,7 +353,7 @@ def render(mat, textures, steve, age, yaw):
             sc.box(piv, 0, m, s, 0.5, leg, box_uv_faces(u, v, *s))
         sc.box(piv, 0, m, s, 1.0, hum, box_uv_faces(u, v, *s, mirror=mir))
     I = ((1, 0, 0), (0, 1, 0), (0, 0, 1))
-    for slot, fn in SLOTS.items():
+    for slot, fn in slots(proto).items():
         tex = leg if slot == 'leggings' else hum
         for top in fn():
             anims = {}
@@ -305,22 +362,24 @@ def render(mat, textures, steve, age, yaw):
     return sc.img
 
 def preview(textures):
-    """celestial.gif: netherite and diamond, front and back, animated; celestial.png: its first frame, bigger"""
+    """celestial.gif: the 4 cat prototypes in netherite, front 3/4 (top row) and back (bottom row), animated;
+    celestial.png: the same in diamond (first frame)"""
     sp = REF_ROOT + '/assets/minecraft/textures/entity/player/wide/steve.png'
     steve = Image.open(sp).convert('RGBA') if os.path.exists(sp) else Image.new('RGBA', (64, 64), (200, 150, 120, 255))
     os.makedirs(PREVIEWS, exist_ok=True)
-    frames = []
-    for f in range(20):
-        g = Image.new('RGBA', (4 * 240 + 20, 380), (30, 26, 48, 255))
-        for i, (mat, yaw) in enumerate((('netherite', -30), ('netherite', 150), ('diamond', -30), ('diamond', 150))):
-            g.alpha_composite(render(mat, textures[mat], steve, f * 9, yaw), (10 + i * 240 + (10 if i >= 2 else 0), 10))
-        frames.append(g.convert('RGB'))
+    def sheet(mat, age):
+        g = Image.new('RGBA', (4 * 240 + 10, 2 * 360 + 10), (30, 26, 48, 255))
+        for v in range(1, 5):
+            for row, yaw in enumerate((-35, 145)):
+                g.alpha_composite(render(mat, textures[mat], steve, age, yaw, v), (10 + (v - 1) * 240, 5 + row * 360))
+        return g.convert('RGB')
+    frames = [sheet('netherite', f * 12) for f in range(15)]
     frames[0].save(PREVIEWS + '/celestial.gif', save_all=True, append_images=frames[1:], duration=450, loop=0)
-    frames[0].resize((frames[0].width * 2, frames[0].height * 2), Image.NEAREST).save(PREVIEWS + '/celestial.png')
+    sheet('diamond', 30).save(PREVIEWS + '/celestial.png')
 
 if __name__ == '__main__':
-    for v in range(1, 5):                                      # the 4 prototype packs are gone (the user chose)
-        shutil.rmtree('%s %d' % (PACK, v), ignore_errors=True)
-    tx = build()
+    shutil.rmtree(PACK, ignore_errors=True)                    # while choosing: 4 prototype packs instead of one
+    for v in range(1, 5):
+        tx = build(v)
     preview(tx)
-    print('celestial ok')
+    print('celestial ok: 4 prototypes')
