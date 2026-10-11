@@ -24,9 +24,9 @@ for script in ('gen.py', 'magic.py', 'gear.py', 'icons.py', 'extras.py', 'screen
 
 if not args.no_zip:
     dist = os.path.join(ROOT, 'dist'); os.makedirs(dist, exist_ok=True)
-    for old in ('Aurora Celestial.zip',):               # replaced by the 4 prototypes
+    for old in tuple('Aurora Celestial %d.zip' % v for v in range(1, 5)):   # old prototypes
         if os.path.exists(os.path.join(dist, old)): os.remove(os.path.join(dist, old))
-    for name in ('Aurora Pack', 'Aurora Outline', 'Aurora HUD XL', 'Aurora EMF') + tuple('Aurora Celestial %d' % v for v in range(1, 5)):
+    for name in ('Aurora Pack', 'Aurora Outline', 'Aurora HUD XL', 'Aurora EMF', 'Aurora Celestial'):
         src = os.path.join(PACKS, name); out = os.path.join(dist, name + '.zip')
         with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
             for base, dirs, files in sorted(os.walk(src)):
