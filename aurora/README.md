@@ -52,6 +52,7 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 - `menu_themes.py`: utilidades de dibujo y los 25 temas (marco, fondo, casillas y adornos que sobresalen).
 - `emf.py`: pack Aurora EMF (modelos `.jem` de EMF para la netherita, con sus `.properties`) y vista 3D en `previews/emf_netherite.png` con un pequeño renderizador propio.
 - `celestial.py`: pack Aurora Celestial (modelos `.jem` animados por pieza, texturas casi transparentes con capa emisiva `_e.png`) y vista previa animada en `previews/celestial.gif`.
+- `optimize.py`: optimización sin pérdida al final de la build (antes de validar). Junta fotogramas repetidos de las animaciones (el juego sube a la GPU cada cambio de fotograma; menos cambios = menos trabajo por tick y menos memoria) y guarda como PNG de paleta exacta las texturas con transparencia y ≤256 colores (comprobado píxel a píxel). Nada cambia en pantalla.
 - `validate.py`: validación estática contra la 26.3. Revisa JSON, tamaños y frames de las animaciones, nine-slice, referencias de modelos y texturas, definiciones de items, capas de equipamiento, compilación de los shaders en las 5 variantes OIT con `glslangValidator` y que las salidas del vsh coincidan con las entradas del fsh.
 - `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta, incluida `textures/entity/shield/` (en la 26.3 contiene `shield_base.png` y `shield_base_nopattern.png`).
 

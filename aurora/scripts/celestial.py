@@ -67,16 +67,37 @@ def sub(pid, translate=(0, 0, 0), rotate=(0, 0, 0), boxes=(), subs=()):
 def cube(c, size, idx):
     return box((c[0] - size / 2, c[1] - size / 2, c[2] - size / 2), (size, size, size), idx)
 
+def turn90(m, s, k):
+    """box (min, size) turned k quarter turns around the y axis (Mojang's rotationY: x' = x cos + z sin, z' = -x sin + z cos)"""
+    x0, y0, z0 = m; x1, z1 = x0 + s[0], z0 + s[2]
+    for _ in range(k % 4):
+        x0, z0, x1, z1 = z0, -x1, z1, -x0
+    return (min(x0, x1), y0, min(z0, z1)), (abs(x1 - x0), s[1], abs(z1 - z0))
+
 def ring(pid, radius, n, thick, beads=(), bead=0.5, shift=0):
-    """thin closed hoop around the y axis: n tangent segments (each one its own submodel turned by 360/n degrees)
-    coloured along the gradient, plus beads (angle in degrees, colour index) sitting on the hoop"""
+    """thin closed hoop around the y axis: n tangent segments coloured along the gradient, plus beads (angle in
+    degrees, colour index) sitting on the hoop. Segments a quarter turn apart share one rotated submodel (their boxes
+    are just turned by 90 degrees inside it), so the hoop costs n/4 parts instead of n: same picture, less to move."""
+    assert n % 4 == 0
+    q = n // 4
     seg = 2 * radius * math.tan(math.pi / n) + 0.03
-    subs = [sub('%s_%d' % (pid, i), rotate=(0, 360 * i / n, 0),
-                boxes=[box((-seg / 2, -thick / 2, -radius - thick / 2), (seg, thick, thick),
-                           (i * NGRAD // n + shift) % NGRAD)]) for i in range(n)]
-    subs += [sub('%s_b%d' % (pid, k), rotate=(0, a, 0), boxes=[cube((0, 0, -radius), bead, idx)])
-             for k, (a, idx) in enumerate(beads)]
-    return sub(pid, subs=subs)
+    groups = {i: [] for i in range(q)}
+    front = ((-seg / 2, -thick / 2, -radius - thick / 2), (seg, thick, thick))
+    for j in range(n):
+        m, sz = turn90(*front, j // q)
+        groups[j % q].append(box(m, sz, (j * NGRAD // n + shift) % NGRAD))
+    extra = []
+    for k, (a, idx) in enumerate(beads):
+        b = cube((0, 0, -radius), bead, idx)
+        m, sz = (b['coordinates'][:3], b['coordinates'][3:])
+        i = next((i for i in range(q) if abs(((a - 360 * i / n) / 90) - round((a - 360 * i / n) / 90)) < 1e-6), None)
+        if i is None:
+            extra.append(sub('%s_b%d' % (pid, k), rotate=(0, a, 0), boxes=[b]))
+        else:
+            m2, sz2 = turn90(m, sz, round((a - 360 * i / n) / 90))
+            groups[i].append(box(m2, sz2, idx))
+    subs = [sub('%s_%d' % (pid, i), rotate=(0, round(360 * i / n, 4), 0), boxes=groups[i]) for i in range(q)]
+    return sub(pid, subs=subs + extra)
 
 def top(part, pid, subs, anims):
     return {'part': part, 'id': pid, 'attach': True, 'invertAxis': '', 'translate': [0, 0, 0],
