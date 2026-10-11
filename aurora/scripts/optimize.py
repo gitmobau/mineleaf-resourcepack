@@ -11,7 +11,7 @@ from PIL import Image
 
 HOME = os.path.expanduser('~')
 RP = os.environ.get('AURORA_RP', HOME + '/mnt/.minecraft/resourcepacks')
-PACKS = ['Aurora Pack', 'Aurora HUD XL', 'Aurora Outline', 'Aurora EMF', 'Aurora Celestial']
+PACKS = ['Aurora Pack', 'Aurora HUD XL', 'Aurora Outline', 'Aurora EMF'] + ['Aurora Celestial %d' % v for v in range(1, 5)]
 
 def frame_size(a, w, h):
     fw, fh = a.get('width'), a.get('height')

@@ -22,9 +22,7 @@ from gear import cyc, mix, C, WHITE, VIVID, box_faces, HUMANOID_BOXES
 HOME = os.path.expanduser('~')
 REF_ROOT = os.environ.get('AURORA_REF', HOME + '/ref63')
 RP = os.environ.get('AURORA_RP', HOME + '/mnt/.minecraft/resourcepacks')
-PACK = RP + '/Aurora Celestial'
-CEM = PACK + '/assets/minecraft/emf/cem/'
-TEX = PACK + '/assets/minecraft/textures/entity/equipment/'
+PACK = RP + '/Aurora Celestial'                  # prototypes: 'Aurora Celestial 1' ... 'Aurora Celestial 4'
 PREVIEWS = os.environ.get('AURORA_PREVIEWS', PACK)
 
 # ------------------------------------------------------------------ palettes
@@ -105,45 +103,163 @@ def top(part, pid, subs, anims):
 
 # ------------------------------------------------------------------ the pieces
 # Rates are whole degrees per tick dividing 360, so the preview GIF loops (180 ticks = 9 s).
-def helmet():
-    halo = ring('halo', 4.3, 24, 0.32, beads=((0, 12), (120, 13), (240, 12)), bead=0.55)
-    tilt = sub('halo_tilt', translate=(0, -11.5, 0), rotate=(10, 0, -4), subs=[halo])
-    return [top('head', 'cel_head', [tilt], {'halo_tilt.ty': '-11.5 + sin(torad(age * 4)) * 0.35',
-                                             'halo.ry': 'torad(age * 2)'})]
-
-def chestplate():
-    # pendant hanging from the necklace: a small diamond close to the chest (it barely sticks out), slowly turning,
-    # with two motes circling in front of it (vertical orbit, so they never go into the chest)
-    star = sub('star', rotate=(0, 0, 45), boxes=[cube((0, 0, 0), 1.05, 14)],
-               subs=[sub('star_x', rotate=(45, 0, 0), boxes=[cube((0, 0, 0), 0.75, 15)])])
-    motes = sub('star_orbit', translate=(0, 0, -0.35),
-                subs=[sub('mote_%d' % i, rotate=(0, 0, a), boxes=[cube((0, -1.35, 0), 0.28, 12 + i)])
-                      for i, a in enumerate((0, 180))])
-    pos = sub('star_pos', translate=(0, 5.4, -3.85), subs=[star, motes])
-    return [top('body', 'cel_body', [pos], {'star_pos.ty': '5.4 + sin(torad(age * 6)) * 0.15',
-                                            'star.ry': 'torad(age * 4)',
-                                            'star.sx': '1 + sin(torad(age * 8)) * 0.1',
-                                            'star.sy': '1 + sin(torad(age * 8)) * 0.1',
-                                            'star.sz': '1 + sin(torad(age * 8)) * 0.1',
-                                            'star_orbit.rz': 'torad(age * -6)'})]
-
-def leggings():
-    hips = ring('waist', 5.4, 28, 0.26, beads=((90, 13), (270, 12)), bead=0.42, shift=6)
-    tilt = sub('waist_tilt', translate=(0, 12.6, 0), rotate=(6, 0, 3), subs=[hips])
-    return [top('body', 'cel_waist', [tilt], {'waist_tilt.ty': '12.6 + sin(torad(age * 4 + 90)) * 0.25',
-                                              'waist.ry': 'torad(age * -2)'})]
-
-def boots():
-    out = []
-    for side, sgn in (('right', 1), ('left', -1)):
-        hoop = ring('ankle_' + side, 3.1, 16, 0.22, beads=((0, 12 if sgn > 0 else 13),), bead=0.36, shift=3 * (1 - sgn))
-        pos = sub('ankle_%s_pos' % side, translate=(0, 9.2, 0), rotate=(0, 0, 5 * sgn), subs=[hoop])
-        out.append(top(side + '_leg', 'cel_%s_leg' % side, [pos],
-                       {'ankle_%s_pos.ty' % side: '9.2 + sin(torad(age * 8 + %d)) * 0.2' % (90 * (1 - sgn)),
-                        'ankle_%s.ry' % side: 'torad(age * %d)' % (4 * sgn)}))
+def flat_star(c, size, thick, idx, core=None, depth=0.18):
+    """4-point star facing the front: a long and a tall bar plus an optional core bead"""
+    x, y, z = c
+    out = [box((x - size / 2, y - thick / 2, z - depth / 2), (size, thick, depth), idx),
+           box((x - thick / 2, y - size / 2, z - depth / 2), (thick, size, depth), idx)]
+    if core is not None:
+        out.append(cube((x, y, z - depth / 2), thick * 1.5, core))
     return out
 
-SLOTS = {'helmet': helmet, 'chestplate': chestplate, 'leggings': leggings, 'boots': boots}
+def beam(pid, p0, p1, thick, idx, z):
+    """thin bar from p0 to p1 (x, y) in the front plane at depth z"""
+    dx, dy = p1[0] - p0[0], p1[1] - p0[1]
+    length = math.hypot(dx, dy)
+    return sub(pid, translate=(p0[0], p0[1], 0), rotate=(0, 0, math.degrees(math.atan2(dy, dx))),
+               boxes=[box((0, -thick / 2, z - thick / 2), (length, thick, thick), idx)])
+
+def helmet():
+    # halo: a soft pastel ring with a thin bright core ring inside it and four twinkling sparkles riding on it
+    outer = ring('halo_o', 4.55, 24, 0.26)
+    core = ring('halo_c', 4.1, 24, 0.18, shift=0)
+    for part in core['submodels']:                     # the core ring is white (dark glow on diamond)
+        for b in part['boxes']:
+            for k in ('uvNorth', 'uvSouth', 'uvEast', 'uvWest'): b[k] = uv(12, 1)
+            b['uvUp'], b['uvDown'] = uv(12, 0), uv(12, 2)
+    sparks = []
+    for k, a in enumerate((45, 135, 225, 315)):
+        r = math.radians(a)
+        sparks.append(sub('spark_%d' % k, translate=(-4.55 * math.sin(r), 0, -4.55 * math.cos(r)), rotate=(0, a, 0),
+                          boxes=[box((-0.12, -0.6, -0.12), (0.24, 1.2, 0.24), 13), box((-0.6, -0.12, -0.12), (1.2, 0.24, 0.24), 13)]))
+    halo = sub('halo', subs=[outer, core] + sparks)
+    tilt = sub('halo_tilt', translate=(0, -11.5, 0), rotate=(10, 0, -4), subs=[halo])
+    anims = {'halo_tilt.ty': '-11.5 + sin(torad(age * 4)) * 0.35', 'halo.ry': 'torad(age * 2)'}
+    for k in range(4):
+        ex = '0.6 + 0.45 * sin(torad(age * 8 + %d))' % (k * 90)
+        anims.update({'spark_%d.sx' % k: ex, 'spark_%d.sy' % k: ex, 'spark_%d.sz' % k: ex})
+    return [top('head', 'cel_head', [tilt], anims)]
+
+def chestplate():
+    # pendant: a FLAT jewel lying on the chest under the necklace (barely 0.45 px in front of it), swinging softly
+    # like a pendulum from the bottom of the V and gently pulsing
+    jewel = sub('pend', translate=(0, 1.25, 0), rotate=(0, 0, 45),
+                boxes=[box((-0.6, -0.6, -0.12), (1.2, 1.2, 0.24), 15), box((-0.33, -0.33, -0.26), (0.66, 0.66, 0.14), 14),
+                       cube((0.55, -0.55, -0.2), 0.22, 13)])
+    pivot = sub('pend_pivot', translate=(0, 4.2, -3.2), subs=[jewel])
+    return [top('body', 'cel_body', [pivot], {'pend_pivot.rz': 'torad(sin(torad(age * 4)) * 7)',
+                                             'pend.sx': '1 + sin(torad(age * 8)) * 0.07',
+                                             'pend.sy': '1 + sin(torad(age * 8)) * 0.07'})]
+
+# ---- leggings prototypes (not halos)
+def leg_sash():
+    """1. ribbon sash fitted round the hips, tied in a bow on the left hip, two tails swaying"""
+    band = [box((-4.25, 10.6, -2.3), (8.5, 0.6, 0.25), 2), box((-4.25, 10.6, 2.05), (8.5, 0.6, 0.25), 5),
+            box((-4.3, 10.6, -2.3), (0.25, 0.6, 4.6), 4), box((4.05, 10.6, -2.3), (0.25, 0.6, 4.6), 3)]
+    bow = [box((1.7, 10.2, -2.65), (1.0, 0.8, 0.3), 3), box((3.1, 10.2, -2.65), (1.0, 0.8, 0.3), 3), cube((2.9, 10.9, -2.55), 0.55, 13)]
+    tails = sub('sash_tails', translate=(2.9, 11.1, -2.55),
+                boxes=[box((-0.55, 0, -0.08), (0.4, 3.4, 0.16), 4), box((0.2, 0, -0.08), (0.4, 2.8, 0.16), 2)])
+    return [top('body', 'cel_waist', [sub('sash', boxes=band + bow, subs=[tails])],
+                {'sash_tails.rz': 'torad(sin(torad(age * 6)) * 9)'})]
+
+def leg_knee_stars():
+    """2. a small twinkling star floating just in front of each knee, plus a tiny one on the thigh"""
+    out = []
+    for side, o in (('right', -1), ('left', 1)):
+        star = sub('knee_%s' % side, translate=(0.2 * o, 6.3, -2.45), boxes=flat_star((0, 0, 0), 1.7, 0.36, 2, core=12))
+        small = sub('thigh_%s' % side, translate=(1.0 * o, 2.6, -2.3), boxes=flat_star((0, 0, 0), 0.9, 0.22, 4))
+        ph = 0 if o < 0 else 180
+        ex = '1 + sin(torad(age * 6 + %d)) * 0.22' % ph
+        ex2 = '0.8 + sin(torad(age * 6 + %d)) * 0.3' % (ph + 90)
+        out.append(top('%s_leg' % side, 'cel_%s_leg' % side, [star, small],
+                       {'knee_%s.sx' % side: ex, 'knee_%s.sy' % side: ex, 'knee_%s.rz' % side: 'torad(sin(torad(age * 2)) * 12)',
+                        'thigh_%s.sx' % side: ex2, 'thigh_%s.sy' % side: ex2}))
+    return out
+
+def leg_feathers():
+    """3. three small light feathers at each hip, fluttering"""
+    subs, anims = [], {}
+    for side, o in (('r', -1), ('l', 1)):
+        subs.append(sub('hipwing_%s' % side, translate=(4.75 * o, 10.0, 0.6), rotate=(-25, 0, 0),
+                        boxes=[box((-0.1, k * 0.65, 0), (0.2, 0.5, 3.0 - k * 0.6), 12 if k == 0 else (3 + k) % NGRAD)
+                               for k in range(3)]))
+        anims['hipwing_%s.ry' % side] = 'torad(%d + sin(torad(age * 12)) * 12)' % (15 * o)
+    return [top('body', 'cel_waist', subs, anims)]
+
+def leg_constellation():
+    """4. a little constellation on the front of each thigh: twinkling points joined by fine lines"""
+    out = []
+    pts = ((-0.9, 1.2), (0.8, 2.6), (-0.2, 4.4), (1.0, 5.6))
+    for side, o in (('right', -1), ('left', 1)):
+        P = [(x * -o, y) for x, y in pts]
+        lines = [beam('cst_%s_l%d' % (side, k), P[k], P[k + 1], 0.12, 15, -2.12) for k in range(len(P) - 1)]
+        dots = [sub('cst_%s_p%d' % (side, k), translate=(x, y, -2.18), boxes=[cube((0, 0, 0), 0.42, 12 if k % 2 else 13)])
+                for k, (x, y) in enumerate(P)]
+        anims = {}
+        for k in range(len(P)):
+            ex = '0.7 + sin(torad(age * 8 + %d)) * 0.45' % (k * 90 + (0 if o < 0 else 45))
+            anims.update({'cst_%s_p%d.sx' % (side, k): ex, 'cst_%s_p%d.sy' % (side, k): ex, 'cst_%s_p%d.sz' % (side, k): ex})
+        out.append(top('%s_leg' % side, 'cel_%s_leg' % side, lines + dots, anims))
+    return out
+
+# ---- boots prototypes (not halos)
+def boot_wings():
+    """1. little wings of light on the outer side of each heel, flapping"""
+    out = []
+    for side, o in (('right', -1), ('left', 1)):
+        feathers = [box((-0.1, -k * 0.6, 0), (0.2, 0.5, 2.6 - k * 0.5), 12 if k == 0 else (2 + k) % NGRAD) for k in range(3)]
+        wing = sub('heelwing_%s' % side, translate=(2.25 * o, 9.6, 0.9), rotate=(-30, 0, 0), boxes=feathers)
+        out.append(top('%s_leg' % side, 'cel_%s_leg' % side, [wing],
+                       {'heelwing_%s.ry' % side: 'torad(%d + sin(torad(age * 12)) * 18)' % (20 * o)}))
+    return out
+
+def boot_trail():
+    """2. a trail of three sparkles behind each heel, bobbing one after another"""
+    out = []
+    for side, o in (('right', -1), ('left', 1)):
+        subs, anims = [], {}
+        for k, (z, y, s) in enumerate(((3.5, 10.6, 1.2), (4.7, 9.9, 0.9), (5.7, 9.3, 0.6))):
+            pid = 'trail_%s_%d' % (side, k)
+            subs.append(sub(pid, translate=(0.4 * o, y, z), boxes=flat_star((0, 0, 0), s, 0.2, 12 if k == 0 else 3 + k)))
+            anims[pid + '.ty'] = '%g + sin(torad(age * 8 + %d)) * 0.3' % (y, k * 60 + (0 if o < 0 else 180))
+            ex = '0.75 + sin(torad(age * 8 + %d)) * 0.3' % (k * 60)
+            anims.update({pid + '.sx': ex, pid + '.sy': ex})
+        out.append(top('%s_leg' % side, 'cel_%s_leg' % side, subs, anims))
+    return out
+
+def boot_ribbon():
+    """3. a ribbon tied snugly round each ankle (hugging the leg, not floating), bow at the back, two tails swaying"""
+    out = []
+    for side, o in (('right', -1), ('left', 1)):
+        band = [box((-2.25, 8.4, -2.25), (4.5, 0.5, 0.22), 2), box((-2.25, 8.4, 2.03), (4.5, 0.5, 0.22), 4),
+                box((-2.25, 8.4, -2.25), (0.22, 0.5, 4.5), 3), box((2.03, 8.4, -2.25), (0.22, 0.5, 4.5), 3)]
+        bow = [box((-1.3, 7.95, 2.2), (0.9, 0.7, 0.3), 4), box((0.4, 7.95, 2.2), (0.9, 0.7, 0.3), 4), cube((0, 8.65, 2.35), 0.45, 13)]
+        tails = sub('rtail_%s' % side, translate=(0, 8.85, 2.35),
+                    boxes=[box((-0.5, 0, -0.07), (0.35, 2.2, 0.14), 2), box((0.15, 0, -0.07), (0.35, 1.8, 0.14), 4)])
+        out.append(top('%s_leg' % side, 'cel_%s_leg' % side, [sub('ribbon_%s' % side, boxes=band + bow, subs=[tails])],
+                       {'rtail_%s.rx' % side: 'torad(%d + sin(torad(age * 6 + %d)) * 10)' % (15, 0 if o < 0 else 180)}))
+    return out
+
+def boot_clouds():
+    """4. tiny clouds round each foot, as if walking on them, bobbing gently"""
+    out = []
+    puff = lambda c, s: [cube((c[0] + dx * s, c[1] + dy * s, c[2] + dz * s), r * s, 14 if dy < 0 else 15)
+                         for dx, dy, dz, r in ((0, 0, 0, 1.0), (-0.75, 0.15, 0.1, 0.75), (0.75, 0.15, -0.1, 0.8), (0.2, -0.5, 0, 0.7))]
+    for side, o in (('right', -1), ('left', 1)):
+        subs, anims = [], {}
+        for k, (x, y, z, s) in enumerate(((2.9 * o, 11.5, -1.8, 1.2), (2.7 * o, 11.8, 1.9, 1.0), (-0.3 * o, 12.2, -3.4, 0.9))):
+            pid = 'cloud_%s_%d' % (side, k)
+            subs.append(sub(pid, translate=(x, y, z), boxes=puff((0, 0, 0), s)))
+            anims[pid + '.ty'] = '%g + sin(torad(age * 4 + %d)) * 0.25' % (y, k * 120 + (0 if o < 0 else 60))
+        out.append(top('%s_leg' % side, 'cel_%s_leg' % side, subs, anims))
+    return out
+
+LEGGINGS = [leg_sash, leg_knee_stars, leg_feathers, leg_constellation]
+BOOTS = [boot_wings, boot_trail, boot_ribbon, boot_clouds]
+PROTOS = {1: 'cinta + alitas', 2: 'estrellas en las rodillas + estela', 3: 'plumas + lazos', 4: 'constelación + nubecitas'}
+
+def slots(v):
+    return {'helmet': helmet, 'chestplate': chestplate, 'leggings': LEGGINGS[v - 1], 'boots': BOOTS[v - 1]}
 
 # ------------------------------------------------------------------ textures
 def faces_of(boxes):
@@ -192,26 +308,28 @@ def write_json(path, obj):
     with open(path, 'w') as f:
         json.dump(obj, f, indent=2)
 
-def build():
-    shutil.rmtree(PACK + '/assets', ignore_errors=True)
-    for slot, fn in SLOTS.items():
+def build(v):
+    pack = '%s %d' % (PACK, v)
+    cem, tex = pack + '/assets/minecraft/emf/cem/', pack + '/assets/minecraft/textures/entity/equipment/'
+    shutil.rmtree(pack + '/assets', ignore_errors=True)
+    for slot, fn in slots(v).items():
         model = {'textureSize': [64, 32], 'models': fn()}
         for who in ('player_', 'player_slim_', ''):             # exact player names + generic fallback for mobs
-            write_json(CEM + who + slot + '.jem', model)
+            write_json(cem + who + slot + '.jem', model)
     out = {}
     for mat in ('netherite', 'diamond'):
         hum, leg, hum_e, leg_e = worn(mat)
         for layer, img, emi in (('humanoid', hum, hum_e), ('humanoid_leggings', leg, leg_e)):
-            os.makedirs(TEX + layer, exist_ok=True)
-            img.save(TEX + '%s/%s.png' % (layer, mat), optimize=True)
-            emi.save(TEX + '%s/%s_e.png' % (layer, mat), optimize=True)
+            os.makedirs(tex + layer, exist_ok=True)
+            img.save(tex + '%s/%s.png' % (layer, mat), optimize=True)
+            emi.save(tex + '%s/%s_e.png' % (layer, mat), optimize=True)
         out[mat] = (hum, leg)
     src = RP + '/Aurora Pack/pack.png'
     if os.path.exists(src):
-        shutil.copyfile(src, PACK + '/pack.png')
-    with open(PACK + '/pack.mcmeta', 'w') as f:
-        json.dump({'pack': {'description': ['', {'text': 'Aurora Celestial ', 'color': '#B9B9F8'},
-                                            {'text': '· aureolas (EMF + ETF, en lugar de Aurora EMF)', 'color': '#F8B0EA'}],
+        shutil.copyfile(src, pack + '/pack.png')
+    with open(pack + '/pack.mcmeta', 'w') as f:
+        json.dump({'pack': {'description': ['', {'text': 'Aurora Celestial %d ' % v, 'color': '#B9B9F8'},
+                                            {'text': '· %s (EMF + ETF)' % PROTOS[v], 'color': '#F8B0EA'}],
                             'min_format': 84, 'max_format': 97}}, f, indent=2, ensure_ascii=False)
     return out
 
@@ -260,7 +378,7 @@ def draw_part(scene, tex, part, M, T, anims, age):
 
 PIVOTS = {'head': (0, 0, 0), 'body': (0, 0, 0), 'right_leg': (-1.9, 12, 0), 'left_leg': (1.9, 12, 0)}
 
-def render(mat, textures, steve, age, yaw):
+def render(mat, textures, steve, age, yaw, proto=1):
     from emf import Scene, LIMBS, SKIN_UV, box_uv_faces
     hum, leg = textures
     sc = Scene(230, 360, math.radians(yaw), math.radians(12), 8, 115, 120)
@@ -273,7 +391,7 @@ def render(mat, textures, steve, age, yaw):
             sc.box(piv, 0, m, s, 0.5, leg, box_uv_faces(u, v, *s))
         sc.box(piv, 0, m, s, 1.0, hum, box_uv_faces(u, v, *s, mirror=mir))
     I = ((1, 0, 0), (0, 1, 0), (0, 0, 1))
-    for slot, fn in SLOTS.items():
+    for slot, fn in slots(proto).items():
         tex = leg if slot == 'leggings' else hum
         for top in fn():
             anims = {}
@@ -282,22 +400,28 @@ def render(mat, textures, steve, age, yaw):
     return sc.img
 
 def preview(textures):
+    """celestial.gif: the 4 prototypes in netherite (front 3/4 view), animated; celestial.png: front + back of each
+    prototype in netherite and diamond"""
     sp = REF_ROOT + '/assets/minecraft/textures/entity/player/wide/steve.png'
     steve = Image.open(sp).convert('RGBA') if os.path.exists(sp) else Image.new('RGBA', (64, 64), (200, 150, 120, 255))
-    frames = []
-    for f in range(30):
-        age = f * 6
-        g = Image.new('RGBA', (4 * 230 + 50, 380), (30, 26, 48, 255))
-        for i, (mat, yaw) in enumerate((('netherite', -30), ('netherite', 150), ('diamond', -30), ('diamond', 150))):
-            g.alpha_composite(render(mat, textures[mat], steve, age, yaw), (10 + i * 240 + (10 if i >= 2 else 0), 10))
-        frames.append(g)
     os.makedirs(PREVIEWS, exist_ok=True)
-    big = [fr.resize((fr.width * 2, fr.height * 2), Image.NEAREST).convert('RGB') for fr in frames]
-    big[0].save(PREVIEWS + '/celestial.png')
-    small = [fr.convert('RGB') for fr in frames]
-    small[0].save(PREVIEWS + '/celestial.gif', save_all=True, append_images=small[1:], duration=300, loop=0)
+    frames = []
+    for f in range(20):
+        age = f * 9
+        g = Image.new('RGBA', (4 * 240 + 10, 380), (30, 26, 48, 255))
+        for v in range(1, 5):
+            g.alpha_composite(render('netherite', textures['netherite'], steve, age, -30, v), (10 + (v - 1) * 240, 10))
+        frames.append(g.convert('RGB'))
+    frames[0].save(PREVIEWS + '/celestial.gif', save_all=True, append_images=frames[1:], duration=450, loop=0)
+    sheet = Image.new('RGBA', (4 * 240 + 10, 4 * 370 + 10), (30, 26, 48, 255))
+    for v in range(1, 5):
+        for row, (mat, yaw) in enumerate((('netherite', -30), ('netherite', 150), ('diamond', -30), ('diamond', 150))):
+            sheet.alpha_composite(render(mat, textures[mat], steve, 30, yaw, v), (10 + (v - 1) * 240, 10 + row * 370))
+    sheet.convert('RGB').save(PREVIEWS + '/celestial.png')
 
 if __name__ == '__main__':
-    tx = build()
+    shutil.rmtree(PACK, ignore_errors=True)                    # the single pack of the first prototype is gone
+    for v in range(1, 5):
+        tx = build(v)
     preview(tx)
-    print('celestial ok')
+    print('celestial ok: 4 prototypes')
