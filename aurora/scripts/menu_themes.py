@@ -525,21 +525,12 @@ class Creator(Theme):                     # creative inventory: creator's studio
 
 # ------------------------------------------------------------------ non-container windows
 class Cookbook(Theme):                    # recipe book panel: starry cookbook (inside stays dark: white text)
-    pads = (6, 16, 6, 10)
+    # Exactly the vanilla size: the book is drawn glued to the container next to it (and recipe-book mods draw it
+    # their own way), so a frame that sticks out ended up misplaced in game. Same look, nothing outside.
+    pads = (0, 0, 0, 0)
     band = [(50, 26, 60), (150, 90, 150), (225, 165, 215), (255, 238, 250), (185, 120, 180), (100, 55, 110), (50, 26, 60)]
     def bg(self, x, y, w, h): return grad([(250, 236, 248), (236, 218, 240)], y / h)
     def feature(self, l, x, w): return grad([(26, 18, 44), (52, 38, 84), (200, 180, 240), (255, 255, 255)], l)
-    def ornaments(self, img, L, T, w, h):
-        S = img.size; cx = L + w // 2
-        paint(img, poly(S, [(cx, T - 3), (cx - 13, T - 6), (cx - 13, T - 14), (cx, T - 11)]), lambda x, y: (255, 250, 238), line=(110, 60, 120))
-        paint(img, poly(S, [(cx, T - 3), (cx + 13, T - 6), (cx + 13, T - 14), (cx, T - 11)]), lambda x, y: (246, 236, 226), line=(110, 60, 120))
-        paint(img, poly(S, star_pts(cx - 6, T - 9, 3, 1.3, 5)), lambda x, y: (255, 160, 200), line=None, bevel=False)
-        paint(img, poly(S, star_pts(cx + 6, T - 9, 3, 1.3, 5)), lambda x, y: (150, 220, 255), line=None, bevel=False)
-        for (x, y) in ((L - 1, T - 1), (L + w, T - 1)):
-            paint(img, poly(S, [(x, y - 5), (x + 5, y), (x, y + 5), (x - 5, y)]), lambda a, b: (255, 220, 140), line=(130, 90, 40), bevel=False)
-        for k, (x, col) in enumerate(((L + 30, (255, 150, 200)), (L + 40, (150, 210, 255)))):   # ribbon bookmarks
-            paint(img, poly(S, [(x - 2, T + h - 1), (x + 2, T + h - 1), (x + 2, T + h + 8), (x, T + h + 6), (x - 2, T + h + 8)]),
-                  lambda a, b, col=col: col, line=(110, 60, 120), bevel=False)
     def motif(self, img, x, y, r): pass
 
 class ModePortal(Theme):                  # F3+F4 game mode switcher: portal of modes (dark: white text)

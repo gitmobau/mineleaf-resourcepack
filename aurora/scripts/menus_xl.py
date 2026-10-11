@@ -165,7 +165,8 @@ def build(name):
             if placed >= 10: break
     theme.ornaments(art, l, t, w, h)
     img = Image.new('RGBA', tsize); img.alpha_composite(art, origin)
-    write_markers(img, kind, w, h, theme.pads, origin)
+    if any(theme.pads):                                # nothing sticks out: no markers, plain vanilla-size texture
+        write_markers(img, kind, w, h, theme.pads, origin)
     p = os.path.normpath(TX + 'gui/container/%s.png' % name)
     os.makedirs(os.path.dirname(p), exist_ok=True); img.save(p, optimize=True)
     return img
