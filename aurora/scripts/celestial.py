@@ -137,15 +137,13 @@ def helmet():
 # ---- chestplate: cats (the necklace and pendant are gone: the user did not like them)
 FUR, PATCH, EYE, PINK, BAG, STRAP, GOLD = 16, 17, 18, 19, 20, 21, 22
 
-def cat_head(asleep=False):
+def cat_head(eyes=True):
     """cat head boxes around a neck pivot at (0, 0, 0), facing the front (-z); about 3 x 2.6 px"""
     b = [box((-1.5, -2.6, -1.4), (3.0, 2.6, 2.4), FUR),
          box((-1.45, -3.45, -0.55), (0.85, 0.9, 0.5), FUR), box((0.6, -3.45, -0.55), (0.85, 0.9, 0.5), FUR),
          box((-1.25, -3.2, -0.62), (0.45, 0.5, 0.1), PINK), box((0.8, -3.2, -0.62), (0.45, 0.5, 0.1), PINK),
          box((-0.2, -1.0, -1.5), (0.4, 0.3, 0.12), PINK)]
-    if asleep:
-        b += [box((-1.1, -1.5, -1.5), (0.6, 0.15, 0.12), EYE), box((0.5, -1.5, -1.5), (0.6, 0.15, 0.12), EYE)]
-    else:
+    if eyes:
         b += [box((-1.05, -1.75, -1.5), (0.55, 0.55, 0.12), EYE), box((0.5, -1.75, -1.5), (0.55, 0.55, 0.12), EYE)]
     return b
 
@@ -166,52 +164,40 @@ def scaled(part, k, root=True):
     out['submodels'] = [scaled(sp, k, False) for sp in part['submodels']]
     return out
 
-def cat_sitting():
-    """a cat sitting on the right shoulder, wagging its tail and looking around"""
-    head = sub('sit_head', translate=(0, -3.0, -0.1), boxes=cat_head())
-    tail = sub('sit_tail', translate=(0, -0.5, 2.2), rotate=(55, 0, 0),          # curled up behind
-               boxes=[box((-0.3, -0.3, 0), (0.6, 0.6, 2.2), FUR), box((-0.3, -0.3, 2.2), (0.6, 0.6, 1.0), PATCH)])
-    cat = sub('sit_cat', translate=(-6.6, 0, 0.3), subs=[head, tail],
-              boxes=[box((-1.2, -3.1, -0.9), (2.4, 3.1, 2.4), FUR), box((-1.4, -1.3, -0.4), (2.8, 1.3, 2.8), FUR),
-                     box((-0.65, -2.6, -0.98), (1.3, 1.6, 0.1), PATCH),
-                     box((-1.0, -0.6, -1.45), (0.7, 0.6, 0.7), FUR), box((0.3, -0.6, -1.45), (0.7, 0.6, 0.7), FUR)])
-    return [scaled(cat, 1.3)], {'sit_tail.ry': 'torad(sin(torad(age * 8)) * 25)',
-                                'sit_head.ry': 'torad(sin(torad(age * 2)) * 20)'}
-
-def cat_sleeping():
-    """a cat asleep lying on the left shoulder, breathing slowly, tail hanging down the back"""
-    body = sub('nap_body', translate=(6, 0, 0.2),
-               boxes=[box((-1.3, -1.8, -2.4), (2.6, 1.8, 5.0), FUR), box((-0.9, -1.85, -1.2), (1.8, 0.1, 2.0), PATCH),
-                      box((-1.15, -0.6, -3.1), (0.7, 0.6, 0.8), FUR), box((0.45, -0.6, -3.1), (0.7, 0.6, 0.8), FUR)])
-    head = sub('nap_head', translate=(6, 0.2, -2.0), rotate=(0, 0, 8), boxes=cat_head(asleep=True))
-    tail = sub('nap_tail', translate=(6, -0.8, 2.7), rotate=(-65, 0, 0),         # hanging down the back
-               boxes=[box((-0.3, -0.3, 0), (0.6, 0.6, 2.6), FUR), box((-0.3, -0.3, 2.6), (0.6, 0.6, 1.1), PATCH)])
-    parts = [dict(scaled(p_, 1.12), translate=p_['translate']) for p_ in (body, head, tail)]
-    return parts, {'nap_body.sy': '1 + sin(torad(age * 4)) * 0.05', 'nap_tail.rz': 'torad(sin(torad(age * 4)) * 15)'}
-
-def cat_backpack():
-    """a backpack shaped like a cat's face (ears, eyes, nose and cheeks on the back) with a kitten peeking out of
-    the top between its ears and looking around; straps over the shoulders"""
-    peek = sub('peek_head', translate=(0, -3.0, 1.15), rotate=(0, 180, 0), boxes=cat_head())
-    bag = sub('bag', translate=(0, 4.5, 2.0), subs=[scaled(peek, 0.8)],
+def chestplate():
+    """ONE cat mixing the four prototypes: it rides in a cat-face backpack, has climbed out onto the left shoulder
+    (lying on it, front paws hanging over the front), peeks ahead looking around, and now and then dozes off (eyes
+    shut for a while) - the user asked for the four ideas in a single cat"""
+    # the backpack, a little to the right so the cat's rear sits over its corner
+    bag = sub('bag', translate=(1.2, 4.5, 2.0),
               boxes=[box((-2.6, -2.6, 0.05), (5.2, 5.4, 2.2), BAG), box((-2.2, -3.2, 0.15), (4.4, 0.7, 2.0), BAG),
                      box((-2.75, -4.2, 0.6), (1.2, 1.1, 1.0), BAG), box((1.55, -4.2, 0.6), (1.2, 1.1, 1.0), BAG),
                      box((-2.45, -3.95, 1.6), (0.6, 0.55, 0.12), PINK), box((1.85, -3.95, 1.6), (0.6, 0.55, 0.12), PINK),
                      box((-1.5, -0.9, 2.25), (0.75, 0.75, 0.12), EYE), box((0.75, -0.9, 2.25), (0.75, 0.75, 0.12), EYE),
                      box((-0.25, 0.0, 2.25), (0.5, 0.35, 0.12), PINK),
                      box((-2.05, 0.25, 2.25), (0.6, 0.4, 0.1), PINK), box((1.45, 0.25, 2.25), (0.6, 0.4, 0.1), PINK),
-                     box((-2.65, 1.7, 0.05), (5.3, 0.5, 2.27), STRAP),
-                     box((-1.05, -3.75, 1.55), (0.6, 0.5, 0.6), FUR), box((0.45, -3.75, 1.55), (0.6, 0.5, 0.6), FUR)])
-    return [bag, sub('straps', boxes=straps())], {'bag.ty': '4.5 + sin(torad(age * 8)) * 0.12',
-                                                  'peek_head.ry': 'torad(180 + sin(torad(age * 3)) * 45)'}
-
-def chestplate():
-    """the four cat prototypes together (the user asked to mix them)"""
-    subs, anims = [], {}
-    for fn in (cat_sitting, cat_sleeping, cat_backpack):
-        s_, a_ = fn()
-        subs += s_; anims.update(a_)
-    return [top('body', 'cel_body', subs, anims)]
+                     box((-2.65, 1.7, 0.05), (5.3, 0.5, 2.27), STRAP)])
+    # the cat lying along the left shoulder, from the bag corner (back) to the front of the shoulder
+    eyes_open = sub('cat_eyes', boxes=[box((-1.05, -1.75, -1.5), (0.55, 0.55, 0.12), EYE), box((0.5, -1.75, -1.5), (0.55, 0.55, 0.12), EYE)])
+    eyes_shut = sub('cat_sleepy', boxes=[box((-1.1, -1.5, -1.5), (0.6, 0.15, 0.12), EYE), box((0.5, -1.5, -1.5), (0.6, 0.15, 0.12), EYE)])
+    head = sub('cat_head', translate=(6.3, -0.8, -1.7), subs=[eyes_open, eyes_shut], boxes=cat_head(eyes=False))
+    tail = sub('cat_tail', translate=(6.1, -0.9, 3.3), rotate=(-70, 0, 0),     # hanging down behind the shoulder
+               boxes=[box((-0.3, -0.3, 0), (0.6, 0.6, 2.8), FUR), box((-0.3, -0.3, 2.8), (0.6, 0.6, 1.1), PATCH)])
+    body = sub('cat_body', translate=(6.1, 0.1, 0),
+               boxes=[box((-1.1, -2.0, -1.4), (2.2, 2.0, 4.6), FUR),                 # lying on the shoulder
+                      box((-1.3, -1.8, 1.7), (2.6, 1.8, 1.6), FUR),                  # haunches over the back
+                      box((-0.75, -2.05, -0.6), (1.5, 0.1, 2.2), PATCH),             # a patch on its back
+                      box((-0.95, -0.6, -2.0), (0.65, 1.1, 0.65), FUR), box((0.3, -0.6, -2.0), (0.65, 1.1, 0.65), FUR)])
+    nap, awake = 'sin(torad(age * 2)) > 0.9', 'sin(torad(age * 2)) <= 0.9'   # dozes off for a while every 9 s
+    body, head, tail = (dict(scaled(p_, 1.25), translate=p_['translate']) for p_ in (body, head, tail))
+    return [top('body', 'cel_body', [bag, sub('straps', boxes=straps()), body, head, tail], {
+        'bag.ty': '4.5 + sin(torad(age * 8)) * 0.12',
+        'cat_body.sy': '1 + sin(torad(age * 4)) * 0.04',
+        'cat_head.ry': 'torad(sin(torad(age * 3)) * 15)',
+        'cat_head.rx': 'torad(if(%s, 12, 0))' % nap,
+        'cat_eyes.visible': awake,
+        'cat_sleepy.visible': nap,
+        'cat_tail.rz': 'torad(sin(torad(age * 6)) * 18)'})]
 
 # ---- leggings: ribbon sash (the user's pick among 4 prototypes, asked bigger)
 def leggings():
@@ -308,8 +294,10 @@ def rot(rx, ry, rz):
     return mm(mm(Rz, Ry), Rx)
 
 def evaluate(expr, age):
-    env = {'age': age, 'sin': math.sin, 'cos': math.cos, 'torad': math.radians}
-    return eval(expr, {'__builtins__': {}}, env)
+    """tiny evaluator for the expressions used here (OptiFine/EMF syntax: if(c, a, b), !, comparisons)"""
+    env = {'age': age, 'sin': math.sin, 'cos': math.cos, 'torad': math.radians, 'if_': lambda c, a, b: a if c else b}
+    py = expr.replace('if(', 'if_(').replace('!(', ' not (')
+    return eval(py, {'__builtins__': {}}, env)
 
 def draw_part(scene, tex, part, M, T, anims, age):
     """M (3x3) and T (translation) = parent transform; part = submodel dict"""
@@ -322,6 +310,7 @@ def draw_part(scene, tex, part, M, T, anims, age):
         if var[0] == 't': t['xyz'.index(var[1])] = v
         elif var[0] == 'r': r['xyz'.index(var[1])] = v
         elif var[0] == 's': sc['xyz'.index(var[1])] = v
+        elif var == 'visible' and not v: return
     R = rot(*r)
     T2 = tuple(T[i] + sum(M[i][j] * t[j] for j in range(3)) for i in range(3))
     M2 = tuple(tuple(sum(M[i][k] * R[k][j] for k in range(3)) * sc[j] for j in range(3)) for i in range(3))
