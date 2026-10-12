@@ -134,7 +134,7 @@ def helmet():
         anims.update({'spark_%d.sx' % k: ex, 'spark_%d.sy' % k: ex, 'spark_%d.sz' % k: ex})
     return [top('head', 'cel_head', [tilt], anims)]
 
-# ---- chestplate: cat prototypes (the necklace and pendant are gone: the user did not like them)
+# ---- chestplate: cats (the necklace and pendant are gone: the user did not like them)
 FUR, PATCH, EYE, PINK, BAG, STRAP, GOLD = 16, 17, 18, 19, 20, 21, 22
 
 def cat_head(asleep=False):
@@ -166,55 +166,52 @@ def scaled(part, k, root=True):
     out['submodels'] = [scaled(sp, k, False) for sp in part['submodels']]
     return out
 
-def chest_cat_shoulder():
-    """1. a little cat sitting on the right shoulder, wagging its tail and looking around"""
-    head = sub('cat_head', translate=(0, -3.0, -0.1), boxes=cat_head())
-    tail = sub('cat_tail', translate=(0, -0.5, 2.2), rotate=(55, 0, 0),      # curled up behind
+def cat_sitting():
+    """a cat sitting on the right shoulder, wagging its tail and looking around"""
+    head = sub('sit_head', translate=(0, -3.0, -0.1), boxes=cat_head())
+    tail = sub('sit_tail', translate=(0, -0.5, 2.2), rotate=(55, 0, 0),          # curled up behind
                boxes=[box((-0.3, -0.3, 0), (0.6, 0.6, 2.2), FUR), box((-0.3, -0.3, 2.2), (0.6, 0.6, 1.0), PATCH)])
-    cat = sub('cat', translate=(-6.6, 0, 0.3), subs=[head, tail],
+    cat = sub('sit_cat', translate=(-6.6, 0, 0.3), subs=[head, tail],
               boxes=[box((-1.2, -3.1, -0.9), (2.4, 3.1, 2.4), FUR), box((-1.4, -1.3, -0.4), (2.8, 1.3, 2.8), FUR),
                      box((-0.65, -2.6, -0.98), (1.3, 1.6, 0.1), PATCH),
                      box((-1.0, -0.6, -1.45), (0.7, 0.6, 0.7), FUR), box((0.3, -0.6, -1.45), (0.7, 0.6, 0.7), FUR)])
-    return [top('body', 'cel_body', [scaled(cat, 1.3)], {'cat_tail.ry': 'torad(sin(torad(age * 8)) * 25)',
-                                           'cat_head.ry': 'torad(sin(torad(age * 2)) * 20)'})]
+    return [scaled(cat, 1.3)], {'sit_tail.ry': 'torad(sin(torad(age * 8)) * 25)',
+                                'sit_head.ry': 'torad(sin(torad(age * 2)) * 20)'}
 
-def chest_cat_sleeping():
-    """2. a cat asleep lying on the left shoulder, breathing slowly, tail hanging down the back"""
-    body = sub('cat_body', translate=(6, 0, 0.2),
+def cat_sleeping():
+    """a cat asleep lying on the left shoulder, breathing slowly, tail hanging down the back"""
+    body = sub('nap_body', translate=(6, 0, 0.2),
                boxes=[box((-1.3, -1.8, -2.4), (2.6, 1.8, 5.0), FUR), box((-0.9, -1.85, -1.2), (1.8, 0.1, 2.0), PATCH),
                       box((-1.15, -0.6, -3.1), (0.7, 0.6, 0.8), FUR), box((0.45, -0.6, -3.1), (0.7, 0.6, 0.8), FUR)])
-    head = sub('cat_head', translate=(6, 0.2, -2.0), rotate=(0, 0, 8), boxes=cat_head(asleep=True))
-    tail = sub('cat_tail', translate=(6, -0.8, 2.7), rotate=(-65, 0, 0),     # hanging down the back
+    head = sub('nap_head', translate=(6, 0.2, -2.0), rotate=(0, 0, 8), boxes=cat_head(asleep=True))
+    tail = sub('nap_tail', translate=(6, -0.8, 2.7), rotate=(-65, 0, 0),         # hanging down the back
                boxes=[box((-0.3, -0.3, 0), (0.6, 0.6, 2.6), FUR), box((-0.3, -0.3, 2.6), (0.6, 0.6, 1.1), PATCH)])
-    k = 1.12
-    body, head, tail = (dict(scaled(p_, k), translate=p_['translate']) for p_ in (body, head, tail))
-    return [top('body', 'cel_body', [body, head, tail], {'cat_body.sy': '1 + sin(torad(age * 4)) * 0.05',
-                                                        'cat_tail.rz': 'torad(sin(torad(age * 4)) * 15)'})]
+    parts = [dict(scaled(p_, 1.12), translate=p_['translate']) for p_ in (body, head, tail)]
+    return parts, {'nap_body.sy': '1 + sin(torad(age * 4)) * 0.05', 'nap_tail.rz': 'torad(sin(torad(age * 4)) * 15)'}
 
-def chest_cat_backpack():
-    """3. a backpack shaped like a cat's face (ears on top, face on the back), straps over the shoulders"""
-    bag = sub('bag', translate=(0, 4.5, 2.0),
+def cat_backpack():
+    """a backpack shaped like a cat's face (ears, eyes, nose and cheeks on the back) with a kitten peeking out of
+    the top between its ears and looking around; straps over the shoulders"""
+    peek = sub('peek_head', translate=(0, -3.0, 1.15), rotate=(0, 180, 0), boxes=cat_head())
+    bag = sub('bag', translate=(0, 4.5, 2.0), subs=[scaled(peek, 0.8)],
               boxes=[box((-2.6, -2.6, 0.05), (5.2, 5.4, 2.2), BAG), box((-2.2, -3.2, 0.15), (4.4, 0.7, 2.0), BAG),
-                     box((-2.5, -4.2, 0.6), (1.3, 1.1, 1.0), BAG), box((1.2, -4.2, 0.6), (1.3, 1.1, 1.0), BAG),
-                     box((-2.2, -3.95, 1.6), (0.65, 0.55, 0.12), PINK), box((1.55, -3.95, 1.6), (0.65, 0.55, 0.12), PINK),
+                     box((-2.75, -4.2, 0.6), (1.2, 1.1, 1.0), BAG), box((1.55, -4.2, 0.6), (1.2, 1.1, 1.0), BAG),
+                     box((-2.45, -3.95, 1.6), (0.6, 0.55, 0.12), PINK), box((1.85, -3.95, 1.6), (0.6, 0.55, 0.12), PINK),
                      box((-1.5, -0.9, 2.25), (0.75, 0.75, 0.12), EYE), box((0.75, -0.9, 2.25), (0.75, 0.75, 0.12), EYE),
                      box((-0.25, 0.0, 2.25), (0.5, 0.35, 0.12), PINK),
                      box((-2.05, 0.25, 2.25), (0.6, 0.4, 0.1), PINK), box((1.45, 0.25, 2.25), (0.6, 0.4, 0.1), PINK),
-                     box((-2.65, 1.7, 0.05), (5.3, 0.5, 2.27), STRAP)])
-    return [top('body', 'cel_body', [bag, sub('straps', boxes=straps())], {'bag.ty': '4.5 + sin(torad(age * 8)) * 0.12'})]
+                     box((-2.65, 1.7, 0.05), (5.3, 0.5, 2.27), STRAP),
+                     box((-1.05, -3.75, 1.55), (0.6, 0.5, 0.6), FUR), box((0.45, -3.75, 1.55), (0.6, 0.5, 0.6), FUR)])
+    return [bag, sub('straps', boxes=straps())], {'bag.ty': '4.5 + sin(torad(age * 8)) * 0.12',
+                                                  'peek_head.ry': 'torad(180 + sin(torad(age * 3)) * 45)'}
 
-def chest_cat_peek():
-    """4. a backpack with a cat peeking out of the top, looking around"""
-    head = sub('cat_head', translate=(0, -2.3, 1.3), rotate=(0, 180, 0), boxes=cat_head())
-    bag = sub('bag', translate=(0, 5.2, 2.0), subs=[head],
-              boxes=[box((-2.4, -2.2, 0.05), (4.8, 5.0, 2.4), BAG), box((-2.6, -2.5, -0.05), (5.2, 0.6, 2.6), STRAP),
-                     box((-1.6, 0.6, 2.45), (3.2, 1.8, 0.15), STRAP), box((-0.35, 1.15, 2.6), (0.7, 0.7, 0.1), GOLD),
-                     box((-1.3, -2.95, 1.9), (0.7, 0.5, 0.7), FUR), box((0.6, -2.95, 1.9), (0.7, 0.5, 0.7), FUR)])
-    return [top('body', 'cel_body', [bag, sub('straps', boxes=straps())],
-                {'cat_head.ry': 'torad(180 + sin(torad(age * 3)) * 45)', 'cat_head.ty': '-2.3 + sin(torad(age * 6)) * 0.15'})]
-
-CHESTS = [chest_cat_shoulder, chest_cat_sleeping, chest_cat_backpack, chest_cat_peek]
-PROTOS = {1: 'gato en el hombro', 2: 'gato dormido en el hombro', 3: 'mochila cara de gato', 4: 'mochila con gato asomado'}
+def chestplate():
+    """the four cat prototypes together (the user asked to mix them)"""
+    subs, anims = [], {}
+    for fn in (cat_sitting, cat_sleeping, cat_backpack):
+        s_, a_ = fn()
+        subs += s_; anims.update(a_)
+    return [top('body', 'cel_body', subs, anims)]
 
 # ---- leggings: ribbon sash (the user's pick among 4 prototypes, asked bigger)
 def leggings():
@@ -229,24 +226,30 @@ def leggings():
     return [top('body', 'cel_waist', [sub('sash', boxes=band + bow, subs=[tails])],
                 {'sash_tails.rz': 'torad(sin(torad(age * 6)) * 9)'})]
 
-# ---- boots: little clouds round the feet (the user's pick, asked bigger)
+# ---- boots: fluffy clouds round the feet (the user's pick; remodelled rounder)
+def cloud_blob(r, body=23, under=15):
+    """a round puff from three crossed boxes (reads as a ball at this size), flat lavender underside"""
+    return [box((-r, -0.55 * r, -0.7 * r), (2 * r, 1.1 * r, 1.4 * r), body),
+            box((-0.7 * r, -0.55 * r, -r), (1.4 * r, 1.1 * r, 2 * r), body),
+            box((-0.75 * r, -0.95 * r, -0.75 * r), (1.5 * r, 1.6 * r, 1.5 * r), body),
+            box((-0.85 * r, 0.45 * r, -0.85 * r), (1.7 * r, 0.25 * r, 1.7 * r), under)]
+
 def boots():
-    """puffy clouds round each foot, as if walking on them, bobbing gently"""
+    """a ring of round puffs round each foot, as if walking on a cloud; every puff bobs on its own"""
     out = []
-    puff = lambda s: [cube((dx * s, dy * s, dz * s), r * s, 14 if dy < 0 else 15)
-                      for dx, dy, dz, r in ((0, 0, 0, 1.0), (-0.75, 0.15, 0.1, 0.75), (0.75, 0.15, -0.1, 0.8), (0.2, -0.5, 0, 0.7))]
     for side, o in (('right', -1), ('left', 1)):
         subs, anims = [], {}
-        for k, (x, y, z, s) in enumerate(((3.4 * o, 11.2, -1.9, 1.9), (3.1 * o, 11.5, 2.3, 1.6),
-                                          (-0.3 * o, 11.9, -3.9, 1.6), (-1.5 * o, 12.0, 3.7, 1.3))):
+        for k in range(8):
+            a = math.radians(k * 45 + 22.5)
+            r = (1.4, 0.95, 1.25, 0.85)[k % 4] * (1.15 if k in (0, 7) else 1.0)    # bumpy, biggest at the front
+            x, z, y = 3.0 * math.sin(a) * -1, -3.0 * math.cos(a), 11.7 - (0.35 if k % 2 else 0)
             pid = 'cloud_%s_%d' % (side, k)
-            subs.append(sub(pid, translate=(x, y, z), boxes=puff(s)))
-            anims[pid + '.ty'] = '%g + sin(torad(age * 4 + %d)) * 0.25' % (y, k * 90 + (0 if o < 0 else 45))
+            subs.append(sub(pid, translate=(round(x, 3), y, round(z, 3)), boxes=cloud_blob(r)))
+            anims[pid + '.ty'] = '%g + sin(torad(age * 4 + %d)) * 0.2' % (y, k * 45 + (0 if o < 0 else 90))
         out.append(top('%s_leg' % side, 'cel_%s_leg' % side, subs, anims))
     return out
 
-def slots(v):
-    return {'helmet': helmet, 'chestplate': CHESTS[v - 1], 'leggings': leggings, 'boots': boots}
+SLOTS = {'helmet': helmet, 'chestplate': chestplate, 'leggings': leggings, 'boots': boots}
 
 # ------------------------------------------------------------------ textures
 def worn(mat):
@@ -270,11 +273,11 @@ def write_json(path, obj):
     with open(path, 'w') as f:
         json.dump(obj, f, indent=2)
 
-def build(v):
-    pack = '%s %d' % (PACK, v)
+def build():
+    pack = PACK
     cem, tex = pack + '/assets/minecraft/emf/cem/', pack + '/assets/minecraft/textures/entity/equipment/'
     shutil.rmtree(pack + '/assets', ignore_errors=True)
-    for slot, fn in slots(v).items():
+    for slot, fn in SLOTS.items():
         model = {'textureSize': [64, 32], 'models': fn()}
         for who in ('player_', 'player_slim_', ''):             # exact player names + generic fallback for mobs
             write_json(cem + who + slot + '.jem', model)
@@ -290,8 +293,8 @@ def build(v):
     if os.path.exists(src):
         shutil.copyfile(src, pack + '/pack.png')
     with open(pack + '/pack.mcmeta', 'w') as f:
-        json.dump({'pack': {'description': ['', {'text': 'Aurora Celestial %d ' % v, 'color': '#B9B9F8'},
-                                            {'text': '· %s (EMF + ETF)' % PROTOS[v], 'color': '#F8B0EA'}],
+        json.dump({'pack': {'description': ['', {'text': 'Aurora Celestial ', 'color': '#B9B9F8'},
+                                            {'text': '· aureola, gatos, cinturón y nubes (EMF + ETF)', 'color': '#F8B0EA'}],
                             'min_format': 84, 'max_format': 97}}, f, indent=2, ensure_ascii=False)
     return out
 
@@ -340,7 +343,7 @@ def draw_part(scene, tex, part, M, T, anims, age):
 
 PIVOTS = {'head': (0, 0, 0), 'body': (0, 0, 0), 'right_leg': (-1.9, 12, 0), 'left_leg': (1.9, 12, 0)}
 
-def render(mat, textures, steve, age, yaw, proto):
+def render(mat, textures, steve, age, yaw):
     from emf import Scene, LIMBS, SKIN_UV, box_uv_faces
     hum, leg = textures
     sc = Scene(230, 360, math.radians(yaw), math.radians(12), 8, 115, 120)
@@ -353,7 +356,7 @@ def render(mat, textures, steve, age, yaw, proto):
             sc.box(piv, 0, m, s, 0.5, leg, box_uv_faces(u, v, *s))
         sc.box(piv, 0, m, s, 1.0, hum, box_uv_faces(u, v, *s, mirror=mir))
     I = ((1, 0, 0), (0, 1, 0), (0, 0, 1))
-    for slot, fn in slots(proto).items():
+    for slot, fn in SLOTS.items():
         tex = leg if slot == 'leggings' else hum
         for top in fn():
             anims = {}
@@ -362,24 +365,22 @@ def render(mat, textures, steve, age, yaw, proto):
     return sc.img
 
 def preview(textures):
-    """celestial.gif: the 4 cat prototypes in netherite, front 3/4 (top row) and back (bottom row), animated;
-    celestial.png: the same in diamond (first frame)"""
+    """celestial.gif: netherite and diamond, front and back, animated; celestial.png: its first frame, bigger"""
     sp = REF_ROOT + '/assets/minecraft/textures/entity/player/wide/steve.png'
     steve = Image.open(sp).convert('RGBA') if os.path.exists(sp) else Image.new('RGBA', (64, 64), (200, 150, 120, 255))
     os.makedirs(PREVIEWS, exist_ok=True)
-    def sheet(mat, age):
-        g = Image.new('RGBA', (4 * 240 + 10, 2 * 360 + 10), (30, 26, 48, 255))
-        for v in range(1, 5):
-            for row, yaw in enumerate((-35, 145)):
-                g.alpha_composite(render(mat, textures[mat], steve, age, yaw, v), (10 + (v - 1) * 240, 5 + row * 360))
-        return g.convert('RGB')
-    frames = [sheet('netherite', f * 12) for f in range(15)]
+    frames = []
+    for f in range(20):
+        g = Image.new('RGBA', (4 * 240 + 20, 380), (30, 26, 48, 255))
+        for i, (mat, yaw) in enumerate((('netherite', -35), ('netherite', 145), ('diamond', -35), ('diamond', 145))):
+            g.alpha_composite(render(mat, textures[mat], steve, f * 9, yaw), (10 + i * 240 + (10 if i >= 2 else 0), 10))
+        frames.append(g.convert('RGB'))
     frames[0].save(PREVIEWS + '/celestial.gif', save_all=True, append_images=frames[1:], duration=450, loop=0)
-    sheet('diamond', 30).save(PREVIEWS + '/celestial.png')
+    frames[0].resize((frames[0].width * 2, frames[0].height * 2), Image.NEAREST).save(PREVIEWS + '/celestial.png')
 
 if __name__ == '__main__':
-    shutil.rmtree(PACK, ignore_errors=True)                    # while choosing: 4 prototype packs instead of one
-    for v in range(1, 5):
-        tx = build(v)
+    for v in range(1, 5):                                      # the cat prototypes are mixed into one pack now
+        shutil.rmtree('%s %d' % (PACK, v), ignore_errors=True)
+    tx = build()
     preview(tx)
-    print('celestial ok: 4 prototypes')
+    print('celestial ok')

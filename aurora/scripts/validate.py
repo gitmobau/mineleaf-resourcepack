@@ -7,7 +7,7 @@ from PIL import Image
 HOME = os.path.expanduser('~')
 REF = os.environ.get('AURORA_REF', HOME + '/ref63') + '/assets/minecraft/'
 RP = os.environ.get('AURORA_RP', HOME + '/mnt/.minecraft/resourcepacks') + '/'
-PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora HUD XL', RP + 'Aurora EMF'] + [RP + 'Aurora Celestial %d' % v for v in range(1, 5)]
+PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora HUD XL', RP + 'Aurora EMF', RP + 'Aurora Celestial']
 errors, warns = [], []
 # every model id referenced by a vanilla item definition is known to exist in the jar
 VANILLA_MODELS = set(re.findall(r'"model": "(minecraft:[^"]+)"',
@@ -257,7 +257,7 @@ if os.path.isdir(cem):
                     if k.split('.')[0] not in EMF_PARTS[kind]: err('EMF %s: animation of unknown part %s' % (f, k))
 
 # ---- Aurora Celestial: nested submodels, every face on the colour swatch block, animations name existing parts
-for cpack in [RP + 'Aurora Celestial %d/' % v for v in range(1, 5)]:
+for cpack in [RP + 'Aurora Celestial/']:
   ccem = cpack + 'assets/minecraft/emf/cem/'
   if os.path.isdir(ccem):
       from celestial import SW, SW2
