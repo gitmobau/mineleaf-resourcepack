@@ -58,12 +58,10 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
 - Nuevos `grimorio.py`, `hardcore.py` y `sonidos.py` (ver README). `fetch_ref.py` baja ahora también
   `blockstates`, `models/block`, `particles`, `sounds.json`, `textures/particle` y `textures/entity/{enchantment,experience}`
   (sparse-checkout en modo no-cone para poder pedir ficheros sueltos).
-- Libros: `items/enchanted_book.json` es una cadena de `condition` con `property: minecraft:component`,
-  `predicate: minecraft:stored_enchantments` (formato comprobado en SpyglassMC/vanilla-mcdoc). Gana el primer
-  encantamiento de la lista: maldiciones, luego tesoro, luego el resto. Un libro con varios encantamientos se
-  ve como el primero que encaje.
-- Auras por rareza: mismas condiciones con `predicate: minecraft:enchantments`; la lista de predicados exige
-  que se cumplan todos.
+- Libros encantados por encantamiento: se hicieron y se quitaron a petición del usuario (ya tiene otro pack
+  para eso). Están en el historial (commit a980512) por si algún día se recuperan.
+- Auras por rareza: `condition` con `property: minecraft:component`, `predicate: minecraft:enchantments`
+  (formato comprobado en SpyglassMC/vanilla-mcdoc); la lista de predicados exige que se cumplan todos.
 - **Cambio de la 26.3 encontrado**: el campo `shade` de los elementos de modelo ya no existe (se sustituyó por
   `shade_direction_override`). El aura de `gear.py` usaba `"shade": false`; ahora usa
   `"shade_direction_override": "up"` y `validate.py` rechaza `shade`.

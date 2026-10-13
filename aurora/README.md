@@ -37,11 +37,10 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 - `gen.py`: base v1 (agua, mira, fondo de la barra de XP, indicadores de ataque, `pack.png` y `pack.mcmeta`).
 - `magic.py`: "Marco mágico". Menús (inventario, mesa de crafteo, hornos, cofre grande y shulker) y sprites animados (hotbar, selección, casilla resaltada, botón del libro de recetas, fuego y flecha del horno, XP).
 - `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (túnica galáctica + capa 3D), también puestas en bebés, caballos y nautilus.
-- `grimorio.py`: un libro encantado distinto para cada encantamiento y nivel (43 encantamientos, 105
-  texturas animadas; color por tipo, marco dorado en los de tesoro, oscuros los de maldición, puntos de nivel),
-  auras por rareza en herramientas (normal → **rara** si tiene Reparación → **legendaria** con Reparación +
+- `grimorio.py`: auras por rareza en herramientas (normal → **rara** si tiene Reparación → **legendaria** con Reparación +
   Irrompibilidad III + Filo/Castigo/Perdición V o Eficiencia V), menús de mesa de encantamientos, yunque y muela,
   botones y gemas de nivel animados, el libro que flota sobre la mesa y las letras mágicas y partículas de golpe.
+  Los libros encantados (objeto) se dejan sin tocar: el usuario usa su propio pack para eso.
 - `hardcore.py`: corazones animados (normal y hardcore, con veneno, wither, congelado, absorción y montura),
   hambre y armadura a juego, y el huevo del dragón como trofeo (galaxia con auroras animadas que brilla).
 - `sonidos.py`: sonidos sintetizados (campanillas) al encantar, usar el yunque, subir de nivel y coger

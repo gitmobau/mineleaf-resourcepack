@@ -1,5 +1,5 @@
-# Aurora "Grimorio": one enchanted book per enchantment and level, rarity auras for tools,
-# enchanting table / anvil / grindstone menus and sprites, enchanting book, magic particles.
+# Aurora "Grimorio": rarity auras for tools, enchanting table / anvil / grindstone menus and sprites,
+# the enchanting table book and magic particles. (Enchanted book items are left to the user's own pack.)
 # Runs after gear.py: it rewrites the tool item definitions that gear.py wrote.
 import os, sys, math, json, random
 from PIL import Image
@@ -19,187 +19,7 @@ def ref(rel):
 def cyc(t, pal=VIVID):
     return gear.cyc(t, pal)
 
-# ------------------------------------------------------------------ enchantments
-# id: (max level, category, treasure)
-ENCH = {
-    'protection': (4, 'armor', 0), 'fire_protection': (4, 'armor', 0), 'blast_protection': (4, 'armor', 0),
-    'projectile_protection': (4, 'armor', 0), 'thorns': (3, 'armor', 0), 'respiration': (3, 'armor', 0),
-    'aqua_affinity': (1, 'armor', 0), 'feather_falling': (4, 'armor', 0), 'depth_strider': (3, 'armor', 0),
-    'frost_walker': (2, 'armor', 1), 'soul_speed': (3, 'armor', 1), 'swift_sneak': (3, 'armor', 1),
-    'sharpness': (5, 'melee', 0), 'smite': (5, 'melee', 0), 'bane_of_arthropods': (5, 'melee', 0),
-    'knockback': (2, 'melee', 0), 'fire_aspect': (2, 'melee', 0), 'looting': (3, 'melee', 0),
-    'sweeping_edge': (3, 'melee', 0), 'lunge': (3, 'melee', 0),
-    'efficiency': (5, 'tool', 0), 'silk_touch': (1, 'tool', 0), 'fortune': (3, 'tool', 0),
-    'unbreaking': (3, 'any', 0), 'mending': (1, 'any', 1),
-    'power': (5, 'bow', 0), 'punch': (2, 'bow', 0), 'flame': (1, 'bow', 0), 'infinity': (1, 'bow', 0),
-    'multishot': (1, 'bow', 0), 'piercing': (4, 'bow', 0), 'quick_charge': (3, 'bow', 0),
-    'impaling': (5, 'sea', 0), 'loyalty': (3, 'sea', 0), 'channeling': (1, 'sea', 0), 'riptide': (3, 'sea', 0),
-    'luck_of_the_sea': (3, 'sea', 0), 'lure': (3, 'sea', 0),
-    'density': (5, 'mace', 0), 'breach': (4, 'mace', 0), 'wind_burst': (3, 'mace', 1),
-    'binding_curse': (1, 'curse', 1), 'vanishing_curse': (1, 'curse', 1),
-}
-CAT = {   # cover colour
-    'armor': (110, 175, 255), 'melee': (255, 125, 160), 'tool': (255, 185, 105), 'any': (95, 220, 175),
-    'bow': (175, 140, 255), 'sea': (70, 200, 220), 'mace': (160, 105, 225), 'curse': (62, 30, 62),
-}
 GOLD = (255, 222, 120)
-
-# 7x7 icons. '#' light, '+' accent (second value), 'o' dark outline, '.' cover shows through.
-ICONS = {
- 'protection': ((".#####.", "#+++++#", "#+++++#", "#+++++#", ".#+++#.", "..#+#..", "...#..."), (190, 220, 255)),
- 'fire_protection': ((".#####.", "#++.++#", "#+.o.+#", "#+ooo+#", ".#+o+#.", "..#+#..", "...#..."), (255, 150, 90)),
- 'blast_protection': ((".#####.", "#+.+.+#", "#..o..#", "#+ooo+#", ".#.o.#.", "..#+#..", "...#..."), (255, 120, 120)),
- 'projectile_protection': ((".#####.", "#+++++#", "#oooo+#", "#+++o+#", ".#++o#.", "..#+#..", "...#..."), (200, 255, 200)),
- 'thorns': (("#..#..#", ".#.#.#.", "..###..", "###+###", "..###..", ".#.#.#.", "#..#..#"), (120, 230, 120)),
- 'respiration': (("....##.", "...#..#", "...#..#", "##..##.", "#.#....", "##..+..", "...+.+."), (180, 240, 255)),
- 'aqua_affinity': (("...#...", "..#+#..", ".#+++#.", ".#+++#.", "#++#++#", ".#+++#.", "..###.."), (120, 210, 255)),
- 'feather_falling': (("....###", "...##+#", "..##+#.", ".##+#..", ".#+#...", "#.#....", "#......"), (255, 255, 255)),
- 'depth_strider': ((".......", ".##..##", "#++##++", ".......", ".##..##", "#++##++", "......."), (150, 220, 255)),
- 'frost_walker': (("...#...", ".#.#.#.", "..###..", "###+###", "..###..", ".#.#.#.", "...#..."), (190, 240, 255)),
- 'soul_speed': (("...+...", "..+#+..", "..+#+..", ".+###+.", ".+###+.", "..###..", "......."), (110, 230, 240)),
- 'swift_sneak': ((".......", ".#####.", "#.+++.#", "#+o+o+#", "#.+++.#", ".#####.", "......."), (180, 160, 255)),
- 'sharpness': (("......#", ".....##", "....##.", "#..##..", ".###...", ".+#....", "+..#..."), (255, 210, 140)),
- 'smite': (("..###..", ".#####.", ".#o#o#.", ".#####.", "..#+#..", "..#.#..", "......."), (255, 240, 170)),
- 'bane_of_arthropods': (("#.....#", ".#.#.#.", "..###..", "##o#o##", "..###..", ".#.#.#.", "#.....#"), (120, 60, 90)),
- 'knockback': (("...#...", "..##...", ".######", "#######", ".######", "..##...", "...#..."), (255, 255, 255)),
- 'fire_aspect': (("...#...", "..##...", "..#+#..", ".#++#..", ".#+++#.", "#++o++#", ".#####."), (255, 150, 70)),
- 'looting': ((".......", "..###..", ".#+++#.", "#++#++#", "#+++++#", ".#+++#.", "..###.."), (255, 220, 90)),
- 'sweeping_edge': ((".###...", "....#..", ".....#.", ".....#.", "....#..", "..##...", "++....."), (200, 240, 255)),
- 'lunge': (("....##.", "....###", "...#.#.", "..#....", "+#.....", "#.+....", "+..+..."), (255, 210, 160)),
- 'efficiency': (("....##.", "...##..", "..##...", ".######", "...##..", "..##...", ".##...."), (255, 240, 120)),
- 'silk_touch': (("...#...", "..#+#..", ".#+++#.", "#+++++#", ".#+++#.", "..#+#..", "...#..."), (230, 220, 255)),
- 'fortune': ((".##.##.", "#++#++#", "#+++++#", ".##+##.", "#+++++#", "#++#++#", ".##.##."), (120, 235, 130)),
- 'unbreaking': ((".......", "#######", ".#+++#.", "..###..", "..###..", ".#####.", "#######"), (210, 210, 235)),
- 'mending': ((".##.##.", "#++#++#", "#+++++#", "#++#++#", ".#+#+#.", "..#+#..", "...#..."), (255, 130, 170)),
- 'power': (("....###", ".....##", "+...#.#", "...#...", "..#..+.", ".#.....", "#.+...."), (255, 236, 140)),
- 'punch': (("...#...", "..#+#..", ".#+++#.", "#+++++#", ".#+++#.", "..#+#..", "...#..."), (255, 180, 120)),
- 'flame': (("......#", "...+.#.", "..+.#..", ".+.#...", "..#+...", ".#+++..", "#..+..."), (255, 150, 70)),
- 'infinity': ((".......", ".##.##.", "#..#..#", "#..#..#", "#..#..#", ".##.##.", "......."), (255, 255, 255)),
- 'multishot': (("#..#..#", ".#.#.#.", "..###..", "...#...", "...#...", "..+#+..", "...+..."), (255, 220, 170)),
- 'piercing': (("...#...", "...#...", "#######", "...#...", "..###..", ".#.#.#.", "...#..."), (255, 255, 255)),
- 'quick_charge': ((".#####.", "#..#..#", "#..#..#", "#..##.#", "#.....#", "#.....#", ".#####."), (255, 255, 255)),
- 'impaling': (("#..#..#", "#..#..#", "#######", "...#...", "...#...", "...#...", "...#..."), (180, 245, 230)),
- 'loyalty': (("..###..", ".#...#.", "#.....#", "#.....#", "#...#.#", ".#..##.", "...###."), (255, 255, 255)),
- 'channeling': ((".#####.", "#######", "...#...", "..#....", "..###..", "....#..", "...#..."), (255, 240, 120)),
- 'riptide': ((".####..", "#....#.", "#.##..#", "#.#.#.#", "#..#..#", ".#...#.", "..###.."), (150, 230, 255)),
- 'luck_of_the_sea': ((".......", "...##..", ".##++#.", "#++++o#", ".##++#.", "...##..", "......."), (130, 220, 255)),
- 'lure': (("...#...", "...#...", "...#...", "...#...", ".#.#...", ".#.#...", "..#...."), (255, 255, 255)),
- 'density': ((".......", "..###..", ".#####.", "#######", "#######", ".#####.", "......."), (200, 190, 230)),
- 'breach': ((".#####.", "#++.++#", "#+..++#", "#++..+#", ".#+.+#.", "..#.#..", "...#..."), (255, 160, 160)),
- 'wind_burst': ((".####..", "#....#.", ".....#.", "####...", ".......", "######.", "......#"), (220, 250, 255)),
- 'binding_curse': ((".##.##.", "#..#..#", ".##.##.", ".......", ".##.##.", "#..#..#", ".##.##."), (255, 90, 120)),
- 'vanishing_curse': ((".#####.", "#######", "#o#o###", "#######", "#######", "#.#.#.#", "......."), (255, 90, 120)),
-}
-
-def book(eid, lvl, N=16):
-    """16x16 grimoire, front-facing. Returns an animation strip 16 x 16*N."""
-    mx, cat, treasure = ENCH[eid]
-    rows, acc = ICONS[eid]
-    base = CAT[cat]
-    curse = cat == 'curse'
-    strip = Image.new('RGBA', (16, 16 * N))
-    for f in range(N):
-        ph = f / N
-        im = Image.new('RGBA', (16, 16))
-        P = lambda x, y, c, a=255: im.putpixel((x, y), C(c, a))
-        # outline 1..14 x 1..14
-        for y in range(1, 15):
-            for x in range(1, 15):
-                edge = x in (1, 14) or y in (1, 14)
-                if edge:
-                    if (x, y) in ((1, 1), (14, 1), (1, 14), (14, 14)):
-                        continue
-                    P(x, y, OUT)
-        # spine
-        for y in range(2, 14):
-            for x in (2, 3):
-                c = mix(base, (30, 20, 60), 0.45 if x == 2 else 0.3)
-                if y in (3, 12): c = GOLD if treasure else mix(base, WHITE, 0.55)
-                P(x, y, c)
-        # pages (right + bottom)
-        for y in range(2, 14):
-            P(13, y, (236, 230, 250) if y % 2 else (214, 206, 240))
-        for x in range(3, 14):
-            P(x, 13, (236, 230, 250) if x % 2 else (214, 206, 240))
-        # cover 4..12 x 2..12
-        for y in range(2, 13):
-            for x in range(4, 13):
-                g = ((x - 4) + (y - 2)) / 18
-                c = mix(mix(base, WHITE, 0.32), mix(base, (40, 26, 80), 0.25), g)
-                if curse:
-                    c = mix((40, 18, 44), (90, 30, 70), g * (0.6 + 0.4 * math.sin(ph * 2 * math.pi)))
-                # diagonal shine sweep
-                s = ((x - 4) - (y - 2) + 10) / 20
-                d = abs(s - (ph * 1.6 - 0.3))
-                if d < 0.09 and not curse:
-                    c = mix(c, WHITE, 0.55 * (1 - d / 0.09))
-                P(x, y, c)
-        if treasure and not curse:   # gold frame on the cover
-            for x in range(4, 13):
-                for y in (2, 12):
-                    P(x, y, mix(GOLD, WHITE, 0.4 * (0.5 + 0.5 * math.sin((x / 9 + ph) * 2 * math.pi))))
-            for y in range(2, 13):
-                for x in (4, 12):
-                    P(x, y, mix(GOLD, WHITE, 0.4 * (0.5 + 0.5 * math.sin((y / 11 + ph) * 2 * math.pi))))
-        # icon 7x7 at (5,3)
-        light = (255, 252, 255) if not curse else (230, 200, 220)
-        dark = (40, 26, 80) if not curse else (20, 8, 20)
-        for j, row in enumerate(rows):
-            for i, ch in enumerate(row):
-                if ch == '#': P(5 + i, 3 + j, light)
-                elif ch == '+': P(5 + i, 3 + j, acc)
-                elif ch == 'o': P(5 + i, 3 + j, dark)
-        # level pips on row 11 (only for enchantments with more than one level)
-        if mx > 1:
-            for i in range(lvl):
-                x = 8 - (lvl - 1) + 2 * i
-                P(x, 11, mix(GOLD, WHITE, 0.3) if not curse else (255, 120, 150))
-        # twinkles
-        if treasure or lvl == mx and mx > 1:
-            for k in range(2):
-                tx, ty = [(12, 2), (4, 12), (12, 12), (4, 2)][(f // 4 + k * 2) % 4]
-                if (f + k * 8) % 16 < 3:
-                    P(tx, ty, WHITE)
-        strip.paste(im, (0, f * 16))
-    return strip, {"animation": {"frametime": 2}}
-
-def books():
-    """item/grimorio/<id>_<lvl> textures + models, and the enchanted_book item definition."""
-    sheet = {}
-    for eid, (mx, cat, tr) in ENCH.items():
-        for l in range(1, mx + 1):
-            st, meta = book(eid, l)
-            name = '%s_%d' % (eid, l)
-            save_tex(st, 'item/grimorio/%s.png' % name, meta)
-            save_json({"parent": "minecraft:item/generated",
-                       "textures": {"layer0": "minecraft:item/grimorio/" + name}},
-                      'models/item/grimorio/%s.json' % name)
-            sheet[name] = st
-    def has(eid, lvl=None):
-        v = {"enchantments": "minecraft:" + eid}
-        if lvl is not None: v["levels"] = lvl
-        return {"type": "minecraft:condition", "property": "minecraft:component",
-                "predicate": "minecraft:stored_enchantments", "value": [v]}
-    def per_level(eid):
-        mx = ENCH[eid][0]
-        node = {"type": "minecraft:model", "model": "minecraft:item/grimorio/%s_%d" % (eid, mx)}  # above max: show max
-        for l in range(mx, 0, -1):
-            if mx == 1:
-                break
-            c = has(eid, l); c["on_true"] = {"type": "minecraft:model", "model": "minecraft:item/grimorio/%s_%d" % (eid, l)}
-            c["on_false"] = node; node = c
-        return node
-    # priority: curses, treasure, then the rest in tooltip order (first match wins on multi-enchant books)
-    order = [e for e in ENCH if ENCH[e][1] == 'curse'] + [e for e in ENCH if ENCH[e][2] and ENCH[e][1] != 'curse'] + \
-            [e for e in ENCH if not ENCH[e][2]]
-    node = json.load(open(REF + 'items/enchanted_book.json'))['model']   # fallback: vanilla book
-    for eid in reversed(order):
-        c = has(eid); c["on_true"] = per_level(eid); c["on_false"] = node; node = c
-    van = json.load(open(REF + 'items/enchanted_book.json'))
-    van['model'] = node
-    with open(PACK + 'items/enchanted_book.json', 'w') as f:   # 43 nested conditions: compact, not indented
-        json.dump(van, f, separators=(',', ':'))
-    return sheet
 
 # ------------------------------------------------------------------ rarity auras
 RARE = [(255, 230, 140), (255, 205, 160), (255, 245, 190), (255, 220, 120), (255, 252, 225)]          # gold
@@ -439,28 +259,17 @@ def particles():
     return out
 
 # ------------------------------------------------------------------ preview
-def preview(bk, rar, mn, parts, tbook):
-    order = list(ENCH)
-    cols = 15
-    sheet = Image.new('RGBA', (1240, 1120), (60, 52, 84, 255))
-    x0, y0 = 10, 10
-    for i, eid in enumerate(order):
-        mx = ENCH[eid][0]
-        st = bk['%s_%d' % (eid, mx)]
-        fr = st.crop((0, 0, 16, 16)).resize((64, 64), Image.NEAREST)
-        sheet.alpha_composite(fr, (x0 + (i % cols) * 80, y0 + (i // cols) * 80))
-    y = y0 + 3 * 80 + 10
-    for i, l in enumerate(range(1, 6)):
-        fr = bk['sharpness_%d' % l].crop((0, 0, 16, 16)).resize((64, 64), Image.NEAREST)
-        sheet.alpha_composite(fr, (x0 + i * 80, y))
+def preview(rar, mn, parts, tbook):
+    sheet = Image.new('RGBA', (1240, 760), (60, 52, 84, 255))
+    x0, y = 10, 10
     for i, n in enumerate(['diamond_sword', 'diamond_pickaxe', 'netherite_sword', 'netherite_pickaxe']):
         base, tiers = rar[n]
         strip = Image.open(PACK + 'textures/item/%s.png' % n).convert('RGBA').crop((0, 0, 16, 16))
         normal = Image.open(PACK + 'textures/item/aurora/aura_%s.png' % n).convert('RGBA').crop((0, 0, 24, 24))
         for k, au in enumerate([normal, tiers['rare'][0].crop((0, 0, 24, 24)), tiers['legend'][0].crop((0, 0, 24, 24))]):
             fr = au.copy(); fr.alpha_composite(strip, (4, 4))
-            sheet.alpha_composite(fr.resize((72, 72), Image.NEAREST), (440 + k * 84 + (i % 2) * 260, y + (i // 2) * 84 - 4))
-    y += 180
+            sheet.alpha_composite(fr.resize((72, 72), Image.NEAREST), (x0 + k * 84 + i * 280, y))
+    y += 100
     for i, n in enumerate(['enchanting_table', 'anvil', 'grindstone']):
         sheet.alpha_composite(mn[n].crop((0, 0, 176, 166)).resize((352, 332), Image.NEAREST), (x0 + i * 400, y))
     E = PACK + 'textures/gui/sprites/container/enchanting_table/'
@@ -474,22 +283,25 @@ def preview(bk, rar, mn, parts, tbook):
     y += 350
     for i, p in enumerate(parts):
         sheet.alpha_composite(p.resize((32, 32), Image.NEAREST), (x0 + i * 40, y))
-    sheet.alpha_composite(tbook.resize((256, 128), Image.NEAREST), (x0 + 900, y - 120))
+    sheet.alpha_composite(tbook.resize((256, 128), Image.NEAREST), (x0, y + 50))
     sheet.save(PREVIEWS + '/preview_grimorio.png')
     frames = []
-    show = ['mending_1', 'sharpness_5', 'protection_4', 'soul_speed_3', 'efficiency_5', 'binding_curse_1', 'wind_burst_3', 'unbreaking_3']
     for f in range(16):
-        g = Image.new('RGBA', (8 * 72 + 10, 80), (60, 52, 84, 255))
-        for i, nm in enumerate(show):
-            g.alpha_composite(bk[nm].crop((0, f * 16, 16, f * 16 + 16)).resize((64, 64), Image.NEAREST), (8 + i * 72, 8))
+        g = Image.new('RGBA', (3 * 84 * 2 + 20, 90), (60, 52, 84, 255))
+        for i, n in enumerate(['diamond_sword', 'netherite_pickaxe']):
+            base, tiers = rar[n]
+            tool = Image.open(PACK + 'textures/item/%s.png' % n).convert('RGBA').crop((0, f * 16, 16, f * 16 + 16))
+            normal = Image.open(PACK + 'textures/item/aurora/aura_%s.png' % n).convert('RGBA')
+            for k, au in enumerate([normal, tiers['rare'][0], tiers['legend'][0]]):
+                fr = au.crop((0, f * 24, 24, f * 24 + 24)); fr.alpha_composite(tool, (4, 4))
+                g.alpha_composite(fr.resize((72, 72), Image.NEAREST), (10 + (i * 3 + k) * 84, 8))
         frames.append(g.convert('RGB'))
     frames[0].save(PREVIEWS + '/anim_grimorio.gif', save_all=True, append_images=frames[1:], duration=100, loop=0)
 
 if __name__ == '__main__':
-    bk = books()
     rar = rarity()
     mn = menus(); sprites()
     tb = table_book(); pa = particles()
     os.makedirs(PREVIEWS, exist_ok=True)
-    preview(bk, rar, mn, pa, tb)
+    preview(rar, mn, pa, tb)
     print('ok')
