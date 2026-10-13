@@ -100,7 +100,7 @@ def menus():
     res = {}
     S = magic
     for name, excl, cats, seed in (
-            ('enchanting_table', [S.TITLE, S.inv_label(166), (59, 13, 169, 72)], [(S.CAT_SIT, 6, 18)], 21),
+            ('enchanting_table', [S.TITLE, S.inv_label(166), (59, 13, 169, 72), (10, 12, 58, 44)], [], 21),
             ('anvil', [(58, 18, 170, 36), S.inv_label(166), (58, 66, 170, 80), (0, 0, 60, 46)], [], 23),
             ('grindstone', [S.TITLE, S.inv_label(166), (40, 2, 104, 76)], [(S.CAT_PEEK, 138, 4)], 25)):
         img, sl = S.build_container(name, 176, 166, cats=cats, excl=excl, seed=seed)

@@ -65,15 +65,20 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
 - **Cambio de la 26.3 encontrado**: el campo `shade` de los elementos de modelo ya no existe (se sustituyó por
   `shade_direction_override`). El aura de `gear.py` usaba `"shade": false`; ahora usa
   `"shade_direction_override": "up"` y `validate.py` rechaza `shade`.
-- Mod de Fabric (Yunque inteligente, lista de lo que falta a cada objeto, diario hardcore): pendiente. La red
-  del entorno bloquea `piston-meta.mojang.com`, `piston-data.mojang.com`, `libraries.minecraft.net`,
-  `resources.download.minecraft.net`, `maven.fabricmc.net` y `meta.fabricmc.net`; sin ellos no se puede
-  compilar contra Minecraft ni arrancar el cliente.
+- Mod de Fabric **Aurora Guía** en `mod/` (ver su README). El usuario permitió en la red del entorno
+  `piston-meta/piston-data.mojang.com`, `libraries.minecraft.net`, `resources.download.minecraft.net`,
+  `maven.fabricmc.net` y `meta.fabricmc.net`. Hace falta JDK 25 (`apt-get install openjdk-25-jdk-headless`).
+- **El juego ya se puede arrancar en la nube**: `cd mod && xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX
+  +render -noreset" ./gradlew runClientGameTest` (instalar antes `mesa-vulkan-drivers`). OpenGL falla con
+  "Couldn't find matching GLX visual" y el juego cae a **Vulkan con llvmpipe**, que funciona. No hay audio.
+  El test activa `aurora/packs/Aurora Pack`, crea un mundo hardcore y saca capturas; así se comprobó por primera
+  vez el pack dentro del juego: carga sin errores de modelos, texturas ni JSON.
 - El usuario juega en un mundo propio de un jugador (hardcore, Fabric), no en el servidor.
 
 ## Estado / pendiente
-- Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar ambos packs
-  (Aurora Outline encima de Aurora Pack), comprobar capa, aura, borde y menús con capturas.
+- Probado dentro del juego (2026-10-13): menús, HUD, corazones hardcore, huevo, mesa, yunque y muela del
+  Aurora Pack. Falta probar en el juego: Aurora Outline, la capa/túnica puesta, las auras por rareza en mano
+  y los sonidos (sin audio en la nube).
 - Ideas pendientes ofrecidas: versión EMF/ETF de la túnica con vuelo 3D; ajustar intensidad/velocidad.
 - Limpieza en el PC: sobra el archivo temporal `Aurora_export\ziJhG1Z5`. Las previews antiguas
   (`preview*.png`, `anim_*.gif`) que hay dentro de la carpeta instalada `Aurora Pack` se pueden borrar.

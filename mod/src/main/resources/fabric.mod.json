@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "aurora_guia",
+  "version": "${version}",
+  "name": "Aurora Guía",
+  "description": "Ayudas de solo lectura para tu mundo: yunque inteligente con el orden más barato, lo que le falta a cada objeto y un diario hardcore. No cambia ninguna mecánica.",
+  "authors": ["MINELEAF"],
+  "license": "MIT",
+  "icon": "assets/aurora_guia/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.mineleaf.auroraguia.AuroraGuia"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "aurora_guia_gametest",
+  "version": "1.0.0",
+  "name": "Aurora Guía (tests)",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-client-gametest": ["dev.mineleaf.auroraguia.gametest.AuroraGuiaClientTest"]
+  },
+  "depends": {"aurora_guia": "*"}
+}
