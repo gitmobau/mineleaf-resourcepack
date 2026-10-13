@@ -54,6 +54,25 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   `OIT_WAVELET_RANK` y `OIT_COEFF_ATTACHMENT_COUNT`. El validador usa 8, 3 y 2, y el
   `rendertype_lines` vanilla compila con esa misma configuración (sirve de control).
 
+### Sesión del 2026-10-13: Grimorio, HUD hardcore, huevo y sonidos
+- Nuevos `grimorio.py`, `hardcore.py` y `sonidos.py` (ver README). `fetch_ref.py` baja ahora también
+  `blockstates`, `models/block`, `particles`, `sounds.json`, `textures/particle` y `textures/entity/{enchantment,experience}`
+  (sparse-checkout en modo no-cone para poder pedir ficheros sueltos).
+- Libros: `items/enchanted_book.json` es una cadena de `condition` con `property: minecraft:component`,
+  `predicate: minecraft:stored_enchantments` (formato comprobado en SpyglassMC/vanilla-mcdoc). Gana el primer
+  encantamiento de la lista: maldiciones, luego tesoro, luego el resto. Un libro con varios encantamientos se
+  ve como el primero que encaje.
+- Auras por rareza: mismas condiciones con `predicate: minecraft:enchantments`; la lista de predicados exige
+  que se cumplan todos.
+- **Cambio de la 26.3 encontrado**: el campo `shade` de los elementos de modelo ya no existe (se sustituyó por
+  `shade_direction_override`). El aura de `gear.py` usaba `"shade": false`; ahora usa
+  `"shade_direction_override": "up"` y `validate.py` rechaza `shade`.
+- Mod de Fabric (Yunque inteligente, lista de lo que falta a cada objeto, diario hardcore): pendiente. La red
+  del entorno bloquea `piston-meta.mojang.com`, `piston-data.mojang.com`, `libraries.minecraft.net`,
+  `resources.download.minecraft.net`, `maven.fabricmc.net` y `meta.fabricmc.net`; sin ellos no se puede
+  compilar contra Minecraft ni arrancar el cliente.
+- El usuario juega en un mundo propio de un jugador (hardcore, Fabric), no en el servidor.
+
 ## Estado / pendiente
 - Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar ambos packs
   (Aurora Outline encima de Aurora Pack), comprobar capa, aura, borde y menús con capturas.

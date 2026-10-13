@@ -28,14 +28,24 @@ No están en el repo porque son assets de Mojang. Para conseguirlas:
 `ref63/` del zip de traspaso y genera exactamente los mismos zips. También vale el
 `versions/26.3/26.3.jar`.
 
-`build.py` borra y regenera `packs/Aurora Pack`, ejecuta `gen.py → magic.py → gear.py` (en ese
-orden, porque los últimos sobrescriben a los primeros), pasa `validate.py` y crea los zips.
+`build.py` borra y regenera `packs/Aurora Pack`, ejecuta `gen.py → magic.py → gear.py → grimorio.py →
+hardcore.py → sonidos.py` (en ese orden, porque los últimos sobrescriben a los primeros), pasa `validate.py`
+y crea los zips. `sonidos.py` necesita `numpy` y `ffmpeg` con libvorbis.
 La salida es determinista: con la misma entrada salen los mismos bytes.
 
 ### Qué hace cada script
 - `gen.py`: base v1 (agua, mira, fondo de la barra de XP, indicadores de ataque, `pack.png` y `pack.mcmeta`).
 - `magic.py`: "Marco mágico". Menús (inventario, mesa de crafteo, hornos, cofre grande y shulker) y sprites animados (hotbar, selección, casilla resaltada, botón del libro de recetas, fuego y flecha del horno, XP).
 - `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (túnica galáctica + capa 3D), también puestas en bebés, caballos y nautilus.
+- `grimorio.py`: un libro encantado distinto para cada encantamiento y nivel (43 encantamientos, 105
+  texturas animadas; color por tipo, marco dorado en los de tesoro, oscuros los de maldición, puntos de nivel),
+  auras por rareza en herramientas (normal → **rara** si tiene Reparación → **legendaria** con Reparación +
+  Irrompibilidad III + Filo/Castigo/Perdición V o Eficiencia V), menús de mesa de encantamientos, yunque y muela,
+  botones y gemas de nivel animados, el libro que flota sobre la mesa y las letras mágicas y partículas de golpe.
+- `hardcore.py`: corazones animados (normal y hardcore, con veneno, wither, congelado, absorción y montura),
+  hambre y armadura a juego, y el huevo del dragón como trofeo (galaxia con auroras animadas que brilla).
+- `sonidos.py`: sonidos sintetizados (campanillas) al encantar, usar el yunque, subir de nivel y coger
+  experiencia. Mono Ogg Vorbis, generados desde cero.
 - `validate.py`: validación estática contra la 26.3. Revisa JSON, tamaños y frames de las animaciones, nine-slice, referencias de modelos y texturas, definiciones de items, capas de equipamiento, compilación de los shaders en las 5 variantes OIT con `glslangValidator` y que las salidas del vsh coincidan con las entradas del fsh.
 - `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta.
 - `prev.py`: hoja de previsualización antigua de la v1, se conserva como referencia.

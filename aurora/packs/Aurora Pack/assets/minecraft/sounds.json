@@ -1,0 +1,48 @@
+{
+  "block.enchantment_table.use": {
+    "replace": true,
+    "sounds": [
+      {
+        "name": "minecraft:aurora/enchant1"
+      },
+      {
+        "name": "minecraft:aurora/enchant2"
+      },
+      {
+        "name": "minecraft:aurora/enchant3"
+      }
+    ],
+    "subtitle": "subtitles.block.enchantment_table.use"
+  },
+  "block.anvil.use": {
+    "replace": true,
+    "sounds": [
+      {
+        "name": "minecraft:aurora/anvil_use",
+        "volume": 0.5
+      }
+    ],
+    "subtitle": "subtitles.block.anvil.use"
+  },
+  "entity.player.levelup": {
+    "replace": true,
+    "sounds": [
+      {
+        "name": "minecraft:aurora/levelup"
+      }
+    ],
+    "subtitle": "subtitles.entity.player.levelup"
+  },
+  "entity.experience_orb.pickup": {
+    "replace": true,
+    "sounds": [
+      {
+        "name": "minecraft:aurora/orb1"
+      },
+      {
+        "name": "minecraft:aurora/orb2"
+      }
+    ],
+    "subtitle": "subtitles.entity.experience_orb.pickup"
+  }
+}

@@ -190,7 +190,7 @@ def aura_model(name):
         "parent": "minecraft:item/handheld",
         "textures": {"aura": tex, "particle": tex},
         "elements": [{
-            "from": [-4, -4, 8], "to": [20, 20, 8], "shade": False, "light_emission": 15,
+            "from": [-4, -4, 8], "to": [20, 20, 8], "shade_direction_override": "up", "light_emission": 15,
             "faces": {"south": {"uv": [0, 0, 16, 16], "texture": "#aura"},
                       "north": {"uv": [16, 0, 0, 16], "texture": "#aura"}}
         }]

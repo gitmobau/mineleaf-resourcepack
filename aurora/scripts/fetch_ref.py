@@ -8,17 +8,24 @@ tag = sys.argv[sys.argv.index('--tag') + 1] if '--tag' in sys.argv else '26.3-as
 if '--tag' in sys.argv: args.remove(tag)
 dest = os.path.abspath(os.path.expanduser(args[0] if args else '~/ref63'))
 FOLDERS = ['assets/minecraft/' + p for p in (
-    'atlases', 'equipment', 'items', 'models/item', 'shaders',
-    'textures/block', 'textures/entity/equipment', 'textures/gui', 'textures/item', 'textures/misc')]
+    'atlases', 'blockstates', 'equipment', 'items', 'models/block', 'models/item', 'particles', 'shaders',
+    'textures/block', 'textures/entity/enchantment', 'textures/entity/equipment', 'textures/entity/experience',
+    'textures/gui', 'textures/item', 'textures/misc', 'textures/particle')] + ['assets/minecraft/sounds.json']
 
 tmp = tempfile.mkdtemp()
 try:
     run = lambda *c: subprocess.run(c, cwd=tmp, check=True)
     run('git', '-c', 'advice.detachedHead=false', 'clone', '-q', '--depth', '1', '--branch', tag, '--filter=blob:none', '--sparse',
         'https://github.com/misode/mcmeta', 'm')
-    subprocess.run(['git', 'sparse-checkout', 'set'] + FOLDERS, cwd=tmp + '/m', check=True)
+    pats = ['/' + f + ('' if f.endswith('.json') else '/') for f in FOLDERS]   # non-cone: folders and single files
+    subprocess.run(['git', 'sparse-checkout', 'set', '--no-cone'] + pats, cwd=tmp + '/m', check=True)
     for f in FOLDERS:
-        shutil.copytree(os.path.join(tmp, 'm', f), os.path.join(dest, f), dirs_exist_ok=True)
+        src = os.path.join(tmp, 'm', f)
+        if os.path.isdir(src):
+            shutil.copytree(src, os.path.join(dest, f), dirs_exist_ok=True)
+        else:
+            os.makedirs(os.path.dirname(os.path.join(dest, f)), exist_ok=True)
+            shutil.copy2(src, os.path.join(dest, f))
     print('referencia vanilla (%s) en %s' % (tag, dest))
 finally:
     shutil.rmtree(tmp, ignore_errors=True)

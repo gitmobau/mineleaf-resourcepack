@@ -1,6 +1,6 @@
 # Static validation of the Aurora packs against the vanilla 26.3 reference (~/ref63).
 # Checks: JSON syntax, animation frame layout, nine-slice sizes, model/texture references,
-# item model definitions, equipment layers and (if glslangValidator exists) core shaders.
+# item model definitions, sounds, equipment layers and (if glslangValidator exists) core shaders.
 import os, sys, json, glob, shutil, subprocess, tempfile, re
 from PIL import Image
 
@@ -94,6 +94,7 @@ for pack in PACKS:
             for fn, face in el['faces'].items():
                 t = face['texture']
                 if t.startswith('#') and t[1:] not in tex: err('%s: face %s uses undefined %s' % (rel, fn, t))
+            if 'shade' in el: err('%s: "shade" was replaced by shade_direction_override in 26.3' % rel)
             le = el.get('light_emission', 0)
             if not 0 <= le <= 15: err('%s: light_emission %s' % (rel, le))
     # ---- item model definitions
@@ -118,6 +119,23 @@ for pack in PACKS:
         van = json.load(open(REF + 'items/' + os.path.basename(ij)))
         for k, v in van.items():
             if k != 'model' and d.get(k) != v: err('%s: vanilla field %s=%s lost' % (rel, k, v))
+    # ---- sounds: every event must exist in vanilla and every file must be a mono Ogg Vorbis in the pack or vanilla
+    if os.path.exists(A + 'sounds.json'):
+        van = json.load(open(REF + 'sounds.json'))
+        for key, e in json.load(open(A + 'sounds.json')).items():
+            if key not in van: warn('sounds.json: %s is not a vanilla event' % key)
+            for snd in e.get('sounds', []):
+                s = snd if isinstance(snd, dict) else {'name': snd}
+                if s.get('type', 'file') != 'file': continue
+                ns, p = rid(s['name'])
+                f = '%s/assets/%s/sounds/%s.ogg' % (pack, ns, p)
+                if not os.path.exists(f):
+                    if ns != 'minecraft' or p not in json.dumps(van): err('sounds.json %s: %s missing' % (key, s['name']))
+                    continue
+                if shutil.which('ffprobe'):
+                    r = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'stream=codec_name,channels',
+                                        '-of', 'csv=p=0', f], capture_output=True, text=True)
+                    if r.stdout.strip() != 'vorbis,1': err('%s: expected mono vorbis, got %s' % (f, r.stdout.strip()))
     # ---- equipment
     for ej in glob.glob(A + 'equipment/*.json'):
         d = json.load(open(ej))
