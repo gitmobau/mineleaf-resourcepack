@@ -1,12 +1,9 @@
 package dev.mineleaf.auroraguia.anvil;
 
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 
@@ -14,25 +11,56 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AnvilScreen;
+import net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.Util;
 import net.minecraft.world.inventory.AnvilMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 
 /**
- * "Yunque inteligente": a side panel on the anvil screen with the cost of the current pair, the cost the
- * other way round, and the cheapest order to put every useful enchanted book of the inventory on the item.
- * It only reads and draws; it never moves items or changes costs.
+ * "Yunque inteligente": a side panel on the anvil screen. For the pair on the anvil it says whether the other
+ * way round is cheaper and what penalty the result keeps; below, the cheapest order to put the useful
+ * enchanted books of the inventory on the item. It only reads and draws; it never moves items or changes costs.
+ * The panel uses the tooltip background, so it takes the look of the resource pack.
  */
 public final class AnvilOverlay {
-	private static final int W = 176, H = 166, PANEL_W = 156;
+	private static final int ANVIL_W = 176, ANVIL_H = 166;
+	/** Aurora HUD XL draws the anvil 14 px wider on each side: keep clear of its ornaments when there is room. */
+	private static final int GAP = 16, GAP_TIGHT = 4, EDGE = 4;
+	private static final int MIN_W = 100, MAX_W = 200, PAD = 5, LINE = 10, SECTION = 5;
 	private static final int MAX_BOOKS = 8;
-	private static final int BG = 0xE0201436, EDGE = 0xFFB48CFF, TEXT = 0xFFFFFFFF, DIM = 0xFFC8B8F0,
-		GOOD = 0xFF8CFFB4, WARN = 0xFFFFB0C8, GOLD = 0xFFFFE08C;
+	private static final int TEXT = 0xFFFFFFFF, DIM = 0xFFBFB2E0, TITLE = 0xFFFFE08C, GOOD = 0xFF9CF5C0,
+		WARN = 0xFFFFB0C8, ITEM = 0xFF9CE0FF, RULE = 0x50C8A0FF;
 
-	private static String cacheKey = "";
-	private static Panel cached;
+	/**
+	 * One paragraph: an optional prefix ("1.") with the text wrapped beside it (hanging indent), and an optional
+	 * number aligned right on the first line.
+	 */
+	private record Row(FormattedCharSequence prefix, int indent, List<FormattedCharSequence> lines, FormattedCharSequence right,
+		int rightWidth, boolean section) {
+	}
+
+	private record Layout(List<Row> rows, int width, int height) {
+	}
+
+	// cache: the panel is only rebuilt when something it depends on changes
+	private static final List<ItemStack> seen = new ArrayList<>();
+	private static final List<ItemStack> now = new ArrayList<>();
+	private static int seenCost = -1, seenXp = -1, seenWidth = -1;
+	private static Layout layout;
+
+	/** The plan is worked out on a background thread (8 books can take tens of ms); the panel shows it when ready. */
+	private record PlanInput(Object item, AnvilMath.Piece target, List<AnvilMath.Piece> books, int preferred) {
+	}
+
+	private static PlanInput planInput;
+	private static CompletableFuture<AnvilMath.Plan> planFuture;
+	private static boolean waiting;
 
 	private AnvilOverlay() {
 	}
@@ -45,250 +73,269 @@ public final class AnvilOverlay {
 		});
 	}
 
-	/** parts: item icons or short strings drawn before {@code text}. */
-	private record Line(List<Object> parts, Component text, int color) {
-		boolean icons() {
-			return parts.stream().anyMatch(p -> p instanceof ItemStack);
-		}
-	}
-
-	private record Panel(List<Line> lines) {
-	}
-
 	private static void draw(AnvilScreen screen, GuiGraphicsExtractor g) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.player == null || mc.level == null) {
+		LocalPlayer player = mc.player;
+		if (player == null || mc.level == null) {
 			return;
 		}
 		AnvilMenu menu = screen.getMenu();
 		ItemStack left = menu.getSlot(AnvilMenu.INPUT_SLOT).getItem();
-		ItemStack right = menu.getSlot(AnvilMenu.ADDITIONAL_SLOT).getItem();
-		List<ItemStack> books = new ArrayList<>();
-		for (ItemStack s : mc.player.getInventory().getNonEquipmentItems()) {
+		if (left.isEmpty()) {
+			return;                                            // nothing to say: keep the screen clean
+		}
+		now.clear();
+		now.add(left);
+		now.add(menu.getSlot(AnvilMenu.ADDITIONAL_SLOT).getItem());
+		now.add(menu.getSlot(AnvilMenu.RESULT_SLOT).getItem());
+		for (ItemStack s : player.getInventory().getNonEquipmentItems()) {
 			if (McAnvil.isBook(s)) {
-				books.add(s);
+				now.add(s);
 			}
 		}
-		String key = describe(left) + "|" + describe(right) + "|" + menu.getCost() + "|"
-			+ books.stream().map(AnvilOverlay::describe).sorted().toList();
-		if (!key.equals(cacheKey)) {
-			cacheKey = key;
-			cached = build(mc, menu, left, right, books);
+		int room = screen.width - (screen.width + ANVIL_W) / 2 - EDGE;
+		int gap = room - GAP >= MIN_W + 2 * PAD ? GAP : GAP_TIGHT;
+		int width = Math.max(MIN_W, Math.min(MAX_W, room - gap - 2 * PAD));
+		int xp = player.hasInfiniteMaterials() ? Integer.MAX_VALUE : player.experienceLevel;
+		if (changed(menu.getCost(), xp, width) || waiting && planFuture.isDone()) {
+			layout = layout(mc.font, build(mc, menu, xp), width);
 		}
-		render(screen, g, mc.font, cached);
+		if (layout != null) {
+			render(screen, g, mc.font, layout, (screen.width + ANVIL_W) / 2 + gap, room - gap);
+		}
 	}
 
-	private static String describe(ItemStack s) {
-		return s.isEmpty() ? "-" : s.getItem() + "x" + s.getCount() + McAnvil.piece(s).key() + s.getDamageValue();
+	private static boolean changed(int cost, int xp, int width) {
+		boolean same = cost == seenCost && xp == seenXp && width == seenWidth && now.size() == seen.size();
+		for (int i = 0; same && i < now.size(); i++) {
+			same = ItemStack.matches(now.get(i), seen.get(i));
+		}
+		if (!same) {
+			seen.clear();
+			now.forEach(s -> seen.add(s.copy()));
+			seenCost = cost;
+			seenXp = xp;
+			seenWidth = width;
+		}
+		return !same;
 	}
 
-	private static Panel build(Minecraft mc, AnvilMenu menu, ItemStack left, ItemStack right, List<ItemStack> books) {
-		List<Line> out = new ArrayList<>();
-		out.add(new Line(List.of(), Component.translatable("aurora_guia.anvil.title"), GOLD));
-		if (left.isEmpty()) {
-			out.add(new Line(List.of(), Component.translatable("aurora_guia.anvil.put_left"), DIM));
-			return new Panel(out);
+	// ------------------------------------------------------------------ content
+
+	private record Text(Component prefix, Component text, Component right, boolean section) {
+		Text(Component text, Component right, boolean section) {
+			this(null, text, right, section);
 		}
+	}
+
+	private static List<Text> build(Minecraft mc, AnvilMenu menu, int xp) {
+		List<Text> out = new ArrayList<>();
+		waiting = false;
+		ItemStack left = menu.getSlot(AnvilMenu.INPUT_SLOT).getItem();
+		ItemStack right = menu.getSlot(AnvilMenu.ADDITIONAL_SLOT).getItem();
+		ItemStack result = menu.getSlot(AnvilMenu.RESULT_SLOT).getItem();
 		Map<String, Holder<Enchantment>> reg = McAnvil.registry(mc.level.registryAccess());
 		AnvilMath.Piece target = McAnvil.piece(left);
 		AnvilMath.Rules rules = McAnvil.rules(left, reg);
 
 		// --- the pair that is on the anvil now
 		if (!right.isEmpty()) {
-			int now = menu.getCost();
-			boolean swappable = McAnvil.isBook(left) == McAnvil.isBook(right) && ItemStack.isSameItem(left, right);
-			if (now > 0) {
-				out.add(new Line(List.of(left, "+", right), Component.translatable("aurora_guia.anvil.now", now),
-					now >= AnvilMath.TOO_EXPENSIVE ? WARN : TEXT));
-			}
-			if (swappable) {
-				AnvilMath.Result rev = AnvilMath.combine(McAnvil.piece(right), target, McAnvil.rules(right, reg));
-				AnvilMath.Result cur = AnvilMath.combine(target, McAnvil.piece(right), rules);
-				if (rev != null && cur != null && rev.cost() < cur.cost()) {
-					out.add(new Line(List.of(right, "+", left), Component.translatable("aurora_guia.anvil.swap", rev.cost()), WARN));
-					out.add(new Line(List.of(), Component.translatable("aurora_guia.anvil.swap_hint", cur.cost() - rev.cost()), WARN));
-				}
-			}
-			AnvilMath.Result cur = AnvilMath.combine(target, McAnvil.piece(right), rules);
-			if (cur != null) {
-				int rc = cur.piece().repairCost();
-				out.add(new Line(List.of(), Component.translatable("aurora_guia.anvil.after", rc, AnvilMath.uses(rc)), DIM));
+			swap(left, right, target, rules, reg).ifPresent(out::add);
+			if (!result.isEmpty()) {
+				int rc = McAnvil.repairCost(result);
+				out.add(new Text(color(Component.translatable("aurora_guia.anvil.after", penalty(rc)), DIM), null, false));
 			}
 		}
 
-		// --- cheapest plan with the useful books of the inventory (+ the right slot if it holds a book)
-		List<ItemStack> pool = new ArrayList<>(books);
+		// --- cheapest order with the books of the inventory (and the one on the anvil)
+		if (McAnvil.isBook(left) || left.getCount() > 1) {
+			return out;                                        // merging books / a stack: nothing to plan
+		}
+		List<ItemStack> pool = new ArrayList<>();
+		int preferred = -1;
 		if (McAnvil.isBook(right)) {
+			preferred = 0;
 			pool.add(right);
 		}
-		List<ItemStack> chosen = choose(target, pool, rules);
-		if (chosen.isEmpty()) {
-			out.add(new Line(List.of(), Component.translatable("aurora_guia.anvil.no_books"), DIM));
-			return new Panel(out);
+		for (ItemStack s : mc.player.getInventory().getNonEquipmentItems()) {
+			if (McAnvil.isBook(s)) {
+				pool.add(s);
+			}
 		}
-		List<AnvilMath.Piece> pieces = chosen.stream().map(McAnvil::piece).toList();
-		AnvilMath.Plan plan = AnvilMath.optimize(target, pieces, rules);
-		out.add(new Line(List.of(), Component.translatable("aurora_guia.anvil.plan", chosen.size()), GOLD));
+		List<AnvilMath.Piece> pieces = pool.stream().map(McAnvil::piece).toList();
+		List<Integer> idx = AnvilMath.candidates(target, pieces, rules, preferred, MAX_BOOKS);
+		boolean anyGain = idx.stream().anyMatch(i -> AnvilMath.gain(target, pieces.get(i), rules) > 0);
+		if (!anyGain) {
+			if (out.isEmpty() && !McAnvil.improvable(left, reg).isEmpty()) {
+				out.add(new Text(color(Component.translatable("aurora_guia.anvil.no_books"), DIM), null, false));
+			}
+			return out;
+		}
+		List<ItemStack> chosen = idx.stream().map(pool::get).toList();
+		PlanInput input = new PlanInput(left.getItem(), target, idx.stream().map(pieces::get).toList(), idx.indexOf(preferred));
+		if (!input.equals(planInput)) {
+			java.util.Set<String> ids = new java.util.HashSet<>(target.enchantments().keySet());
+			input.books().forEach(b -> ids.addAll(b.enchantments().keySet()));
+			AnvilMath.Rules frozen = AnvilMath.freeze(rules, ids);
+			planInput = input;
+			planFuture = CompletableFuture.supplyAsync(() -> AnvilMath.optimize(input.target(), input.books(), frozen,
+				input.preferred()), Util.backgroundExecutor());
+		}
+		waiting = !planFuture.isDone();
+		if (waiting) {
+			out.add(new Text(color(Component.translatable("aurora_guia.anvil.thinking"), DIM), null, !out.isEmpty()));
+			return out;
+		}
+		AnvilMath.Plan plan = planFuture.isCompletedExceptionally() ? null : planFuture.join();
 		if (plan == null) {
-			out.add(new Line(List.of(), Component.translatable("aurora_guia.anvil.impossible"), WARN));
-			return new Panel(out);
+			out.add(new Text(color(Component.translatable("aurora_guia.anvil.impossible"), WARN), null, !out.isEmpty()));
+			return out;
 		}
-		List<ItemStack> leaves = new ArrayList<>();
-		leaves.add(left);
-		leaves.addAll(chosen);
-		Map<AnvilMath.Node, Integer> stepNo = new HashMap<>();
-		int i = 1;
-		for (AnvilMath.Step s : plan.steps()) {
-			stepNo.put(s, i);
-			List<Object> parts = new ArrayList<>();
-			parts.add(i + ".");
-			parts.add(ref(s.left(), stepNo, leaves));
-			parts.add("+");
-			parts.add(ref(s.right(), stepNo, leaves));
-			out.add(new Line(parts, Component.translatable("aurora_guia.anvil.step", s.cost()), TEXT));
-			if (s.left() instanceof AnvilMath.Leaf || s.right() instanceof AnvilMath.Leaf) {
-				// the books all look alike: say which ones they are
-				out.add(new Line(List.of(), Component.literal("   ").append(name(s.left(), stepNo, leaves, reg))
-					.append(" + ").append(name(s.right(), stepNo, leaves, reg)), DIM));
-			}
-			i++;
+		List<AnvilMath.Step> steps = plan.steps();
+		int books = Integer.bitCount(plan.used()) - 1;
+		out.add(new Text(color(Component.translatable("aurora_guia.anvil.plan"), TITLE),
+			color(Component.translatable(books == 1 ? "aurora_guia.anvil.books_one" : "aurora_guia.anvil.books", books), DIM),
+			!out.isEmpty()));
+		List<AnvilMath.Node> done = new ArrayList<>();
+		for (AnvilMath.Step s : steps) {
+			done.add(s);
+			MutableComponent line = Component.empty().append(ref(s.left(), left, done, reg))
+				.append(color(Component.literal(" + "), DIM)).append(ref(s.right(), left, done, reg));
+			out.add(new Text(color(Component.literal(done.size() + "."), DIM), line,
+				color(Component.literal(String.valueOf(s.cost())), TEXT), false));
 		}
-		out.add(new Line(List.of(), Component.translatable("aurora_guia.anvil.total", plan.total(), plan.maxStep()), GOOD));
-		int rc = plan.root().piece().repairCost();
-		out.add(new Line(List.of(), Component.translatable("aurora_guia.anvil.after", rc, AnvilMath.uses(rc)), DIM));
-		return new Panel(out);
-	}
-
-	private static Component name(AnvilMath.Node n, Map<AnvilMath.Node, Integer> stepNo, List<ItemStack> leaves,
-		Map<String, Holder<Enchantment>> reg) {
-		if (!(n instanceof AnvilMath.Leaf l)) {
-			return Component.literal("(" + stepNo.get(n) + ")");
+		out.add(new Text(color(Component.translatable("aurora_guia.anvil.total"), GOOD),
+			color(Component.translatable("aurora_guia.anvil.levels", plan.total()), GOOD), false));
+		if (xp < plan.total()) {
+			out.add(new Text(color(Component.translatable("aurora_guia.anvil.short", plan.total() - xp), WARN), null, false));
 		}
-		ItemStack s = leaves.get(l.index());
-		if (!McAnvil.isBook(s)) {
-			return s.getHoverName();
-		}
-		net.minecraft.network.chat.MutableComponent c = Component.empty();
-		boolean first = true;
-		for (Map.Entry<String, Integer> e : l.piece().enchantments().entrySet()) {
-			Holder<Enchantment> h = reg.get(e.getKey());
-			if (h == null) {
-				continue;
-			}
-			if (!first) {
-				c.append(", ");
-			}
-			c.append(Component.empty().append(Enchantment.getFullname(h, e.getValue())).withColor(DIM));
-			first = false;
-		}
-		return c;
-	}
-
-	/** Leaves are drawn as icons; earlier steps are referred to by number. */
-	private static Object ref(AnvilMath.Node n, Map<AnvilMath.Node, Integer> stepNo, List<ItemStack> leaves) {
-		if (n instanceof AnvilMath.Leaf l) {
-			return leaves.get(l.index());
-		}
-		return "(" + stepNo.get(n) + ")";
-	}
-
-	/**
-	 * Books that add something to the target, most valuable first, dropping any that clash with what is
-	 * already kept (the anvil would charge for the clash and apply nothing).
-	 */
-	static List<ItemStack> choose(AnvilMath.Piece target, List<ItemStack> pool, AnvilMath.Rules rules) {
-		record Cand(ItemStack stack, Map<String, Integer> useful, int value) {
-		}
-		List<Cand> cands = new ArrayList<>();
-		for (ItemStack s : pool) {
-			AnvilMath.Piece p = McAnvil.piece(s);
-			Map<String, Integer> useful = new HashMap<>();
-			int value = 0;
-			for (Map.Entry<String, Integer> e : p.enchantments().entrySet()) {
-				String id = e.getKey();
-				int have = target.enchantments().getOrDefault(id, 0);
-				boolean raises = e.getValue() > have || e.getValue() == have && have < rules.maxLevel(id);
-				boolean clash = target.enchantments().keySet().stream().anyMatch(o -> !o.equals(id) && !rules.areCompatible(id, o));
-				if (rules.canEnchant(id) && raises && !clash) {
-					useful.put(id, e.getValue());
-					value += rules.anvilCost(id) * e.getValue();
+		out.add(new Text(color(Component.translatable("aurora_guia.anvil.final", penalty(plan.root().piece().repairCost())), DIM),
+			null, false));
+		// books that would add something but were left out (an alternative to one in the plan, or too expensive)
+		MutableComponent unused = Component.empty();
+		for (int i = 0; i < chosen.size(); i++) {
+			if (!plan.uses(i) && AnvilMath.gain(target, pieces.get(idx.get(i)), rules) > 0) {
+				if (!unused.getSiblings().isEmpty()) {
+					unused.append(", ");
 				}
-			}
-			if (!useful.isEmpty() && useful.size() == p.enchantments().size()) {
-				cands.add(new Cand(s, useful, value));
+				unused.append(bookName(McAnvil.piece(chosen.get(i)), reg));
 			}
 		}
-		cands.sort(Comparator.comparingInt(Cand::value).reversed());
-		List<ItemStack> kept = new ArrayList<>();
-		Set<String> have = new HashSet<>(target.enchantments().keySet());
-		for (Cand c : cands) {
-			if (kept.size() >= MAX_BOOKS) {
-				break;
-			}
-			boolean ok = c.useful().keySet().stream().allMatch(id -> have.stream().allMatch(o -> o.equals(id) || rules.areCompatible(id, o)));
-			if (ok) {
-				kept.add(c.stack());
-				have.addAll(c.useful().keySet());
-			}
+		if (!unused.getSiblings().isEmpty()) {
+			out.add(new Text(color(Component.translatable("aurora_guia.anvil.unused", unused), DIM), null, false));
 		}
-		return kept;
+		return out;
 	}
 
-	private static int height(Font font, Line l) {
-		if (l.icons()) {
-			return 18;
+	/** "Swap them" when the other way round gives the same result for fewer levels. */
+	private static java.util.Optional<Text> swap(ItemStack left, ItemStack right, AnvilMath.Piece target, AnvilMath.Rules rules,
+		Map<String, Holder<Enchantment>> reg) {
+		boolean books = McAnvil.isBook(left) && McAnvil.isBook(right);
+		boolean items = !McAnvil.isBook(left) && ItemStack.isSameItem(left, right) && left.isDamageableItem();
+		if (!books && !items || left.getCount() > 1 || right.getCount() > 1) {
+			return java.util.Optional.empty();
 		}
-		return l.parts().isEmpty() ? font.split(l.text(), PANEL_W - 10).size() * 10 + 2 : 12;
+		AnvilMath.Piece other = McAnvil.piece(right);
+		AnvilMath.Result cur = AnvilMath.combine(target, other, rules);
+		AnvilMath.Result rev = AnvilMath.combine(other, target, McAnvil.rules(right, reg));
+		if (cur == null || rev == null || !cur.piece().enchantments().equals(rev.piece().enchantments())) {
+			return java.util.Optional.empty();
+		}
+		int curCost = cur.cost(), revCost = rev.cost();
+		if (items) {
+			curCost += AnvilMath.durabilityFee(left.getMaxDamage(), left.getDamageValue(), right.getDamageValue());
+			revCost += AnvilMath.durabilityFee(right.getMaxDamage(), right.getDamageValue(), left.getDamageValue());
+		}
+		if (revCost >= curCost || revCost >= AnvilMath.TOO_EXPENSIVE) {
+			return java.util.Optional.empty();
+		}
+		return java.util.Optional.of(new Text(color(Component.translatable("aurora_guia.anvil.swap", revCost, curCost - revCost), WARN),
+			null, false));
 	}
 
-	private static void render(AnvilScreen screen, GuiGraphicsExtractor g, Font font, Panel panel) {
-		if (panel == null) {
-			return;
+	/** Leaves by name (books: their enchantments; the item: its name); earlier steps by number. */
+	private static Component ref(AnvilMath.Node n, ItemStack target, List<AnvilMath.Node> done, Map<String, Holder<Enchantment>> reg) {
+		if (n instanceof AnvilMath.Leaf l) {
+			return l.index() == 0 ? color(target.getHoverName().copy(), ITEM) : bookName(l.piece(), reg);
 		}
-		int left = (screen.width - W) / 2, top = (screen.height - H) / 2;
-		int h = 8;
-		for (Line l : panel.lines()) {
-			h += height(font, l);
+		return color(Component.literal("(" + (done.indexOf(n) + 1) + ")"), DIM);
+	}
+
+	private static Component bookName(AnvilMath.Piece p, Map<String, Holder<Enchantment>> reg) {
+		MutableComponent c = Component.empty();
+		for (Map.Entry<String, Integer> e : p.enchantments().entrySet()) {
+			Holder<Enchantment> h = reg.get(e.getKey());
+			if (h != null) {
+				if (!c.getSiblings().isEmpty()) {
+					c.append(", ");
+				}
+				c.append(McAnvil.name(h, e.getValue()));
+			}
 		}
-		// to the right of the anvil; shrink to fit the free space instead of covering the anvil
-		int room = screen.width - (left + W) - 6;
-		float scale = Math.min(1f, Math.min((float) room / PANEL_W, (float) (screen.height - 4) / h));
-		int x0 = left + W + 4;
-		if (scale < 0.5f) {               // no room at all: left side, same rule
-			room = left - 6;
-			scale = Math.max(0.5f, Math.min(1f, (float) room / PANEL_W));
-			x0 = Math.max(2, left - 4 - Math.round(PANEL_W * scale));
+		return color(c, TEXT);
+	}
+
+	private static Component penalty(int repairCost) {
+		int uses = AnvilMath.uses(repairCost);
+		return Component.translatable(uses == 1 ? "aurora_guia.penalty_one" : "aurora_guia.penalty", repairCost, uses);
+	}
+
+	private static MutableComponent color(MutableComponent c, int rgb) {
+		return Component.empty().withColor(rgb & 0xFFFFFF).append(c);
+	}
+
+	// ------------------------------------------------------------------ drawing
+
+	private static Layout layout(Font font, List<Text> texts, int width) {
+		if (texts.isEmpty()) {
+			return null;
 		}
-		int y0 = Math.max(2, Math.min(top, screen.height - 2 - Math.round(h * scale)));
+		List<Row> rows = new ArrayList<>();
+		int h = 0, used = 0;
+		for (Text t : texts) {
+			FormattedCharSequence right = t.right() == null ? null : t.right().getVisualOrderText();
+			int rw = right == null ? 0 : font.width(right) + 4;
+			FormattedCharSequence prefix = t.prefix() == null ? null : t.prefix().getVisualOrderText();
+			int indent = prefix == null ? 0 : font.width("00.") + 3;
+			List<FormattedCharSequence> lines = font.split(t.text(), width - rw - indent);
+			boolean section = t.section() && !rows.isEmpty();
+			rows.add(new Row(prefix, indent, lines, right, rw, section));
+			h += lines.size() * LINE + (section ? SECTION : 0);
+			for (FormattedCharSequence line : lines) {
+				used = Math.max(used, indent + font.width(line) + rw);
+			}
+		}
+		return new Layout(rows, Math.min(width, used), h - 1);      // as narrow as the text allows
+	}
+
+	/** To the right of the anvil, from {@code x0}; shrunk only when it does not fit in {@code room}. */
+	private static void render(AnvilScreen screen, GuiGraphicsExtractor g, Font font, Layout l, int x0, int room) {
+		int boxW = l.width() + 2 * PAD, boxH = l.height() + 2 * PAD;
+		float scale = Math.min(1f, Math.min((float) room / boxW, (float) (screen.height - 2 * EDGE) / boxH));
+		scale = Math.max(0.5f, scale);
+		int anvilTop = (screen.height - ANVIL_H) / 2;
+		int y0 = Math.max(EDGE, Math.min(anvilTop, screen.height - EDGE - Math.round(boxH * scale)));
 		g.pose().pushMatrix();
 		g.pose().translate(x0, y0);
 		g.pose().scale(scale, scale);
-		int x = 0;
-		g.fill(x, 0, x + PANEL_W, h, BG);
-		g.outline(x, 0, PANEL_W, h, EDGE);
-		int y = 5;
-		for (Line l : panel.lines()) {
-			int tx = x + 5;
-			if (!l.parts().isEmpty()) {
-				int ty = l.icons() ? y + 4 : y;
-				for (Object p : l.parts()) {
-					if (p instanceof ItemStack s) {
-						g.item(s, tx, y);
-						tx += 17;
-					} else {
-						g.text(font, p.toString(), tx, ty, DIM, true);
-						tx += font.width(p.toString()) + 3;
-					}
-				}
-				g.text(font, l.text(), tx + 2, ty, l.color(), true);
-			} else {
-				int yy = y;
-				for (var seq : font.split(l.text(), PANEL_W - 10)) {
-					g.text(font, seq, tx, yy, l.color(), true);
-					yy += 10;
-				}
+		// the tooltip sprites leave 3 px of padding around the content they are given
+		TooltipRenderUtil.extractTooltipBackground(g, 3, 3, boxW - 6, boxH - 6, null);
+		int y = PAD;
+		for (Row r : l.rows()) {
+			if (r.section()) {
+				g.horizontalLine(PAD, PAD + l.width() - 1, y + 1, RULE);  // thin rule in the gap above the section
+				y += SECTION;
 			}
-			y += height(font, l);
+			if (r.right() != null) {
+				g.text(font, r.right(), PAD + l.width() - r.rightWidth() + 4, y, TEXT, true);
+			}
+			if (r.prefix() != null) {
+				g.text(font, r.prefix(), PAD, y, TEXT, true);
+			}
+			for (FormattedCharSequence line : r.lines()) {
+				g.text(font, line, PAD + r.indent(), y, TEXT, true);
+				y += LINE;
+			}
 		}
 		g.pose().popMatrix();
 	}

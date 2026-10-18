@@ -70,11 +70,24 @@ public class AuroraGuiaClientTest implements FabricClientGameTest {
 				p.getInventory().setItem(13, book(s, Enchantments.SWEEPING_EDGE, 3));
 				p.getInventory().setItem(14, book(s, Enchantments.FIRE_ASPECT, 2));
 				p.getInventory().setItem(15, book(s, Enchantments.KNOCKBACK, 2));
+				p.getInventory().setItem(16, book(s, Enchantments.SMITE, 5));      // alternative to Sharpness: left out
+				p.giveExperienceLevels(30);
 				openAnvil(p, new ItemStack(Items.DIAMOND_SWORD), ItemStack.EMPTY);
 			});
 			ctx.waitForScreen(AnvilScreen.class);
-			ctx.waitTicks(5);
+			ctx.waitTicks(20);
 			ctx.takeScreenshot("02_yunque_plan_espada");
+			// the same at GUI scale 3 (less room at the side of the anvil)
+			ctx.runOnClient(mc -> {
+				mc.options.guiScale().set(3);
+				mc.resizeGui();
+			});
+			ctx.waitTicks(10);
+			ctx.takeScreenshot("02b_yunque_plan_escala3");
+			ctx.runOnClient(mc -> {
+				mc.options.guiScale().set(2);
+				mc.resizeGui();
+			});
 
 			// --- anvil with the pickaxes the wrong way round
 			sp.getServer().runOnServer(s -> {

@@ -1,7 +1,6 @@
 package dev.mineleaf.auroraguia.tooltip;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -10,10 +9,8 @@ import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -23,46 +20,65 @@ import dev.mineleaf.auroraguia.anvil.AnvilMath;
 import dev.mineleaf.auroraguia.anvil.McAnvil;
 
 /**
- * Extra tooltip lines for anything that can be enchanted: anvil uses / prior work penalty, and (holding
- * Shift) the enchantments the item is still missing. Read-only.
+ * Extra tooltip lines, only where they say something: the anvil penalty of items that have been on the anvil,
+ * and for enchanted items what they are still missing (the list with Shift). Read-only.
  */
 public final class GuiaTooltip {
 	private GuiaTooltip() {
 	}
 
+	/** What an item could still get: an empty list when it is complete, null when it cannot be enchanted. */
+	private record Missing(List<Component> lines) {
+	}
+
+	// the hovered stack is asked for its tooltip every frame: remember the last answer
+	private static ItemStack lastStack = ItemStack.EMPTY;
+	private static Map<String, Holder<Enchantment>> lastReg;
+	private static Missing lastMissing;
+
 	public static void register() {
 		ItemTooltipCallback.EVENT.register((stack, context, flag, lines) -> {
 			Minecraft mc = Minecraft.getInstance();
-			if (mc.level == null || stack.isEmpty() || !relevant(stack)) {
+			if (mc.level == null || stack.isEmpty()) {
 				return;
 			}
-			int rc = stack.getOrDefault(DataComponents.REPAIR_COST, 0);
-			int uses = AnvilMath.uses(rc);
-			if (rc == 0) {
-				lines.add(Component.translatable("aurora_guia.tooltip.anvil_new").withStyle(ChatFormatting.DARK_AQUA));
-			} else {
-				ChatFormatting c = rc >= 31 ? ChatFormatting.RED : rc >= 15 ? ChatFormatting.GOLD : ChatFormatting.DARK_AQUA;
-				lines.add(Component.translatable("aurora_guia.tooltip.anvil_used", uses, rc).withStyle(c));
+			int rc = McAnvil.repairCost(stack);
+			if (rc > 0) {
+				ChatFormatting c = rc >= 31 ? ChatFormatting.RED : rc >= 15 ? ChatFormatting.GOLD : ChatFormatting.GRAY;
+				int uses = AnvilMath.uses(rc);
+				lines.add(Component.translatable("aurora_guia.tooltip.penalty",
+					Component.translatable(uses == 1 ? "aurora_guia.penalty_one" : "aurora_guia.penalty", rc, uses)).withStyle(c));
 			}
 			if (McAnvil.isBook(stack)) {
 				return;
 			}
-			List<Component> missing = missing(stack, McAnvil.registry(mc.level.registryAccess()));
-			if (missing.isEmpty()) {
-				lines.add(Component.translatable("aurora_guia.tooltip.complete").withStyle(ChatFormatting.LIGHT_PURPLE));
+			Missing missing = missing(stack, McAnvil.registry(mc.level.registryAccess()));
+			if (missing == null) {
+				return;                                        // not enchantable: nothing to say
+			}
+			boolean enchanted = !EnchantmentHelper.getEnchantmentsForCrafting(stack).isEmpty();
+			if (missing.lines().isEmpty()) {
+				if (enchanted) {
+					lines.add(Component.translatable("aurora_guia.tooltip.complete").withStyle(ChatFormatting.LIGHT_PURPLE));
+				}
 			} else if (mc.hasShiftDown()) {
 				lines.add(Component.translatable("aurora_guia.tooltip.missing").withStyle(ChatFormatting.LIGHT_PURPLE));
-				for (Component m : missing) {
+				for (Component m : missing.lines()) {
 					lines.add(Component.literal("  ").append(m));
 				}
-			} else {
-				lines.add(Component.translatable("aurora_guia.tooltip.shift", missing.size()).withStyle(ChatFormatting.DARK_GRAY));
+			} else if (enchanted) {
+				lines.add(Component.translatable("aurora_guia.tooltip.shift", missing.lines().size()).withStyle(ChatFormatting.DARK_GRAY));
 			}
 		});
 	}
 
-	private static boolean relevant(ItemStack stack) {
-		return McAnvil.isBook(stack) || stack.isDamageableItem();
+	private static synchronized Missing missing(ItemStack stack, Map<String, Holder<Enchantment>> reg) {
+		if (reg != lastReg || !ItemStack.matches(stack, lastStack)) {
+			lastStack = stack.copy();
+			lastReg = reg;
+			lastMissing = compute(stack, reg);
+		}
+		return lastMissing;
 	}
 
 	/**
@@ -70,32 +86,21 @@ public final class GuiaTooltip {
 	 * that clash with one it already has are left out; the ones that clash with each other are shown as
 	 * alternatives ("A / B").
 	 */
-	static List<Component> missing(ItemStack stack, Map<String, Holder<Enchantment>> reg) {
-		ItemEnchantments have = EnchantmentHelper.getEnchantmentsForCrafting(stack);
-		List<Holder<Enchantment>> upgrades = new ArrayList<>();
-		List<Holder<Enchantment>> absent = new ArrayList<>();
-		reg.values().stream()
-			.filter(h -> !h.is(EnchantmentTags.CURSE) && h.value().canEnchant(stack))
-			.sorted(Comparator.comparing(Holder::getRegisteredName))
-			.forEach(h -> {
-				int lvl = have.getLevel(h);
-				if (lvl > 0) {
-					if (lvl < h.value().getMaxLevel()) {
-						upgrades.add(h);
-					}
-				} else if (have.keySet().stream().allMatch(o -> Enchantment.areCompatible(h, o))) {
-					absent.add(h);
-				}
-			});
-		List<Component> out = new ArrayList<>();
-		for (Holder<Enchantment> h : upgrades) {
-			out.add(Component.translatable("aurora_guia.tooltip.upgrade",
-				Enchantment.getFullname(h, have.getLevel(h)), Component.translatable("enchantment.level." + h.value().getMaxLevel()))
-				.withStyle(ChatFormatting.GRAY));
+	private static Missing compute(ItemStack stack, Map<String, Holder<Enchantment>> reg) {
+		if (reg.values().stream().noneMatch(h -> !h.is(net.minecraft.tags.EnchantmentTags.CURSE) && h.value().canEnchant(stack))) {
+			return null;
 		}
-		// group absent enchantments that exclude each other: A / B
+		ItemEnchantments have = EnchantmentHelper.getEnchantmentsForCrafting(stack);
+		List<Component> out = new ArrayList<>();
 		List<List<Holder<Enchantment>>> groups = new ArrayList<>();
-		for (Holder<Enchantment> h : absent) {
+		for (Holder<Enchantment> h : McAnvil.improvable(stack, reg)) {
+			int lvl = have.getLevel(h);
+			if (lvl > 0) {                                     // raise: "Sharpness IV → V"
+				out.add(Component.translatable("aurora_guia.tooltip.upgrade", McAnvil.name(h, lvl),
+					Component.translatable("enchantment.level." + h.value().getMaxLevel())).withStyle(ChatFormatting.GRAY));
+				continue;
+			}
+			// absent: group the ones that exclude each other
 			List<Holder<Enchantment>> g = groups.stream()
 				.filter(gr -> gr.stream().anyMatch(o -> !Enchantment.areCompatible(h, o)))
 				.findFirst().orElse(null);
@@ -105,16 +110,15 @@ public final class GuiaTooltip {
 			g.add(h);
 		}
 		for (List<Holder<Enchantment>> g : groups) {
-			MutableComponent line = Component.empty();
+			MutableComponent line = Component.empty().withStyle(ChatFormatting.GRAY);
 			for (int i = 0; i < g.size(); i++) {
 				if (i > 0) {
 					line.append(Component.literal(" / ").withStyle(ChatFormatting.DARK_GRAY));
 				}
-				Holder<Enchantment> h = g.get(i);
-				line.append(Enchantment.getFullname(h, h.value().getMaxLevel()));
+				line.append(McAnvil.name(g.get(i), g.get(i).value().getMaxLevel()));
 			}
 			out.add(line);
 		}
-		return out;
+		return new Missing(List.copyOf(out));
 	}
 }
