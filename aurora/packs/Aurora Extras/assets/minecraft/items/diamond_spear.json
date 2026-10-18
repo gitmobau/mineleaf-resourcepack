@@ -1,137 +1,174 @@
 {
   "model": {
-    "type": "minecraft:condition",
-    "property": "minecraft:has_component",
-    "component": "minecraft:enchantments",
-    "ignore_default": true,
-    "on_true": {
-      "type": "minecraft:condition",
-      "property": "minecraft:component",
-      "predicate": "minecraft:enchantments",
-      "value": [
-        {
-          "enchantments": "minecraft:mending"
-        },
-        {
-          "enchantments": "minecraft:unbreaking",
-          "levels": {
-            "min": 3
-          }
-        },
-        {
-          "enchantments": [
-            "minecraft:sharpness",
-            "minecraft:smite",
-            "minecraft:bane_of_arthropods"
-          ],
-          "levels": 5
-        }
-      ],
-      "on_true": {
-        "type": "minecraft:select",
-        "cases": [
-          {
-            "model": {
-              "type": "minecraft:composite",
-              "models": [
+    "type": "minecraft:select",
+    "property": "minecraft:display_context",
+    "cases": [
+      {
+        "when": [
+          "gui",
+          "fixed",
+          "on_shelf"
+        ],
+        "model": {
+          "type": "minecraft:condition",
+          "property": "minecraft:has_component",
+          "component": "minecraft:enchantments",
+          "ignore_default": true,
+          "on_true": {
+            "type": "minecraft:condition",
+            "property": "minecraft:component",
+            "predicate": "minecraft:enchantments",
+            "value": [
+              {
+                "enchantments": "minecraft:mending"
+              },
+              {
+                "enchantments": "minecraft:unbreaking",
+                "levels": {
+                  "min": 3
+                }
+              },
+              {
+                "enchantments": [
+                  "minecraft:sharpness",
+                  "minecraft:smite",
+                  "minecraft:bane_of_arthropods"
+                ],
+                "levels": {
+                  "min": 5
+                }
+              }
+            ],
+            "on_true": {
+              "type": "minecraft:select",
+              "cases": [
                 {
+                  "model": {
+                    "type": "minecraft:composite",
+                    "models": [
+                      {
+                        "type": "minecraft:model",
+                        "model": "minecraft:item/diamond_spear"
+                      },
+                      {
+                        "type": "minecraft:model",
+                        "model": "minecraft:item/aurora/aura_legend_diamond_spear"
+                      }
+                    ]
+                  },
+                  "when": [
+                    "gui",
+                    "ground",
+                    "fixed",
+                    "on_shelf"
+                  ]
+                }
+              ],
+              "fallback": {
+                "type": "minecraft:model",
+                "model": "minecraft:item/diamond_spear_in_hand"
+              },
+              "property": "minecraft:display_context"
+            },
+            "on_false": {
+              "type": "minecraft:condition",
+              "property": "minecraft:component",
+              "predicate": "minecraft:enchantments",
+              "value": [
+                {
+                  "enchantments": "minecraft:mending"
+                }
+              ],
+              "on_true": {
+                "type": "minecraft:select",
+                "cases": [
+                  {
+                    "model": {
+                      "type": "minecraft:composite",
+                      "models": [
+                        {
+                          "type": "minecraft:model",
+                          "model": "minecraft:item/diamond_spear"
+                        },
+                        {
+                          "type": "minecraft:model",
+                          "model": "minecraft:item/aurora/aura_rare_diamond_spear"
+                        }
+                      ]
+                    },
+                    "when": [
+                      "gui",
+                      "ground",
+                      "fixed",
+                      "on_shelf"
+                    ]
+                  }
+                ],
+                "fallback": {
+                  "type": "minecraft:model",
+                  "model": "minecraft:item/diamond_spear_in_hand"
+                },
+                "property": "minecraft:display_context"
+              },
+              "on_false": {
+                "type": "minecraft:select",
+                "cases": [
+                  {
+                    "model": {
+                      "type": "minecraft:composite",
+                      "models": [
+                        {
+                          "type": "minecraft:model",
+                          "model": "minecraft:item/diamond_spear"
+                        },
+                        {
+                          "type": "minecraft:model",
+                          "model": "minecraft:item/aurora/aura_diamond_spear"
+                        }
+                      ]
+                    },
+                    "when": [
+                      "gui",
+                      "ground",
+                      "fixed",
+                      "on_shelf"
+                    ]
+                  }
+                ],
+                "fallback": {
+                  "type": "minecraft:model",
+                  "model": "minecraft:item/diamond_spear_in_hand"
+                },
+                "property": "minecraft:display_context"
+              }
+            }
+          },
+          "on_false": {
+            "type": "minecraft:select",
+            "cases": [
+              {
+                "model": {
                   "type": "minecraft:model",
                   "model": "minecraft:item/diamond_spear"
                 },
-                {
-                  "type": "minecraft:model",
-                  "model": "minecraft:item/aurora/aura_legend_diamond_spear"
-                }
-              ]
+                "when": [
+                  "gui",
+                  "ground",
+                  "fixed",
+                  "on_shelf"
+                ]
+              }
+            ],
+            "fallback": {
+              "type": "minecraft:model",
+              "model": "minecraft:item/diamond_spear_in_hand"
             },
-            "when": [
-              "gui",
-              "ground",
-              "fixed",
-              "on_shelf"
-            ]
+            "property": "minecraft:display_context"
           }
-        ],
-        "fallback": {
-          "type": "minecraft:model",
-          "model": "minecraft:item/diamond_spear_in_hand"
-        },
-        "property": "minecraft:display_context"
-      },
-      "on_false": {
-        "type": "minecraft:condition",
-        "property": "minecraft:component",
-        "predicate": "minecraft:enchantments",
-        "value": [
-          {
-            "enchantments": "minecraft:mending"
-          }
-        ],
-        "on_true": {
-          "type": "minecraft:select",
-          "cases": [
-            {
-              "model": {
-                "type": "minecraft:composite",
-                "models": [
-                  {
-                    "type": "minecraft:model",
-                    "model": "minecraft:item/diamond_spear"
-                  },
-                  {
-                    "type": "minecraft:model",
-                    "model": "minecraft:item/aurora/aura_rare_diamond_spear"
-                  }
-                ]
-              },
-              "when": [
-                "gui",
-                "ground",
-                "fixed",
-                "on_shelf"
-              ]
-            }
-          ],
-          "fallback": {
-            "type": "minecraft:model",
-            "model": "minecraft:item/diamond_spear_in_hand"
-          },
-          "property": "minecraft:display_context"
-        },
-        "on_false": {
-          "type": "minecraft:select",
-          "cases": [
-            {
-              "model": {
-                "type": "minecraft:composite",
-                "models": [
-                  {
-                    "type": "minecraft:model",
-                    "model": "minecraft:item/diamond_spear"
-                  },
-                  {
-                    "type": "minecraft:model",
-                    "model": "minecraft:item/aurora/aura_diamond_spear"
-                  }
-                ]
-              },
-              "when": [
-                "gui",
-                "ground",
-                "fixed",
-                "on_shelf"
-              ]
-            }
-          ],
-          "fallback": {
-            "type": "minecraft:model",
-            "model": "minecraft:item/diamond_spear_in_hand"
-          },
-          "property": "minecraft:display_context"
         }
       }
-    },
-    "on_false": {
+    ],
+    "fallback": {
       "type": "minecraft:select",
       "cases": [
         {

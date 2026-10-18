@@ -1,79 +1,98 @@
 {
   "model": {
-    "type": "minecraft:condition",
-    "property": "minecraft:has_component",
-    "component": "minecraft:enchantments",
-    "ignore_default": true,
-    "on_true": {
-      "type": "minecraft:condition",
-      "property": "minecraft:component",
-      "predicate": "minecraft:enchantments",
-      "value": [
-        {
-          "enchantments": "minecraft:mending"
-        },
-        {
-          "enchantments": "minecraft:unbreaking",
-          "levels": {
-            "min": 3
-          }
-        },
-        {
-          "enchantments": "minecraft:efficiency",
-          "levels": 5
-        }
-      ],
-      "on_true": {
-        "type": "minecraft:composite",
-        "models": [
-          {
+    "type": "minecraft:select",
+    "property": "minecraft:display_context",
+    "cases": [
+      {
+        "when": [
+          "gui",
+          "fixed",
+          "on_shelf"
+        ],
+        "model": {
+          "type": "minecraft:condition",
+          "property": "minecraft:has_component",
+          "component": "minecraft:enchantments",
+          "ignore_default": true,
+          "on_true": {
+            "type": "minecraft:condition",
+            "property": "minecraft:component",
+            "predicate": "minecraft:enchantments",
+            "value": [
+              {
+                "enchantments": "minecraft:mending"
+              },
+              {
+                "enchantments": "minecraft:unbreaking",
+                "levels": {
+                  "min": 3
+                }
+              },
+              {
+                "enchantments": "minecraft:efficiency",
+                "levels": {
+                  "min": 5
+                }
+              }
+            ],
+            "on_true": {
+              "type": "minecraft:composite",
+              "models": [
+                {
+                  "type": "minecraft:model",
+                  "model": "minecraft:item/netherite_hoe"
+                },
+                {
+                  "type": "minecraft:model",
+                  "model": "minecraft:item/aurora/aura_legend_netherite_hoe"
+                }
+              ]
+            },
+            "on_false": {
+              "type": "minecraft:condition",
+              "property": "minecraft:component",
+              "predicate": "minecraft:enchantments",
+              "value": [
+                {
+                  "enchantments": "minecraft:mending"
+                }
+              ],
+              "on_true": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:model",
+                    "model": "minecraft:item/netherite_hoe"
+                  },
+                  {
+                    "type": "minecraft:model",
+                    "model": "minecraft:item/aurora/aura_rare_netherite_hoe"
+                  }
+                ]
+              },
+              "on_false": {
+                "type": "minecraft:composite",
+                "models": [
+                  {
+                    "type": "minecraft:model",
+                    "model": "minecraft:item/netherite_hoe"
+                  },
+                  {
+                    "type": "minecraft:model",
+                    "model": "minecraft:item/aurora/aura_netherite_hoe"
+                  }
+                ]
+              }
+            }
+          },
+          "on_false": {
             "type": "minecraft:model",
             "model": "minecraft:item/netherite_hoe"
-          },
-          {
-            "type": "minecraft:model",
-            "model": "minecraft:item/aurora/aura_legend_netherite_hoe"
           }
-        ]
-      },
-      "on_false": {
-        "type": "minecraft:condition",
-        "property": "minecraft:component",
-        "predicate": "minecraft:enchantments",
-        "value": [
-          {
-            "enchantments": "minecraft:mending"
-          }
-        ],
-        "on_true": {
-          "type": "minecraft:composite",
-          "models": [
-            {
-              "type": "minecraft:model",
-              "model": "minecraft:item/netherite_hoe"
-            },
-            {
-              "type": "minecraft:model",
-              "model": "minecraft:item/aurora/aura_rare_netherite_hoe"
-            }
-          ]
-        },
-        "on_false": {
-          "type": "minecraft:composite",
-          "models": [
-            {
-              "type": "minecraft:model",
-              "model": "minecraft:item/netherite_hoe"
-            },
-            {
-              "type": "minecraft:model",
-              "model": "minecraft:item/aurora/aura_netherite_hoe"
-            }
-          ]
         }
       }
-    },
-    "on_false": {
+    ],
+    "fallback": {
       "type": "minecraft:model",
       "model": "minecraft:item/netherite_hoe"
     }
