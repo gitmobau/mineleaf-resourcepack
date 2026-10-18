@@ -14,7 +14,7 @@ No dibuja nada en la pantalla normal de juego: solo el panel del yunque y unas l
 
 ## Instalar
 1. Fabric Loader 0.19.5 o superior para la 26.3 y **Fabric API** 0.162.0+26.3.
-2. Copia `dist/aurora-guia-1.0.0.jar` en `.minecraft/mods`.
+2. Copia `dist/aurora-guia-1.1.0.jar` en `.minecraft/mods`.
 
 ## Compilar
 Necesita JDK 25.
