@@ -1,7 +1,14 @@
 """Armas Aurora: recoloreado estático, sin cambiar ningún texel de la silueta.
 
 Usa AURORA_REF, AURORA_RP y AURORA_PREVIEWS igual que gear.py.
-Los estados del arco/ballesta comparten un pintor independiente de la posición.
+
+Todo se pinta con unas pocas rampas de 5 tonos que comparten el contorno violeta (OUT) de las
+herramientas de diamante y netherita de gear.py: madera lavanda, hilo celeste, metal perla
+(los mismos tonos ópalo de la netherita), oro pastel y rosa. Cada objeto conserva el reparto de
+luces y sombras vanilla (así se sigue reconociendo) pero con menos colores compitiendo: nada de
+arcoíris por píxel ni lavados a blanco. Los estados del arco/ballesta usan un pintor que solo mira
+el color vanilla (nunca la posición), así que el mismo color sale igual en todos los estados.
+El libro encantado NO se toca: el usuario usa "Enchanted Books: Re-covered".
 """
 import os
 from pathlib import Path
@@ -10,7 +17,8 @@ import sys
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # build.py usa -I
-from gear import C, OUT, P, VIVID, WHITE, crystal_px, cyc, hsv, mix
+import gear
+from gear import C, OUT, P, WHITE, hsv, mix
 
 ROOT = Path(__file__).resolve().parents[1]
 REF = Path(os.environ.get('AURORA_REF', Path.home() / 'ref63')) / 'assets/minecraft/textures'
@@ -24,30 +32,53 @@ ITEMS = (
     'mace', 'totem_of_undying', 'arrow', 'spectral_arrow', 'ender_pearl',
 )
 OPTIONAL = ('tipped_arrow_head', 'tipped_arrow_base')
-# combat / magic / utility items repainted with the generic Aurora painter (hue families -> pastel anchors)
+# combat / magic / utility items repainted with the generic Aurora painter (hue families -> pastel anchors).
+# enchanted_book is left out on purpose: the user stacks "Enchanted Books: Re-covered" for the books.
 GENERIC = (
     'trident', 'elytra', 'elytra_broken', 'firework_rocket', 'firework_star', 'wind_charge', 'breeze_rod',
     'blaze_rod', 'blaze_powder', 'ender_eye', 'golden_apple', 'nether_star', 'echo_shard', 'experience_bottle',
-    'enchanted_book', 'potion', 'splash_potion', 'lingering_potion', 'spyglass', 'fishing_rod', 'fishing_rod_cast',
+    'potion', 'splash_potion', 'lingering_potion', 'spyglass', 'fishing_rod', 'fishing_rod_cast',
     'shears', 'flint_and_steel', 'goat_horn', 'name_tag', 'lead', 'brush',
 )
 WORN = ('entity/equipment/wings/elytra.png',)
 SHIELDS = ('shield_base', 'shield_base_nopattern')
 
+# ------------------------------------------------------------------ shared Aurora ramps (dark -> light)
+# Every ramp starts at (or near) the violet outline of gear.py so all items read as one family.
+WOOD = (OUT, (92, 70, 156), (134, 110, 206), (178, 162, 240), (220, 212, 255))        # lavender wood
+THREAD = ((70, 64, 140), (110, 124, 200), (152, 188, 238), (204, 228, 255), WHITE)    # sky string / flint
+PEARL = (OUT, (96, 84, 160), (142, 134, 206), (194, 190, 240), (246, 244, 255))       # neutral greys
+GOLD = ((96, 52, 98), (204, 134, 92), (246, 198, 100), (255, 224, 128), (255, 242, 196))
+ROSE = ((106, 44, 108), (190, 88, 152), (236, 132, 184), (255, 174, 210), (255, 224, 238))
+MINT = ((44, 92, 110), (70, 170, 160), (120, 232, 200), (190, 252, 228), (236, 255, 246))
+NAVY = (OUT, (72, 54, 128), (98, 76, 160))                                            # firework body
+# pearl metal = the opal tones of the netherite in gear.py (fallback keeps this script working on its own)
+_OPAL = getattr(gear, 'OPAL_TONES', [(158, 142, 214), (192, 182, 236), (220, 214, 250), (243, 241, 255)])
+METAL = (OUT, (98, 82, 164)) + tuple(_OPAL)
 
-def pearl(v):
-    """Madera/cuerda lavanda-perla; los valores más oscuros son el contorno."""
-    if v < 0.23:
-        return OUT
-    if v < 0.34:
-        return (111, 87, 164)
-    return mix(P[2], WHITE, min(0.9, max(0, (v - 0.34) / 0.5)))
+
+def clamp01(t):
+    return 0.0 if t < 0 else 1.0 if t > 1 else t
+
+
+def ramp(stops, t):
+    t = clamp01(t) * (len(stops) - 1)
+    i = min(int(t), len(stops) - 2)
+    return mix(stops[i], stops[i + 1], t - i)
+
+
+def family(base):
+    """5-tone ramp for one pastel colour: violet outline -> darker shades that keep their saturation (mixing a
+    pastel straight into violet gives grey mud) -> the pastel -> soft highlight (never pure white)"""
+    dark = tuple(c * 0.42 for c in base)
+    mid = tuple(c * 0.7 for c in base)
+    return (OUT, mix(dark, OUT, 0.3), mix(mid, OUT, 0.1), base, mix(base, WHITE, 0.55))
 
 
 # Pastel anchors for the generic painter: every vanilla hue family lands on the closest Aurora colour.
-ANCHORS = ((0, (255, 150, 190)), (28, (255, 186, 150)), (50, (255, 226, 150)), (85, (190, 244, 160)),
-           (140, (130, 238, 205)), (185, (120, 214, 255)), (225, (150, 170, 255)), (265, (186, 150, 255)),
-           (305, (236, 150, 236)), (360, (255, 150, 190)))
+ANCHORS = ((0, (255, 150, 190)), (28, (255, 180, 146)), (50, (255, 218, 136)), (85, (188, 240, 150)),
+           (140, (124, 232, 196)), (185, (118, 208, 250)), (225, (146, 166, 250)), (265, (182, 150, 250)),
+           (305, (232, 150, 232)), (360, (255, 150, 190)))
 
 
 def aurora_hue(h):
@@ -57,97 +88,126 @@ def aurora_hue(h):
     return ANCHORS[-1][1]
 
 
-def aurora_px(p):
-    """Generic Aurora repaint: dark -> violet outline, greys -> pearl lavender, colours -> pastel family,
-    keeping the vanilla light and shade so every item stays recognisable."""
-    hue, sat, value = hsv(p)
-    if value < 0.2:
-        return OUT
-    if sat < 0.15:
-        return mix((118, 98, 186), WHITE, min(1, max(0, (value - 0.2) / 0.75)) ** 0.8)
-    base = aurora_hue(hue)
-    if value < 0.55:
-        return mix(base, OUT, min(0.75, (0.55 - value) / 0.35 * 0.75))
-    return mix(base, WHITE, min(0.85, (value - 0.55) * 1.6))
+def is_oak(p):
+    """the oak wood shared by bow, arrow, fishing rod, brush... (and the crossbow's darker wood)"""
+    h, s, v = hsv(p)
+    return 26 <= h <= 42 and 0.55 <= s <= 0.82 and v < 0.75
 
 
-GOLDEN = ('totem_of_undying', 'golden_apple')
+def wood(v):
+    return ramp(WOOD, (v - 0.16) / 0.5)
 
 
-def gold_px(p):
-    """golden items keep their gold: deep rose-gold shade -> honey -> cream highlight; greens become mint gems"""
-    hue, sat, value = hsv(p)
-    if value < 0.2:
-        return OUT
-    if 90 < hue < 170 and sat > 0.3:
-        return mix((120, 240, 210), WHITE, 0.35 if value > 0.8 else 0)
-    if sat < 0.15:
-        return mix((255, 240, 210), WHITE, value)
-    ramp = ((0.2, (110, 60, 120)), (0.5, (214, 120, 120)), (0.65, (246, 168, 112)), (0.8, (255, 206, 120)),
-            (0.92, (255, 232, 160)), (1.0, (255, 250, 222)))
-    for (v0, c0), (v1, c1) in zip(ramp, ramp[1:]):
-        if value <= v1:
-            return mix(c0, c1, (value - v0) / (v1 - v0))
-    return ramp[-1][1]
+def thread(v):
+    """string and grey fittings: light enough to read on a dark slot, a soft sky tone so they never turn white"""
+    return ramp(THREAD, 0.42 + (v - 0.25) / 0.75 * 0.58)
 
 
+def luma(p):
+    return (0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]) / 255
+
+
+def tone(p, lo, hi):
+    """perceived brightness (a saturated dark orange is dark even if its HSV value is high), slightly stretched
+    inside the item: pale items stay pale (wind charge) and outline-less ones still get a shade (blaze rod)"""
+    lum = luma(p)
+    return clamp01(0.8 * (lum - 0.06) / 0.82 + 0.2 * (lum - lo) / max(1e-6, hi - lo))
+
+
+# ------------------------------------------------------------------ painters
 def weapon_pixel(p):
-    """El mismo color vanilla siempre produce el mismo color en cada estado."""
+    """El mismo color vanilla siempre produce el mismo color en cada estado del arco/ballesta."""
     hue, sat, value = hsv(p)
-    if 15 <= hue <= 55 and sat > 0.3:  # madera y astil
-        return pearl(value)
-    if sat < 0.12 and 0.25 <= value <= 0.7:  # cuerda y herrajes grises: claros, que se vean sobre fondo oscuro
-        return mix((196, 186, 244), WHITE, (value - 0.25) / 0.45 * 0.8)
-    if value < 0.28:
+    if is_oak(p) or (15 <= hue <= 55 and sat > 0.3 and value < 0.5):
+        return wood(value)
+    if sat < 0.12:                                   # cuerda, herrajes y punta de flecha
+        return thread(value)
+    if (hue < 12 or hue > 340) and sat > 0.5:        # papel del cohete cargado
+        return ramp(ROSE, (value - 0.35) / 0.55)
+    if 200 <= hue <= 250:                            # cuerpo azul marino del cohete
+        return ramp(NAVY, (value - 0.12) / 0.2)
+    if 170 <= hue < 200:                             # mecha del cohete
+        return thread(0.45 + value * 0.55)
+    return thread(value)
+
+
+def gold_px(p, lo, hi):
+    """golden items stay gold (plum shade -> honey -> cream); greens become mint gems"""
+    hue, sat, value = hsv(p)
+    if 90 < hue < 170 and sat > 0.3:
+        return ramp(MINT, 0.15 + 0.5 * value)
+    return ramp(GOLD, tone(p, lo, hi) ** 1.3)
+
+
+def generic_px(p, lo, hi):
+    """dark -> violet outline, oak -> lavender wood, greys -> pearl, colours -> their pastel family, keeping the
+    vanilla light and shade so every item stays recognisable"""
+    hue, sat, value = hsv(p)
+    if value < 0.16:
         return OUT
-    if value > 0.82 and sat < 0.12:
-        return mix(P[0], WHITE, 0.85) if value < 0.98 else WHITE
-    # Metal, cuerda y cohete: bandas de cristal estables al tensar/cargar.
-    return crystal_px(p, 0.08 + value * 0.55)
+    if is_oak(p):
+        return wood(value)
+    t = tone(p, lo, hi)
+    if sat < 0.15:
+        return ramp(PEARL, t)
+    if (hue < 14 or hue > 340) and sat > 0.5:          # vanilla reds -> the same rose as the loaded crossbow
+        return ramp(ROSE, (value - 0.35) / 0.55)
+    # colours sit a step higher than greys: vanilla browns/teals are dark and would turn to mud as pastels
+    return ramp(family(aurora_hue(hue)), 0.2 + 0.85 * t)
 
 
-def paint_pixel(p, name, x, y, width, height):
+def mace_px(p):
     hue, sat, value = hsv(p)
-    phase = 0.04 + 0.9 * (x - y + height - 1) / max(1, width + height - 2)
+    if sat > 0.35:                                   # mango azul -> madera lavanda
+        return ramp(WOOD, (value - 0.3) / 0.8)
+    return ramp(METAL, (value - 0.16) / 0.5)        # cabeza: metal perla de la netherita
+
+
+def shield_px(p):
+    """lavender boards + pearl metal rim; the banner area (near white) stays almost white for the patterns"""
+    hue, sat, value = hsv(p)
+    if value < 0.27:
+        return OUT
+    if sat > 0.3:
+        return ramp(WOOD, 0.2 + (value - 0.3) / 0.25 * 0.55)
+    if value > 0.88:
+        return mix(METAL[-1], WHITE, 0.6)
+    return ramp(METAL, 0.15 + (value - 0.27) / 0.45 * 0.75)
+
+
+GOLDEN = ('totem_of_undying', 'golden_apple', 'spectral_arrow')
+WARM_METAL = ('spyglass', 'blaze_rod', 'blaze_powder')   # copper / fire -> the same pastel gold, cyan lens kept
+
+
+def paint_pixel(p, name, lo, hi):
     if name.startswith(('bow', 'crossbow')) or name in ('arrow', 'tipped_arrow_base'):
         return weapon_pixel(p)
     if name == 'tipped_arrow_head':
         # El juego multiplica esta capa por el color de la poción. Perla casi
         # neutra conserva su lectura; no se cambia el modelo ni el tinte vanilla.
+        value = hsv(p)[2]
         return mix((166, 159, 184), WHITE, value) if value >= 0.3 else (72, 68, 82)
     if name.startswith('shield_base'):
-        # No se inventan bordes en las costuras UV ni se recolorean los patrones.
-        if value < 0.27:
-            return OUT
-        if sat < 0.12:
-            return crystal_px(p, phase)
-        return mix(pearl(value), cyc(phase), 0.32)
+        return shield_px(p)
     if name in GOLDEN:
-        return gold_px(p)
-    if name in GENERIC or name == 'elytra':
-        return aurora_px(p)
-    if name == 'spectral_arrow':
-        if value < 0.5:
-            return OUT
-        if value > 0.98 and sat < 0.1:
-            return WHITE
-        return mix(cyc(0.12 + (value - 0.5) * 0.8), WHITE, 0.35 if value > 0.95 else 0.05)
-    if name == 'mace' and sat > 0.3:  # mango azul vanilla -> lavanda
-        return pearl(value)
-    col = crystal_px(p, phase)
-    if value > 0.9:
-        col = mix(col, WHITE, 0.65)
-    return col
+        return gold_px(p, lo, hi)
+    if name in WARM_METAL and hsv(p)[0] < 60 and hsv(p)[1] > 0.3:
+        return gold_px(p, lo, hi)
+    if name == 'mace':
+        return mace_px(p)
+    return generic_px(p, lo, hi)
 
 
 def recolor(original, name):
     result = original.copy()  # incluso el RGB de los píxeles transparentes se conserva
+    pixels = [original.getpixel((x, y)) for y in range(original.height) for x in range(original.width)]
+    values = [luma(q) for q in pixels if q[3]]
+    lo, hi = min(values), max(values)
     for y in range(original.height):
         for x in range(original.width):
             pixel = original.getpixel((x, y))
             if pixel[3]:
-                result.putpixel((x, y), C(paint_pixel(
-                    pixel, name, x, y, original.width, original.height), pixel[3]))
+                result.putpixel((x, y), C(paint_pixel(pixel, name, lo, hi), pixel[3]))
     if result.size != original.size or result.getchannel('A').tobytes() != original.getchannel('A').tobytes():
         raise ValueError('La silueta vanilla ha cambiado: ' + name)
     return result
