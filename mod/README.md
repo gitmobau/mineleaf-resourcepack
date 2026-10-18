@@ -5,16 +5,17 @@ objetos ni reglas, así que no alteran ninguna mecánica vanilla.
 
 | Qué | Dónde | Detalle |
 |---|---|---|
-| **Yunque inteligente** | Panel a la derecha del yunque | Coste de lo que tienes puesto, aviso si al revés sale más barato, penalización con la que queda el objeto y el **orden más barato** para ponerle todos los libros útiles que llevas en el inventario (hasta 8). Nunca propone un paso de 40 o más. |
-| **Lo que le falta** | Tooltip de cualquier objeto con durabilidad o libro encantado | Usos de yunque y penalización. Con **Mayús**: encantamientos que le faltan o que no están al máximo. Los que se excluyen entre sí salen como alternativas ("A / B"). |
+| **Yunque inteligente** | Panel a la derecha del yunque (con el fondo de los tooltips del pack) | Aviso si **al revés** sale más barato (mismo resultado, contando la durabilidad), penalización con la que queda el resultado y el **orden más barato** para ponerle los libros útiles que llevas en el inventario (hasta 8) y el que tengas en el yunque. Deja fuera los libros que no aportan, los que no caben por debajo de 40 y, entre alternativas (Filo / Castigo), la de uso general o **la que hayas puesto en el yunque**. Dice cuántos niveles te faltan. |
+| **Lo que le falta** | Tooltip | Penalización de yunque (solo si ya ha pasado por uno). En objetos encantados: "✦ Encantamientos completos" o "Mayús: le faltan N"; con **Mayús**, la lista (también en objetos sin encantar). Los que se excluyen entre sí salen como alternativas ("A / B"); sin maldiciones. |
 
 Capturas hechas dentro del juego real con `runClientGameTest`: [`previews/`](previews/).
 
-No dibuja nada en la pantalla normal de juego: solo el panel del yunque y unas líneas en los tooltips.
+No dibuja nada en la pantalla normal de juego: solo el panel del yunque (y solo con algo en la casilla izquierda)
+y unas líneas en los tooltips.
 
 ## Instalar
 1. Fabric Loader 0.19.5 o superior para la 26.3 y **Fabric API** 0.162.0+26.3.
-2. Copia `dist/aurora-guia-1.1.0.jar` en `.minecraft/mods`.
+2. Copia `dist/aurora-guia-1.2.0.jar` en `.minecraft/mods`.
 
 ## Compilar
 Necesita JDK 25.
@@ -29,7 +30,10 @@ hardcore, activa `aurora/packs/Aurora Pack` y saca capturas de todo en
 
 ## Cómo está hecho
 - `anvil/AnvilMath.java`: copia exacta de `AnvilMenu.createResult` de la 26.3 (comprobada contra el código
-  descompilado) sin durabilidad ni renombrado, y el planificador por programación dinámica sobre subconjuntos.
+  descompilado) para encantar, más los +2 de durabilidad al juntar dos iguales; el renombrado y la reparación
+  con material no hacen falta (el panel lee la penalización del resultado real). El planificador es programación
+  dinámica exacta sobre subconjuntos que elige el subconjunto de libros más completo y luego el más barato.
   No depende de Minecraft, por eso tiene tests de JUnit.
+- El plan se calcula en un hilo de fondo con una copia congelada de las reglas, así que nunca da tirones.
 - `anvil/McAnvil.java`: traduce `ItemStack` y el registro de encantamientos sincronizado al modelo de arriba.
 - `anvil/AnvilOverlay.java`, `tooltip/GuiaTooltip.java`: lo que se dibuja.
