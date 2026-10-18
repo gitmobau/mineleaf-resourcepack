@@ -51,5 +51,7 @@ fabricApi {
 
 tasks.named("runClientGameTest") {
 	// the test enables this pack before taking screenshots
-	jvmArgs "-Daurora.packs=${rootDir}/../aurora/packs"
+	// -PauroraPacks=DIR -PauroraOrder="A,B,C" test another set of packs (bottom to top)
+	jvmArgs "-Daurora.packs=${project.findProperty('auroraPacks') ?: "${rootDir}/../aurora/packs"}",
+		"-Daurora.order=${project.findProperty('auroraOrder') ?: 'Aurora Pack,Aurora Outline'}"
 }

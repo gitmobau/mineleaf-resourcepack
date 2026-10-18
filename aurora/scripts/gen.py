@@ -150,38 +150,7 @@ for n in ['slot_highlight_back', 'slot_highlight_front']:
     save(out, 'gui/sprites/container/' + n + '.png')
     shutil.copy(REF + '/gui/sprites/container/' + n + '.png.mcmeta', TX + '/gui/sprites/container/' + n + '.png.mcmeta')
 
-TAU = 2 * math.pi
-def water_px(u, v, ph, flow=False):
-    if flow:
-        band = u * 1 + v * 2 - ph * 2 + 0.12 * math.sin(TAU * (u + ph))
-    else:
-        band = u + v + 0.18 * math.sin(TAU * (v * 2 + ph)) + 0.10 * math.sin(TAU * (u - ph)) + ph
-    c = cyc(band)
-    w = 0.5 + 0.5 * math.sin(TAU * (u * 2 + v + ph * (2 if flow else 1)))
-    w2 = 0.5 + 0.5 * math.sin(TAU * (v * 3 - u + ph * 3))
-    l = 0.70 + 0.20 * w + 0.10 * w2
-    col = mix((225, 235, 255), c, 0.80)
-    col = tuple(min(255, q * l + 22 * w2) for q in col)
-    if (int(u*97+v*61+ph*32*7) % 53) == 0: col = (255, 255, 255)
-    a = 150 + 30 * w
-    return clamp(col, a)
-
-def water(size, frames, flow):
-    im = Image.new('RGBA', (size, size * frames))
-    for f in range(frames):
-        ph = f / frames
-        for y in range(size):
-            for x in range(size):
-                im.putpixel((x, f * size + y), water_px(x / size, y / size, ph, flow))
-    return im
-
-save(water(16, 32, False), 'block/water_still.png', {"animation": {"frametime": 2, "interpolate": True}})
-save(water(32, 32, True), 'block/water_flow.png', {"animation": {"frametime": 2, "interpolate": True}})
-ov = Image.new('RGBA', (16, 16))
-for y in range(16):
-    for x in range(16):
-        ov.putpixel((x, y), clamp(mix((210, 225, 255), cyc((x + y) / 32), 0.5), 120))
-save(ov, 'block/water_overlay.png')
+# (water was removed: the user wants vanilla / their base pack's water)
 
 def hsv(p):
     h, s, v = colorsys.rgb_to_hsv(*[q / 255 for q in p[:3]])
@@ -256,7 +225,7 @@ icon.save(PACK + '/pack.png', optimize=True)
 with open(PACK + '/pack.mcmeta', 'w') as f:
     json.dump({"pack": {
         "description": ["", {"text": "Aurora ", "color": "#B9B9F8"},
-                        {"text": "· pastel HUD, agua y herramientas", "color": "#F8B0EA"}],
+                        {"text": "· pastel HUD y herramientas", "color": "#F8B0EA"}],
         "min_format": 84,
         "max_format": 97
     }}, f, indent=2, ensure_ascii=False)

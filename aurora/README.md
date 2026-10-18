@@ -5,7 +5,8 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
 
 | Carpeta | Qué hay |
 |---|---|
-| `dist/` | **Los zips listos para instalar**: `Aurora Pack.zip` y `Aurora Outline.zip` |
+| `dist/` | **Los zips listos para instalar**: `Aurora Pack.zip`, `Aurora Outline.zip` y `Aurora Extras.zip` |
+| `packs/Aurora Extras/` | Solo lo nuevo (auras por rareza, huevo del dragón, letras mágicas, libro de la mesa y sonidos), para ponerlo **encima** de Aurora / Aurora Celestial / Aurora HUD XL sin tocar agua, corazones, menús ni armaduras. Lo monta `build.py` copiando de `Aurora Pack` |
 | `packs/Aurora Pack/` | Pack principal. Se genera entero con los scripts (no editar a mano) |
 | `packs/Aurora Outline/` | Borde de bloque neón (core shader `rendertype_lines`). Escrito a mano |
 | `scripts/` | Generadores en Python + Pillow, validador y `build.py` |
@@ -34,7 +35,7 @@ y crea los zips. `sonidos.py` necesita `numpy` y `ffmpeg` con libvorbis.
 La salida es determinista: con la misma entrada salen los mismos bytes.
 
 ### Qué hace cada script
-- `gen.py`: base v1 (agua, mira, fondo de la barra de XP, indicadores de ataque, `pack.png` y `pack.mcmeta`).
+- `gen.py`: base v1 (mira, fondo de la barra de XP, indicadores de ataque, `pack.png` y `pack.mcmeta`).
 - `magic.py`: "Marco mágico". Menús (inventario, mesa de crafteo, hornos, cofre grande y shulker) y sprites animados (hotbar, selección, casilla resaltada, botón del libro de recetas, fuego y flecha del horno, XP).
 - `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (túnica galáctica + capa 3D), también puestas en bebés, caballos y nautilus.
 - `grimorio.py`: auras por rareza en herramientas (normal → **rara** si tiene Reparación → **legendaria** con Reparación +

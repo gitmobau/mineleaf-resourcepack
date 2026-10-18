@@ -2,7 +2,7 @@
 #   python3 build.py [--ref RUTA_A_REF63]
 # The vanilla 26.3 reference (folder with assets/minecraft/...) is NOT in the repo (Mojang assets):
 # extract it from versions/26.3/26.3.jar or from Aurora_handoff.zip (ref63/). Default: ~/ref63.
-import os, sys, shutil, subprocess, zipfile, argparse
+import os, sys, glob, json, shutil, subprocess, zipfile, argparse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -18,13 +18,36 @@ env = dict(os.environ, AURORA_REF=os.path.abspath(args.ref), AURORA_RP=PACKS,
            AURORA_PREVIEWS=os.path.join(ROOT, 'previews'))
 # Aurora Pack is 100% generated: start clean so nothing stale survives.
 shutil.rmtree(os.path.join(PACKS, 'Aurora Pack'), ignore_errors=True)
-for script in ('gen.py', 'magic.py', 'gear.py', 'grimorio.py', 'hardcore.py', 'sonidos.py', 'validate.py'):   # order matters: later ones overwrite
+for script in ('gen.py', 'magic.py', 'gear.py', 'grimorio.py', 'hardcore.py', 'sonidos.py'):   # order matters: later ones overwrite
     print('==>', script)
     subprocess.run([sys.executable, '-I', os.path.join(HERE, script)], env=env, cwd=HERE, check=True)
 
+# Aurora Extras: only the newer additions, to stack on top of the user's own Aurora / Aurora Celestial /
+# Aurora HUD XL without touching their water, hearts, menus or armour.
+EXTRAS = ['items/diamond_*.json', 'items/netherite_*.json', 'models/item/aurora/*', 'textures/item/aurora/*',
+          'textures/block/dragon_egg.png*', 'models/block/dragon_egg.json', 'textures/particle/*',
+          'textures/entity/enchantment/*', 'sounds.json', 'sounds/aurora/*']
+src = os.path.join(PACKS, 'Aurora Pack', 'assets', 'minecraft')
+ext = os.path.join(PACKS, 'Aurora Extras')
+shutil.rmtree(ext, ignore_errors=True)
+for pat in EXTRAS:
+    for f in sorted(glob.glob(os.path.join(src, pat))):
+        d = os.path.join(ext, 'assets', 'minecraft', os.path.relpath(f, src))
+        os.makedirs(os.path.dirname(d), exist_ok=True)
+        shutil.copy2(f, d)
+shutil.copy2(os.path.join(PACKS, 'Aurora Pack', 'pack.png'), os.path.join(ext, 'pack.png'))
+mc = json.load(open(os.path.join(PACKS, 'Aurora Pack', 'pack.mcmeta')))
+mc['pack']['description'] = [{"text": "Aurora Extras", "color": "#B48CFF"},
+                             {"text": "\nauras por rareza, huevo, magia y sonidos", "color": "#F8B0EA"}]
+with open(os.path.join(ext, 'pack.mcmeta'), 'w') as f:
+    json.dump(mc, f, indent=2, ensure_ascii=False)
+
+print('==> validate.py')
+subprocess.run([sys.executable, '-I', os.path.join(HERE, 'validate.py')], env=env, cwd=HERE, check=True)
+
 if not args.no_zip:
     dist = os.path.join(ROOT, 'dist'); os.makedirs(dist, exist_ok=True)
-    for name in ('Aurora Pack', 'Aurora Outline'):
+    for name in ('Aurora Pack', 'Aurora Outline', 'Aurora Extras'):
         src = os.path.join(PACKS, name); out = os.path.join(dist, name + '.zip')
         with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
             for base, dirs, files in sorted(os.walk(src)):

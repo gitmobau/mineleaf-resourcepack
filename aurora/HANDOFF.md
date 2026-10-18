@@ -75,6 +75,17 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   vez el pack dentro del juego: carga sin errores de modelos, texturas ni JSON.
 - El usuario juega en un mundo propio de un jugador (hardcore, Fabric), no en el servidor.
 
+### Sesión del 2026-10-18: montaje real del usuario
+- El usuario usa la línea **Aurora Celestial** (rama `claude/kind-goodall-uskil5`): Aurora Pack, Aurora Celestial,
+  Aurora EMF, **Aurora HUD XL** (los menús con nubes, uno por menú) y Aurora Outline, con Faithful 64x, Fresh
+  Animations (EMF/ETF), Enchanted Books: Re-covered, Enhanced Audio, Blue Netherite, shaders con Iris, etc.
+- Esta rama partió de `main` (más antigua): su Aurora Pack NO debe sustituir al del usuario.
+- Pidió: agua normal (quitada de `gen.py`; a su Aurora Pack se le quitan los 5 `water_*`), armaduras y menús
+  suyos sin tocar, y pantalla limpia (sin el diario del mod).
+- Nuevo `packs/Aurora Extras` (lo monta `build.py`): auras por rareza, huevo, partículas, libro de la mesa y
+  sonidos. Probado en el juego encima de Aurora Pack + HUD XL + Outline de `kind-goodall`:
+  `./gradlew runClientGameTest -PauroraPacks=DIR -PauroraOrder="Aurora Pack,Aurora HUD XL,Aurora Outline,Aurora Extras"`.
+
 ## Estado / pendiente
 - Probado dentro del juego (2026-10-13): menús, HUD, corazones hardcore, huevo, mesa, yunque y muela del
   Aurora Pack. Falta probar en el juego: Aurora Outline, la capa/túnica puesta, las auras por rareza en mano

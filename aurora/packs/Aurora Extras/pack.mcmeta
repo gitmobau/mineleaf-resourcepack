@@ -1,0 +1,16 @@
+{
+  "pack": {
+    "description": [
+      {
+        "text": "Aurora Extras",
+        "color": "#B48CFF"
+      },
+      {
+        "text": "\nauras por rareza, huevo, magia y sonidos",
+        "color": "#F8B0EA"
+      }
+    ],
+    "min_format": 84,
+    "max_format": 97
+  }
+}

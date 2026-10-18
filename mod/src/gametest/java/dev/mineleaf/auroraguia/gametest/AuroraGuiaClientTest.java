@@ -188,7 +188,7 @@ public class AuroraGuiaClientTest implements FabricClientGameTest {
 		ctx.getInput().setCursorPos(pos[0], pos[1]);
 	}
 
-	/** Copies Aurora Pack and Aurora Outline from -Daurora.packs into resourcepacks and enables them (Outline on top). */
+	/** Copies the packs named in -Daurora.order (bottom to top) from -Daurora.packs into resourcepacks and enables them. */
 	static void enableAuroraPack(ClientGameTestContext ctx) {
 		String src = System.getProperty("aurora.packs");
 		if (src == null) {
@@ -196,7 +196,7 @@ public class AuroraGuiaClientTest implements FabricClientGameTest {
 		}
 		ctx.runOnClient(mc -> {
 			List<String> sel = new ArrayList<>(mc.getResourcePackRepository().getSelectedIds());
-			for (String name : List.of("Aurora Pack", "Aurora Outline")) {
+			for (String name : System.getProperty("aurora.order", "Aurora Pack,Aurora Outline").split(",")) {
 				try {
 					copy(Path.of(src, name), mc.getResourcePackDirectory().resolve(name));
 				} catch (IOException e) {
