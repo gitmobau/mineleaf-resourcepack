@@ -51,5 +51,5 @@ fabricApi {
 
 tasks.named("runClientGameTest") {
 	// the test enables this pack before taking screenshots
-	jvmArgs "-Daurora.pack=${rootDir}/../aurora/packs/Aurora Pack"
+	jvmArgs "-Daurora.packs=${rootDir}/../aurora/packs"
 }

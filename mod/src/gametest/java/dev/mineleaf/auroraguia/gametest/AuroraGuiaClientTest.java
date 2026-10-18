@@ -160,7 +160,7 @@ public class AuroraGuiaClientTest implements FabricClientGameTest {
 		}
 	}
 
-	private static ServerPlayer player(MinecraftServer s) {
+	static ServerPlayer player(MinecraftServer s) {
 		return s.getPlayerList().getPlayers().get(0);
 	}
 
@@ -170,11 +170,11 @@ public class AuroraGuiaClientTest implements FabricClientGameTest {
 		p.containerMenu.getSlot(AnvilMenu.ADDITIONAL_SLOT).set(right);
 	}
 
-	private static Holder<Enchantment> ench(MinecraftServer s, ResourceKey<Enchantment> key) {
+	static Holder<Enchantment> ench(MinecraftServer s, ResourceKey<Enchantment> key) {
 		return s.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(key);
 	}
 
-	private static ItemStack book(MinecraftServer s, ResourceKey<Enchantment> key, int level) {
+	static ItemStack book(MinecraftServer s, ResourceKey<Enchantment> key, int level) {
 		ItemStack b = new ItemStack(Items.ENCHANTED_BOOK);
 		ItemEnchantments.Mutable m = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
 		m.set(ench(s, key), level);
@@ -183,7 +183,7 @@ public class AuroraGuiaClientTest implements FabricClientGameTest {
 	}
 
 	/** item, repair cost, then enchantment/level pairs */
-	private static ItemStack item(MinecraftServer s, Item item, int repairCost, Object... kv) {
+	static ItemStack item(MinecraftServer s, Item item, int repairCost, Object... kv) {
 		ItemStack st = new ItemStack(item);
 		ItemEnchantments.Mutable m = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
 		for (int i = 0; i < kv.length; i += 2) {
@@ -205,22 +205,25 @@ public class AuroraGuiaClientTest implements FabricClientGameTest {
 		ctx.getInput().setCursorPos(pos[0], pos[1]);
 	}
 
-	/** Copies the Aurora pack given by -Daurora.pack into resourcepacks and enables it. */
-	private static void enableAuroraPack(ClientGameTestContext ctx) {
-		String src = System.getProperty("aurora.pack");
+	/** Copies Aurora Pack and Aurora Outline from -Daurora.packs into resourcepacks and enables them (Outline on top). */
+	static void enableAuroraPack(ClientGameTestContext ctx) {
+		String src = System.getProperty("aurora.packs");
 		if (src == null) {
 			return;
 		}
 		ctx.runOnClient(mc -> {
-			Path dest = mc.getResourcePackDirectory().resolve("Aurora Pack");
-			try {
-				copy(Path.of(src), dest);
-			} catch (IOException e) {
-				throw new java.io.UncheckedIOException(e);
+			List<String> sel = new ArrayList<>(mc.getResourcePackRepository().getSelectedIds());
+			for (String name : List.of("Aurora Pack", "Aurora Outline")) {
+				try {
+					copy(Path.of(src, name), mc.getResourcePackDirectory().resolve(name));
+				} catch (IOException e) {
+					throw new java.io.UncheckedIOException(e);
+				}
+				if (!sel.contains("file/" + name)) {
+					sel.add("file/" + name);
+				}
 			}
 			mc.getResourcePackRepository().reload();
-			List<String> sel = new ArrayList<>(mc.getResourcePackRepository().getSelectedIds());
-			sel.add("file/Aurora Pack");
 			mc.getResourcePackRepository().setSelected(sel);
 			mc.options.languageCode = "es_es";
 			mc.getLanguageManager().setSelected("es_es");

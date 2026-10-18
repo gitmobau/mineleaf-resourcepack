@@ -5,7 +5,7 @@
   "name": "Aurora Guía (tests)",
   "environment": "client",
   "entrypoints": {
-    "fabric-client-gametest": ["dev.mineleaf.auroraguia.gametest.AuroraGuiaClientTest"]
+    "fabric-client-gametest": ["dev.mineleaf.auroraguia.gametest.AuroraGuiaClientTest", "dev.mineleaf.auroraguia.gametest.AuroraShowcaseTest"]
   },
   "depends": {"aurora_guia": "*"}
 }

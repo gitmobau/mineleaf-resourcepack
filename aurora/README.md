@@ -9,7 +9,7 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
 | `packs/Aurora Pack/` | Pack principal. Se genera entero con los scripts (no editar a mano) |
 | `packs/Aurora Outline/` | Borde de bloque neón (core shader `rendertype_lines`). Escrito a mano |
 | `scripts/` | Generadores en Python + Pillow, validador y `build.py` |
-| `previews/` | Capturas y GIFs para ver el resultado sin abrir el juego |
+| `previews/` | Capturas y GIFs para ver el resultado sin abrir el juego. `previews/juego/` son capturas reales dentro de Minecraft 26.3 (las genera `mod/`, `./gradlew runClientGameTest`) |
 | `HANDOFF.md` | Contexto técnico completo, decisiones verificadas y pendientes |
 
 ## Instalar
