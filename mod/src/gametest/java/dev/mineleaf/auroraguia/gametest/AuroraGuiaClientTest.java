@@ -36,8 +36,6 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 
-import dev.mineleaf.auroraguia.diario.Diario;
-import dev.mineleaf.auroraguia.diario.DiarioScreen;
 
 /** Screenshots of every feature in a hardcore world with the Aurora pack enabled. */
 public class AuroraGuiaClientTest implements FabricClientGameTest {
@@ -51,22 +49,15 @@ public class AuroraGuiaClientTest implements FabricClientGameTest {
 			sp.getConnection().waitForChunksRender();
 			sp.getServer().runCommand("time set 18000");
 			sp.getServer().runCommand("advancement grant @a only minecraft:end/elytra");
-			ctx.runOnClient(mc -> {
-				Diario.goals().clear();
-				Diario.goals().add(new Diario.Goal("Velocidad de almas III en las botas"));
-				Diario.goals().add(new Diario.Goal("Casco con Reparación"));
-				Diario.goals().add(new Diario.Goal("Espada Filo V + Botín III"));
-				Diario.data().visible = true;
-			});
 
-			// --- HUD: hardcore hearts, diary panel, glowing dragon egg in front of the player
+			// --- HUD: hardcore hearts and the glowing dragon egg in front of the player
 			BlockPos egg = sp.getServer().computeOnServer(s -> s.getPlayerList().getPlayers().get(0).blockPosition().relative(
 				s.getPlayerList().getPlayers().get(0).getDirection(), 2));
 			sp.getServer().runCommand("setblock %d %d %d minecraft:dragon_egg".formatted(egg.getX(), egg.getY(), egg.getZ()));
 			ctx.getInput().lookAt(egg);
 			sp.getConnection().waitForChunksRender();
 			ctx.waitTicks(20);
-			ctx.takeScreenshot("01_hud_hardcore_diario_huevo");
+			ctx.takeScreenshot("01_hud_hardcore_huevo");
 
 			// --- anvil with books in the inventory: cheapest plan
 			sp.getServer().runOnServer(s -> {
@@ -149,14 +140,6 @@ public class AuroraGuiaClientTest implements FabricClientGameTest {
 			ctx.waitTicks(5);
 			ctx.takeScreenshot("06_muela");
 
-			// --- diary editor
-			sp.getServer().runOnServer(s -> player(s).closeContainer());
-			ctx.waitTicks(2);
-			ctx.setScreen(DiarioScreen::new);
-			ctx.waitForScreen(DiarioScreen.class);
-			ctx.waitTicks(2);
-			ctx.takeScreenshot("07_diario");
-			ctx.setScreen(() -> null);
 		}
 	}
 

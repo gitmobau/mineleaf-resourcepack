@@ -7,14 +7,10 @@ objetos ni reglas, así que no alteran ninguna mecánica vanilla.
 |---|---|---|
 | **Yunque inteligente** | Panel a la derecha del yunque | Coste de lo que tienes puesto, aviso si al revés sale más barato, penalización con la que queda el objeto y el **orden más barato** para ponerle todos los libros útiles que llevas en el inventario (hasta 8). Nunca propone un paso de 40 o más. |
 | **Lo que le falta** | Tooltip de cualquier objeto con durabilidad o libro encantado | Usos de yunque y penalización. Con **Mayús**: encantamientos que le faltan o que no están al máximo. Los que se excluyen entre sí salen como alternativas ("A / B"). |
-| **Diario hardcore** | Panel arriba a la izquierda | Día del mundo, hitos (dragón, wither, élitros, armadura de netherita, tótem) y tus objetivos pendientes. |
 
 Capturas hechas dentro del juego real con `runClientGameTest`: [`previews/`](previews/).
 
-Teclas (se cambian en Opciones → Controles → Aurora Guía):
-- **J**: mostrar u ocultar el panel del diario.
-- **K**: abrir el diario para añadir, marcar o borrar objetivos. Se guardan por mundo en
-  `config/aurora_guia/diario.json`.
+No dibuja nada en la pantalla normal de juego: solo el panel del yunque y unas líneas en los tooltips.
 
 ## Instalar
 1. Fabric Loader 0.19.5 o superior para la 26.3 y **Fabric API** 0.162.0+26.3.
@@ -36,4 +32,4 @@ hardcore, activa `aurora/packs/Aurora Pack` y saca capturas de todo en
   descompilado) sin durabilidad ni renombrado, y el planificador por programación dinámica sobre subconjuntos.
   No depende de Minecraft, por eso tiene tests de JUnit.
 - `anvil/McAnvil.java`: traduce `ItemStack` y el registro de encantamientos sincronizado al modelo de arriba.
-- `anvil/AnvilOverlay.java`, `tooltip/GuiaTooltip.java`, `diario/*`: lo que se dibuja.
+- `anvil/AnvilOverlay.java`, `tooltip/GuiaTooltip.java`: lo que se dibuja.
