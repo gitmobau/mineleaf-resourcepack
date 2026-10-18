@@ -71,8 +71,17 @@ def save(im, rel, n, fw, fh, ft):
         json.dump({"animation": {"frametime": ft, "interpolate": False, "width": fw, "height": fh}}, f, indent=2)
 
 # ------------------------------------------------------------------ shared pieces
-def frame_recolor(src, ox, oy, dst, ph, span, shine):
-    """ornate version of a vanilla frame sprite: bevelled iridescent metal + deep translucent slots"""
+# The HUD is on screen all the time, so it stays calm: pearl metal with a low-saturation aurora tint that drifts
+# slowly, no rainbow rims, no blinking. Colour is kept for the slot glow and the selection.
+PEARL = (236, 230, 255)
+SOFT = [mix(v, PEARL, 0.55) for v in VIVID]          # the aurora ramp, washed towards pearl
+METAL = (196, 186, 236)                              # lavender pearl of the frames
+
+def soft(t):
+    return cyc(t, SOFT)
+
+def frame_recolor(src, ox, oy, dst, ph, span, shine=None):
+    """calm version of a vanilla frame sprite: bevelled pearl metal with a soft drifting tint + deep slots"""
     w, h = src.size
     A = lambda x, y: src.getpixel((x, y))[3] if 0 <= x < w and 0 <= y < h else 0
     for y in range(h):
@@ -80,53 +89,42 @@ def frame_recolor(src, ox, oy, dst, ph, span, shine):
             p = src.getpixel((x, y))
             if p[3] == 0: continue
             l = (p[0] + p[1] + p[2]) / 765
-            if p[3] < 255:                                    # slot interior
+            if p[3] < 255:                                    # slot interior: deep, quiet, items read on it
                 g = y / max(1, h - 1)
-                c = mix((52, 34, 104), DEEP, g)
+                c = mix((50, 36, 96), DEEP, g)
                 a = p[3] + 30
-                if A(x, y - 1) == 255 and y > 0:              # inner glow under the top rim
-                    c = mix(c, cyc(x / span - ph), 0.55); a = 230
-                elif A(x - 1, y) == 255 or A(x + 1, y) == 255:
-                    c = mix(c, cyc(x / span - ph + 0.3), 0.25)
+                if A(x, y - 1) == 255 and y > 0:              # faint glow under the top rim
+                    c = mix(c, soft(x / span * 0.5 - ph), 0.3); a = 215
                 put(dst, ox + x, oy + y, C(c, a)); continue
             if l < 0.2:
                 c = OUT
             else:
-                c = cyc(x / span * 0.9 - ph)
-                if A(x, y - 1) == 0 or A(x - 1, y) == 0: c = mix(c, WHITE, 0.6)        # outer bevel light
-                elif A(x, y + 1) < 255 and A(x, y + 1) > 0: c = mix(c, OUT, 0.35)      # rim over a slot
-                elif A(x, y + 1) == 0 or A(x + 1, y) == 0: c = mix(c, OUT, 0.45)       # outer bevel shade
-                else: c = mix(c, WHITE, 0.2 + max(0, l - 0.45))
-                d = abs((x + (h - y) * 0.7) - shine)                                  # travelling shine
-                if d < 4: c = mix(c, WHITE, 0.75 * (1 - d / 4))
+                c = mix(METAL, soft(x / span * 0.5 - ph), 0.45)
+                if A(x, y - 1) == 0 or A(x - 1, y) == 0: c = mix(c, WHITE, 0.45)        # outer bevel light
+                elif A(x, y + 1) < 255 and A(x, y + 1) > 0: c = mix(c, OUT, 0.3)       # rim over a slot
+                elif A(x, y + 1) == 0 or A(x + 1, y) == 0: c = mix(c, OUT, 0.4)        # outer bevel shade
+                else: c = mix(c, WHITE, 0.1 + max(0, l - 0.45) * 0.5)
             put(dst, ox + x, oy + y, C(c))
 
 def crystal(dst, poly, ph, seed, bright=1.0):
-    """filled crystal shard with outline, vertical iridescent ramp, facet highlight and a rising glint"""
+    """slender pearl crystal: outline, two facets, a gentle tint from lavender (base) to pink-peach (tip)
+    and one faint glint that rises slowly once per loop"""
     m = Image.new('L', dst.size); ImageDraw.Draw(m).polygon(poly, fill=255)
     xs = [p[0] for p in poly]; ys = [p[1] for p in poly]
     cx = (min(xs) + max(xs)) / 2; y0, y1 = min(ys), max(ys)
     ins = lambda x, y: 0 <= x < dst.width and 0 <= y < dst.height and m.getpixel((x, y)) > 0
-    glint_y = y1 - ((ph * 1.5 + seed) % 1.0) * (y1 - y0 + 6)
+    glint_y = y1 - ((ph + seed) % 1.0) * (y1 - y0 + 10)
     for y in range(dst.height):
         for x in range(dst.width):
             if not ins(x, y): continue
             if not (ins(x - 1, y) and ins(x + 1, y) and ins(x, y - 1) and ins(x, y + 1)):
                 put(dst, x, y, C(OUT)); continue
             t = (y - y0) / max(1, y1 - y0)
-            c = cyc(seed + t * 0.45 - ph)
-            c = mix(c, WHITE, 0.55 if x <= cx else 0.12)                      # two facets
-            if not ins(x - 1, y - 1): c = mix(c, WHITE, 0.6)                    # top-left edge
-            if abs(y - glint_y) < 1.5: c = mix(c, WHITE, 0.85)
-            c = mix(c, OUT, max(0, t - 0.75) * 1.2) if bright >= 1 else mix(c, OUT, 0.25)
+            c = mix(soft(0.42 + seed * 0.2 - t * 0.3 - ph * 0.5), PEARL, 0.25)
+            c = mix(c, WHITE, 0.4) if x <= cx else mix(c, OUT, 0.08)                # two facets
+            if abs(y - glint_y) < 1: c = mix(c, WHITE, 0.45)
+            c = mix(c, OUT, max(0, t - 0.7) * 0.9 if bright >= 1 else 0.2)
             put(dst, x, y, C(c))
-    # tip sparkle
-    tip = min(poly, key=lambda p: p[1])
-    if math.sin((ph + seed) * 2 * math.pi) > 0.6:
-        for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, -1)):
-            if dy < 0 and tip[1] == 0: continue
-            if dx == -1 and tip[0] == 0: continue
-            over(dst, tip[0] + dx, tip[1] + dy, WHITE, 1.0 if (dx, dy) == (0, 0) else 0.6)
 
 def gem(dst, cx, y, ph, k):
     """4-wide gem: 2 rows above the frame, 2 rows in it"""
@@ -147,15 +145,6 @@ def star(dst, x, y, b, col):
         for dx, dy in ((2, 0), (-2, 0), (0, 2), (0, -2)):
             over(dst, x + dx, y + dy, col, (b - 0.7) * 2)
 
-def spires(dst, Hh, ph, seed, x0=0):
-    """crystal cluster for the left end of a frame: a tall main spire, an outer shard and a star at the tip"""
-    b = Hh - 1
-    crystal(dst, [(x0 + 1, 13), (x0 + 3, 21), (x0 + 3, b - 6), (x0 + 1, b - 9), (x0 + 1, 18)], ph, seed + 0.35, 0.8)
-    crystal(dst, [(x0 + 5, 1), (x0 + 8, 10), (x0 + 9, b), (x0 + 3, b), (x0 + 3, 10)], ph, seed)
-    tw = max(0.0, math.sin((ph * 2 + seed) * 2 * math.pi))
-    star(dst, x0 + 5, 1, 0.35 + 0.65 * tw, cyc(ph + seed))
-    star(dst, x0 + 1, 9, max(0.0, math.sin((ph * 2 + seed + 0.5) * 2 * math.pi)) * 0.8, cyc(ph + 0.4))
-
 def halo(layer, ph, a=0.38):
     """soft 1px glow around everything opaque in the layer"""
     src = layer.copy(); w, h = src.size
@@ -164,66 +153,66 @@ def halo(layer, ph, a=0.38):
             if src.getpixel((x, y))[3]: continue
             n = sum(1 for dx in (-1, 0, 1) for dy in (-1, 0, 1)
                     if 0 <= x + dx < w and 0 <= y + dy < h and src.getpixel((x + dx, y + dy))[3] == 255)
-            if n: over(layer, x, y, cyc(y / h * 0.5 - ph), min(1.0, a * (0.6 + 0.2 * n)))
+            if n: over(layer, x, y, soft(y / h * 0.5 - ph), min(1.0, a * (0.6 + 0.2 * n)))
+
+def twinkle(ph, at, width=0.12):
+    """0..1 bump around phase `at`: a slow, single twinkle per loop"""
+    d = min((ph - at) % 1.0, (at - ph) % 1.0)
+    return max(0.0, 1 - d / width)
 
 def wings(dst, Hh, ph):
-    """fan of three crystal feathers for the left end of the hotbar (12 px out, 18 px up)"""
+    """two slender crystals in the 7 px gap between the off-hand slot and the hotbar (x 5..11 of the 12 px pad):
+    they never cover the off-hand slot or the hearts above the bar"""
     b = Hh - 1; layer = Image.new('RGBA', dst.size)
-    crystal(layer, [(0, 17), (3, 23), (3, b - 4), (1, b - 2), (0, b - 9)], ph, 0.55, 0.8)
-    crystal(layer, [(5, 6), (8, 14), (8, b), (3, b), (2, 16)], ph, 0.3)
-    crystal(layer, [(10, 0), (13, 10), (14, b), (7, b), (7, 10)], ph, 0.0)
-    halo(layer, ph)
+    crystal(layer, [(5, 14), (7, 19), (7, b), (5, b)], ph, 0.5, 0.8)            # short outer shard
+    crystal(layer, [(9, 2), (11, 8), (11, b), (6, b), (6, 9)], ph, 0.0)          # tall inner shard
+    halo(layer, ph, 0.16)
     dst.alpha_composite(layer)
-    for i, (x, y) in enumerate(((10, 1), (5, 7), (1, 18))):
-        tw = max(0.0, math.sin((ph * 2 + i / 3) * 2 * math.pi))
-        star(dst, x, y, (0.4 if i == 0 else 0.0) + 0.6 * tw, cyc(ph + i / 3))
+    star(dst, 9, 2, 0.75 * twinkle(ph, 0.25), soft(ph))
 
 # ------------------------------------------------------------------ hotbar (182x22 -> 206x40)
 HB_PADS = (12, 18, 12, 0)
+HB_N, HB_FT = 40, 5                     # 200 ticks = 10 s: the tint drifts slowly, almost unnoticed
 def hotbar():
     src = ref(H + 'hotbar.png'); l, t, r, b = HB_PADS
-    W, Hh, N = 182 + l + r, 22 + t + b, 24
+    W, Hh, N = 182 + l + r, 22 + t + b, HB_N
     strip = Image.new('RGBA', (W, Hh * N))
     for f in range(N):
         ph = f / N
         fr = Image.new('RGBA', (W, Hh))
-        # soft aurora glow line hugging the top rim (the part right above sits under the XP bar)
-        for x in range(l, l + 182):
-            g = cyc(x / 182 - ph)
-            over(fr, x, t - 1, g, 0.55 + 0.25 * math.sin((x / 18 - ph) * 2 * math.pi))
-            over(fr, x, t - 2, g, 0.22)
-        frame_recolor(src, l, t, fr, ph, 182, ph * (182 + 60) - 30)
-        for k in range(1, 9):
-            gem(fr, l + 20 * k, t - 2, ph, k)
-        # tall crystal spires at both ends, rising beside the XP bar and the hearts
+        frame_recolor(src, l, t, fr, ph, 182)
+        for k in range(1, 9):                                   # a tiny pearl stud on every divider
+            put(fr, l + 20 * k + 1, t, C(mix(PEARL, soft(k / 9 - ph), 0.3)))
+            put(fr, l + 20 * k + 1, t + 21, C(mix(METAL, OUT, 0.35)))
         wing = Image.new('RGBA', (W, Hh))
         wings(wing, Hh, ph)
         fr.alpha_composite(wing); fr.alpha_composite(wing.transpose(Image.FLIP_LEFT_RIGHT))
         strip.alpha_composite(fr, (0, f * Hh))
     markers(strip, HB_PADS, Hh, N)
-    save(strip, H + 'hotbar.png', N, W, Hh, 3)
+    save(strip, H + 'hotbar.png', N, W, Hh, HB_FT)
     return strip, W, Hh
 
 # ------------------------------------------------------------------ selection (24x23 -> 32x25)
 SEL_PADS = (4, 2, 4, 0)
+SEL_N, SEL_FT = 20, 4                   # 80 ticks = 4 s, a slow breath of the halo
+# (no crown: in survival the XP bar is drawn over the 2 px above the frame)
 def selection():
     src = ref(H + 'hotbar_selection.png'); l, t, r, b = SEL_PADS
-    W, Hh, N = 24 + l + r, 23 + t + b, 16
+    W, Hh, N = 24 + l + r, 23 + t + b, SEL_N
     strip = Image.new('RGBA', (W, Hh * N))
-    perim = [(x, 0) for x in range(24)] + [(23, y) for y in range(23)] + [(x, 22) for x in range(23, -1, -1)] + [(0, y) for y in range(22, -1, -1)]
+    inside = lambda x, y: 0 <= x < 24 and 0 <= y < 23 and src.getpixel((x, y))[3] > 0
     for f in range(N):
-        ph = f / N; pulse = 0.5 + 0.5 * math.sin(ph * 2 * math.pi)
+        ph = f / N; breath = 0.5 + 0.5 * math.cos(ph * 2 * math.pi)
         fr = Image.new('RGBA', (W, Hh))
-        inside = lambda x, y: 0 <= x < 24 and 0 <= y < 23 and src.getpixel((x, y))[3] > 0
-        # halo around the frame (inside the pads)
+        # soft halo, 2 px, only outside the frame
         for y in range(Hh):
             for x in range(W):
                 sx, sy = x - l, y - t
-                if inside(sx, sy): continue
-                d = min((abs(sx - qx) + abs(sy - qy) for qx in (0, 23) for qy in range(0, 23) if inside(qx, qy)), default=9)
-                d = min(d, min((abs(sx - qx) + abs(sy - qy) for qx in range(24) for qy in (0, 22)), default=9))
-                if d <= 3 and not (4 <= sx <= 19 and 4 <= sy <= 19):
-                    over(fr, x, y, cyc((x + y) / 50 + ph), (0.75, 0.42, 0.18)[d - 1] * (0.55 + 0.45 * pulse))
+                if inside(sx, sy) or (4 <= sx <= 19 and 4 <= sy <= 19): continue
+                dx = max(-sx, sx - 23, 0); dy = max(-sy, sy - 22, 0)
+                d = dx + dy
+                if 1 <= d <= 2:
+                    over(fr, x, y, cyc((x + y) / 60 - ph * 0.5), (0.6, 0.25)[d - 1] * (0.7 + 0.3 * breath))
         for y in range(23):
             for x in range(24):
                 p = src.getpixel((x, y))
@@ -231,29 +220,13 @@ def selection():
                 lum = (p[0] + p[1] + p[2]) / 765
                 if lum < 0.25: c = OUT
                 else:
-                    c = mix(cyc((x + y) / 47 + ph), WHITE, 0.35 + 0.5 * pulse * lum)
-                    if x in (0, 1) or y in (0, 1): c = mix(c, WHITE, 0.4)
-                put(fr, l + x, t + y, C(c, max(p[3], 200)))
-        # corner spikes, side points and a little crown
-        hot = mix(WHITE, cyc(ph), 0.25)
-        for (x, y) in ((2, 1), (1, 0), (W - 3, 1), (W - 2, 0)):
-            put(fr, x, y, C(hot))
-        for side in (0, 1):
-            for j, wdt in enumerate((1, 2, 3, 2, 1)):
-                for i in range(wdt):
-                    x = l - 1 - i if side == 0 else l + 24 + i
-                    c = mix(cyc(ph + j / 10), WHITE, 0.3 if i < wdt - 1 else 0.8)
-                    put(fr, x, t + 9 + j, C(OUT if i == wdt - 1 and wdt == 3 else c))
-        cx = l + 11
-        for x in (cx, cx + 1): put(fr, x, 0, C(WHITE))
-        for x in range(cx - 1, cx + 3): put(fr, x, 1, C(mix(cyc(ph + 0.5), WHITE, 0.4)))
-        # white spark running around the rim
-        for k in range(3):
-            px, py = perim[int((ph + k / 3) * len(perim)) % len(perim)]
-            put(fr, l + px, t + py, C(WHITE))
+                    c = mix(cyc((x + y) / 47 - ph * 0.5), WHITE, 0.2 + 0.25 * lum)     # more colour than the pearl bar
+                    if x in (0, 1) or y in (0, 1): c = mix(c, WHITE, 0.35)
+                    elif x in (22, 23) or y in (21, 22): c = mix(c, OUT, 0.12)
+                put(fr, l + x, t + y, C(c, max(p[3], 210)))
         strip.alpha_composite(fr, (0, f * Hh))
     markers(strip, SEL_PADS, Hh, N)
-    save(strip, H + 'hotbar_selection.png', N, W, Hh, 2)
+    save(strip, H + 'hotbar_selection.png', N, W, Hh, SEL_FT)
     return strip, W, Hh
 
 # ------------------------------------------------------------------ offhand (29x24 -> 34x42)
@@ -261,21 +234,23 @@ OFF_PADS = (5, 18, 0, 0)
 def offhand():
     out = {}
     l, t, r, b = OFF_PADS
-    W, Hh, N = 29 + l + r, 24 + t + b, 24
+    W, Hh, N = 29 + l + r, 24 + t + b, HB_N
     left = Image.new('RGBA', (W, Hh * N))
     src = ref(H + 'hotbar_offhand_left.png')
     for f in range(N):
         ph = f / N
         fr = Image.new('RGBA', (W, Hh))
-        frame_recolor(src, l, t, fr, ph, 60, ph * 90 - 30)
-        sp = Image.new('RGBA', (W, Hh)); spires(sp, Hh, ph, 0.6, x0=-2); halo(sp, ph); fr.alpha_composite(sp)
+        frame_recolor(src, l, t, fr, ph, 60)
+        sp = Image.new('RGBA', (W, Hh))                     # one slim shard on the outer side, like the hotbar's
+        crystal(sp, [(2, 9), (4, 14), (4, Hh - 2), (1, Hh - 2), (1, 14)], ph, 0.25)
+        halo(sp, ph, 0.16); fr.alpha_composite(sp)
         left.alpha_composite(fr, (0, f * Hh))
     right = Image.new('RGBA', left.size)
     for f in range(N):            # mirror frame by frame so the strip order is kept
         right.paste(left.crop((0, f * Hh, W, (f + 1) * Hh)).transpose(Image.FLIP_LEFT_RIGHT), (0, f * Hh))
     markers(left, OFF_PADS, Hh, N); markers(right, (r, t, l, b), Hh, N)
-    save(left, H + 'hotbar_offhand_left.png', N, W, Hh, 3)
-    save(right, H + 'hotbar_offhand_right.png', N, W, Hh, 3)
+    save(left, H + 'hotbar_offhand_left.png', N, W, Hh, HB_FT)
+    save(right, H + 'hotbar_offhand_right.png', N, W, Hh, HB_FT)
     return left, right, W, Hh
 
 # ------------------------------------------------------------------ boss bar backgrounds (182x5 -> 198x11)
@@ -354,9 +329,9 @@ def hud_scene(xl, tick, survival=True, gw=300, gh=110):
             fr = fr.resize(std, Image.NEAREST)
         sc.alpha_composite(fr, (x, y))
     sel = (tick // 16) % 9
-    spr(H + 'hotbar.png', cx - 91, h - 22, (182, 22), tick // 3)
-    spr(H + 'hotbar_selection.png', cx - 91 - 1 + sel * 20, h - 23, (24, 23), tick // 2)
-    spr(H + 'hotbar_offhand_left.png', cx - 91 - 29, h - 23, (29, 24), tick // 3)
+    spr(H + 'hotbar.png', cx - 91, h - 22, (182, 22), tick // HB_FT)
+    spr(H + 'hotbar_selection.png', cx - 91 - 1 + sel * 20, h - 23, (24, 23), tick // SEL_FT)
+    spr(H + 'hotbar_offhand_left.png', cx - 91 - 29, h - 23, (29, 24), tick // HB_FT)
     items = ['diamond_sword', 'netherite_pickaxe', 'diamond_axe', 'diamond_shovel', 'netherite_sword',
              'diamond_spear', 'netherite_hoe', 'diamond_pickaxe', 'netherite_axe']
     for k, it in enumerate(items):
