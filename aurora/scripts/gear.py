@@ -67,7 +67,19 @@ def crystal_px(p, t):
 # ------------------------------------------------------------------ tools
 TOOLS = ['sword', 'pickaxe', 'axe', 'shovel', 'hoe', 'spear']
 
+# Netherite tools: dark plum-lavender metal (so they never look like the light diamond crystal), a clean outline all
+# round the head and pearl highlights where vanilla has its bright edge. The vanilla netherite dithering is reduced to
+# four flat tones, so the 16x16 silhouette reads cleanly in the slot and in the hand.
+NETH_LINE = (34, 24, 56)
+NETH_TONES = [(66, 52, 104), (98, 82, 146), (134, 118, 190)]
+NETH_GRIP = [(38, 28, 52), (84, 62, 100), (132, 102, 146)]
+
+def _is_head(q, kind):
+    qh, qs, qv = hsv(q)
+    return (140 <= qh <= 200) if kind == 'diamond' else not ((qh >= 340 or qh <= 15) and qs >= 0.28)
+
 def recolor_tool(name, kind):
+    """-> (recoloured 16x16 or 32x32 image, head mask [x][y]); grimorio.py uses the silhouette for its auras"""
     im = ref('item/' + name + '.png')
     w, h = im.size
     out = Image.new('RGBA', im.size)
@@ -76,12 +88,10 @@ def recolor_tool(name, kind):
     for y in range(h):
         for x in range(w):
             q = im.getpixel((x, y))
-            if q[3]:
-                qh, qs, qv = hsv(q)
-                ish = (140 <= qh <= 200) if kind == 'diamond' else not ((qh >= 340 or qh <= 15) and qs >= 0.28)
-                if ish:
-                    pts.append(x - y); head[x][y] = True
+            if q[3] and _is_head(q, kind):
+                pts.append(x - y); head[x][y] = True
     dmin, dmax = (min(pts), max(pts)) if pts else (0, 1)
+    op = lambda x, y: 0 <= x < w and 0 <= y < h and im.getpixel((x, y))[3] > 0
     for y in range(h):
         for x in range(w):
             p = im.getpixel((x, y))
@@ -99,43 +109,69 @@ def recolor_tool(name, kind):
                     col = mix((40, 26, 44), (196, 140, 170), min(1, (v - 0.12) / 0.45))
             else:
                 if not head[x][y]:
-                    col = mix((26, 18, 34), (150, 110, 150), min(1, max(0, (v - 0.12) / 0.38)))
+                    # grip: vanilla brown wood and the reddish shadow under the head -> three plum tones
+                    col = NETH_GRIP[0] if v < 0.2 else NETH_GRIP[1] if v < 0.4 else NETH_GRIP[2]
                 elif 300 <= hh <= 330 and s > 0.35:
-                    col = (72, 52, 116)
-                elif v < 0.22: col = (30, 24, 46)
-                elif v < 0.30: col = mix((52, 44, 74), c, 0.18)
-                elif v < 0.40: col = mix(c, (60, 50, 86), 0.50)
-                elif v < 0.48: col = mix(c, (70, 60, 100), 0.35)
-                else: col = mix(c, WHITE, 0.15)
+                    col = NETH_TONES[0]
+                else:
+                    edge = any(not op(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+                    if v < 0.22 or (edge and v < 0.34): col = NETH_LINE
+                    elif v < 0.33: col = NETH_TONES[0] if v < 0.29 and not edge else NETH_TONES[1]
+                    elif v < 0.40: col = NETH_TONES[1]
+                    elif v < 0.48: col = NETH_TONES[2]
+                    else: col = mix(c, WHITE, 0.45)
             out.putpixel((x, y), C(col, p[3]))
     return out, head
 
+def shine_meta(sweep, twinkle_frame, period=140, ft=2, seed=0):
+    """timeline: long rest on frame 0, one sweep (frames 1..sweep), one soft twinkle; each item starts somewhere else"""
+    sw = sweep * ft
+    start = (seed * 29) % (period - sw - 8)
+    tw = (start + sw + (period - sw) // 2) % period            # twinkle half a loop after the sweep
+    seq = []
+    for k in range(sweep):
+        seq.append((start + k * ft, 1 + k, ft))
+    seq.append((tw, twinkle_frame, 4))
+    seq.sort()
+    frames, t = [], 0
+    for at, idx, dur in seq:
+        if at > t: frames.append({"index": 0, "time": at - t})
+        frames.append({"index": idx, "time": dur} if dur != ft else idx); t = at + dur
+    if t < period: frames.append({"index": 0, "time": period - t})
+    return {"animation": {"frametime": ft, "frames": frames}}
+
 def animate(base, head, N=16, ft=2, seed=0):
-    """shine sweep along the head + twinkles"""
+    """gentle shine: frame 0 is the still item; frames 1..N-2 a soft light band crossing the head once; frame N-1 a
+    single twinkle. The .mcmeta keeps frame 0 on screen most of the time (one sweep every 7 s)."""
     w, h = base.size
+    sweep = N - 2
     strip = Image.new('RGBA', (w, h * N))
     pts = [(x, y) for y in range(h) for x in range(w) if head[x][y] and base.getpixel((x, y))[3]]
-    rnd = random.Random(seed)
-    tw = rnd.sample(pts, min(3, len(pts))) if pts else []
+    lum = lambda q: 0.299 * q[0] + 0.587 * q[1] + 0.114 * q[2]
     if pts:
         dmin = min(x - y for x, y in pts); dmax = max(x - y for x, y in pts)
+        bright = sorted(pts, key=lambda q: (-lum(base.getpixel(q)), hsh(q[0], q[1], seed)))
+        star = bright[min(len(bright) - 1, hsh(seed, 3) % max(1, min(4, len(bright))))]
     for f in range(N):
         fr = base.copy()
-        c = -0.3 + 1.6 * (f / (N * 0.7))      # sweep during first 70% of the loop
-        for (x, y) in pts:
-            s = ((x - y) - dmin) / max(1, dmax - dmin)
-            d = abs(s - c)
-            if d < 0.14:
-                p = fr.getpixel((x, y))
-                fr.putpixel((x, y), C(mix(p, WHITE, 0.65 * (1 - d / 0.14)), p[3]))
-        for i, (x, y) in enumerate(tw):
-            if (f + i * 5) % N in (0, 1):
-                fr.putpixel((x, y), C(WHITE))
+        if pts and 1 <= f <= sweep:
+            c = -0.25 + 1.5 * (f - 1) / max(1, sweep - 1)
+            for (x, y) in pts:
+                s = ((x - y) - dmin) / max(1, dmax - dmin)
+                d = abs(s - c)
+                if d < 0.13:
+                    p = fr.getpixel((x, y))
+                    k = (1 - d / 0.13) ** 1.5 * (0.5 if lum(p) > 70 else 0.18)   # outline barely lights up
+                    fr.putpixel((x, y), C(mix(p, WHITE, k), p[3]))
+        if pts and f == N - 1:
+            p = fr.getpixel(star)
+            fr.putpixel(star, C(mix(p, WHITE, 0.85), p[3]))
         strip.paste(fr, (0, f * h))
-    return strip, {"animation": {"frametime": ft}}
+    return strip, shine_meta(sweep, N - 1, ft=ft, seed=seed)
 
 def aura(base, N=16):
-    """24x24 animated halo ring around a 16x16 silhouette (offset 4)"""
+    """24x24 animated halo around a 16x16 silhouette (offset 4): a soft pastel glow hugging the outline (about 2 px),
+    colours drifting slowly round it and two small sparks. Interpolated, so it flows instead of blinking."""
     W = 24
     sil = [[False] * W for _ in range(W)]
     for y in range(16):
@@ -150,25 +186,24 @@ def aura(base, N=16):
             if sil[x][y]:
                 continue
             d = min(math.hypot(x - a, y - b) for a, b in pts)
-            if d <= 3.6:
+            if d <= 2.3:
                 dist[(x, y)] = d
-    ring2 = sorted([k for k, d in dist.items() if 1.6 < d <= 2.6], key=lambda k: math.atan2(k[1] - cy, k[0] - cx))
+    ring = sorted([k for k, d in dist.items() if 1.3 < d <= 2.3], key=lambda k: math.atan2(k[1] - cy, k[0] - cx))
+    pal = [mix(a, b, 0.5) for a, b in zip(P, VIVID)]
     strip = Image.new('RGBA', (W, W * N))
     for f in range(N):
         ph = f / N
-        pulse = 0.7 + 0.3 * math.sin(ph * 2 * math.pi)
+        pulse = 0.85 + 0.15 * math.cos(ph * 2 * math.pi)
         for (x, y), d in dist.items():
             ang = math.atan2(y - cy, x - cx) / (2 * math.pi)
-            col = cyc(ang + ph, VIVID)
-            if d <= 1.5:   a = 215; col = mix(col, WHITE, 0.35)
-            elif d <= 2.6: a = 135
-            else:          a = 55
+            col = mix(cyc(ang + ph, pal), WHITE, 0.25 if d <= 1.05 else 0.0)
+            a = 165 * math.exp(-(d - 1) * 1.15)
             strip.putpixel((x, f * W + y), C(col, a * pulse))
-        for k in range(3):
-            if ring2:
-                x, y = ring2[int((ph + k / 3) * len(ring2)) % len(ring2)]
-                strip.putpixel((x, f * W + y), C(WHITE, 255))
-    return strip, {"animation": {"frametime": 2}}
+        for k in range(2):
+            if ring:
+                x, y = ring[int((ph + k / 2) * len(ring)) % len(ring)]
+                strip.putpixel((x, f * W + y), C(mix(strip.getpixel((x, f * W + y)), WHITE, 0.55), 150))
+    return strip, {"animation": {"frametime": 3, "interpolate": True}}
 
 def aura_model(name):
     tex = "minecraft:item/aurora/aura_" + name
@@ -188,11 +223,11 @@ def tools():
         for t in TOOLS:
             n = '%s_%s' % (mat, t)
             base, head = recolor_tool(n, mat)
-            strip, meta = animate(base, head, seed=len(n) * 7)
+            strip, meta = animate(base, head, seed=sum(map(ord, n)))
             save_tex(strip, 'item/%s.png' % n, meta)
             if os.path.exists(REF + 'textures/item/%s_in_hand.png' % n):
                 b2, h2 = recolor_tool(n + '_in_hand', mat)
-                s2, m2 = animate(b2, h2, seed=7)
+                s2, m2 = animate(b2, h2, seed=sum(map(ord, n)) + 11)
                 save_tex(s2, 'item/%s_in_hand.png' % n, m2)
             au, am = aura(base)
             save_tex(au, 'item/aurora/aura_%s.png' % n, am)
@@ -217,14 +252,18 @@ def tools():
 
 # ------------------------------------------------------------------ glint
 def glint():
+    """pastel glint with about 85 % of the vanilla light (the glint is additive): same streak pattern, soft hues,
+    and vanilla's "blur": true so the streaks stay smooth instead of pixelated"""
+    pal = [mix(a, b, 0.5) for a, b in zip(P, VIVID)]
     for n in ('enchanted_glint_item', 'enchanted_glint_armor'):
         im = ref('misc/%s.png' % n); o = Image.new('RGBA', im.size)
         for y in range(im.height):
             for x in range(im.width):
                 p = im.getpixel((x, y))
-                l = max(p[:3]) / 255
-                o.putpixel((x, y), C(tuple(q * l * 1.1 for q in cyc((x + y) / 256, VIVID)), p[3]))
-        save_tex(o, 'misc/%s.png' % n)
+                c = cyc((x + y) / 256, pal)
+                k = 0.85 * sum(p[:3]) / max(1, sum(c))
+                o.putpixel((x, y), C(tuple(q * k for q in c), p[3]))
+        save_tex(o, 'misc/%s.png' % n, {"texture": {"blur": True}})
 
 # ------------------------------------------------------------------ armor icons
 ARMOR = ['helmet', 'chestplate', 'leggings', 'boots']
@@ -240,7 +279,7 @@ def diamond_armor_icons():
                 p = im.getpixel((x, y))
                 if p[3]:
                     base.putpixel((x, y), C(crystal_px(p, (x + y) / 30 * 0.9), p[3])); head[x][y] = True
-        strip, meta = animate(base, head, seed=len(a))
+        strip, meta = animate(base, head, seed=sum(map(ord, n)))
         save_tex(strip, 'item/%s.png' % n, meta); out[n] = strip
     return out
 
@@ -332,23 +371,23 @@ def opal_paint(im, region=None, line=OPAL_LINE, ph=0.0):
     return o
 
 def netherite_armor_icons():
-    """item icons painted like the worn armour; the rim shimmers and a few pixels twinkle (12 frames)"""
+    """item icons painted like the worn armour; the rim drifts slowly (interpolated, 3.6 s loop) and two pixels glow softly"""
     out = {}
     N = 12
     for k, a in enumerate(ARMOR):
         n = 'netherite_' + a
         im = ref('item/%s.png' % n)
         edge, rim, smooth = opal_layers(im)
-        stars = [p for p in sorted(smooth) if p not in edge and p not in rim and smooth[p] > 0.45 and hsh(*p, k) % 11 == 0][:3]
+        stars = [p for p in sorted(smooth) if p not in edge and p not in rim and smooth[p] > 0.45 and hsh(*p, k) % 11 == 0][:2]
         strip = Image.new('RGBA', (16, 16 * N))
         for f in range(N):
             fr = opal_paint(im, line=OPAL_ICON_LINE, ph=f / N)
             for i, (x, y) in enumerate(stars):
                 b = max(0.0, math.sin((f / N + i / len(stars)) * 2 * math.pi)) ** 3
                 if b > 0.05:
-                    fr.putpixel((x, y), C(mix(fr.getpixel((x, y)), WHITE, b)))
+                    fr.putpixel((x, y), C(mix(fr.getpixel((x, y)), WHITE, 0.8 * b)))
             strip.alpha_composite(fr, (0, f * 16))
-        save_tex(strip, 'item/%s.png' % n, {"animation": {"frametime": 3}})
+        save_tex(strip, 'item/%s.png' % n, {"animation": {"frametime": 6, "interpolate": True}})
         out[n] = strip
     return out
 
