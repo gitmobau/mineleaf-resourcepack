@@ -137,7 +137,7 @@ def build(name):
                 elif i == s - 1 or j == s - 1: c = rim_br
                 else:
                     c = mix(top, bot, j / s)
-                    if i + j in (3, 4): c = mix(c, WHITE, 0.25)
+                    if i + j in (3, 4): c = mix(c, WHITE, theme.glint)     # small glassy glint, top-left
                 art.putpixel((l + sx + i, t + sy + j), C(c))
         used |= rect(art.size, l + sx - 2, t + sy - 2, l + sx + s + 1, t + sy + s + 1)
     # other vanilla decorations (arrows, icons, list panels) in the theme colours
@@ -146,7 +146,7 @@ def build(name):
              and (x, y) not in in_slot]
     for (x, y) in feats:
         p = v.getpixel((x, y)); lum = (p[0] + p[1] + p[2]) / 765
-        if magic.is_rgb(p, 139):          # slot grey the detector missed (joined to tubes, e.g. brewing bottles)
+        if magic.is_rgb(p, 139) and theme.grey_as_slot:   # slot grey the detector missed (joined to tubes, e.g. brewing bottles)
             rim_tl, rim_br, top, bot = theme.slot
             c = mix(top, bot, 0.5)
         else:
@@ -160,9 +160,9 @@ def build(name):
     for _ in range(3000):
         x = rr.randint(l + 8, l + w - 9); y = rr.randint(t + 8, t + h - 9)
         if kind == 'chest' and t + 14 < y < t + 142: continue
-        if all((xx, yy) not in used for xx in range(x - 3, x + 4) for yy in range(y - 3, y + 4)):
-            theme.motif(art, x, y, rr); used |= rect(art.size, x - 4, y - 4, x + 4, y + 4); placed += 1
-            if placed >= 10: break
+        if placed >= theme.motifs: break
+        if all((xx, yy) not in used for xx in range(x - 5, x + 6) for yy in range(y - 5, y + 6)):
+            theme.motif(art, x, y, rr); used |= rect(art.size, x - 12, y - 12, x + 12, y + 12); placed += 1
     theme.ornaments(art, l, t, w, h)
     img = Image.new('RGBA', tsize); img.alpha_composite(art, origin)
     if any(theme.pads):                                # nothing sticks out: no markers, plain vanilla-size texture
