@@ -21,7 +21,7 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
 
 ## Instalar
 1. Copia los zips de `dist/` a `%APPDATA%\.minecraft\resourcepacks`.
-2. En el juego, actívalos en este orden (de arriba a abajo): **Aurora Extras**, **Aurora EMF** (o **Aurora Celestial**, nunca los dos), **Aurora Outline**, **Aurora HUD XL**, **Aurora Pack**.
+2. En el juego, actívalos en este orden (de arriba a abajo): **Aurora Extras**, **Aurora Celestial** (o **Aurora EMF**, nunca los dos a la vez), **Aurora Outline**, **Aurora HUD XL**, **Aurora Pack**.
    Aurora EMF solo hace algo con los mods Entity Model Features + Entity Texture Features instalados (Fabric o NeoForge 26.3).
    Aurora HUD XL es opcional: si los marcos salen aplastados o raros, desactívalo y vuelves al HUD normal de Aurora.
 
@@ -44,7 +44,7 @@ La salida es determinista: con la misma entrada salen los mismos bytes.
 ### Qué hace cada script
 - `gen.py`: base v1 (mira, fondo de la barra de XP, indicadores de ataque, `pack.png` y `pack.mcmeta`).
 - `icons.py`: corazones con la paleta Aurora (cada estado con sus colores: veneno, wither, congelado, absorción, montura, hardcore) y la comida convertida en estrellas, todo animado y sincronizado.
-- `extras.py`: arco (4 estados), ballesta (6 estados), maza, tótem, flechas, perla de ender y las dos bases de escudo en Aurora, más objetos de combate, magia y utilidad con un pintor genérico (cada familia de color va a su tono pastel): tridente, élitros (objeto y puestos), cohete, estrella de fuegos, carga de viento, varas de breeze y blaze, polvo de blaze, ojo de ender, estrella del Nether, fragmento de eco, botella de experiencia, libro encantado, pociones (botella), catalejo, caña de pescar, tijeras, mechero, cuerno, etiqueta, rienda y pincel. Tótem y manzana dorada con una gama dorada pastel; cuerdas y herrajes del arco y la ballesta en claro. Reutiliza los pintores de `gear.py`, mantiene exactamente tamaños y canales alpha vanilla y comprueba esa igualdad al generar. Texturas estáticas; madera/cuerda lavanda-perla y cristal iridiscente. La punta de la flecha con poción queda casi neutra para conservar el tinte del juego; también se recolorea su astil. Genera `previews/extras.png` con comparaciones vanilla/Aurora. Solo requiere volver a copiar `dist/Aurora Pack.zip`.
+- `extras.py`: arco (4 estados), ballesta (6 estados), maza, tótem, flechas, perla de ender y las dos bases de escudo en Aurora, más objetos de combate, magia y utilidad con un pintor genérico (cada familia de color va a su tono pastel): tridente, élitros (objeto y puestos), cohete, estrella de fuegos, carga de viento, varas de breeze y blaze, polvo de blaze, ojo de ender, estrella del Nether, fragmento de eco, botella de experiencia, pociones (botella), catalejo, caña de pescar, tijeras, mechero, cuerno, etiqueta, rienda y pincel. Tótem y manzana dorada con una gama dorada pastel; cuerdas y herrajes del arco y la ballesta en claro. Reutiliza los pintores de `gear.py`, mantiene exactamente tamaños y canales alpha vanilla y comprueba esa igualdad al generar. Texturas estáticas con rampas de 5 tonos compartidas con las herramientas (madera lavanda, hilo celeste, metal perla, oro pastel, rosa y menta). El libro encantado no se toca (se ve el de Enchanted Books: Re-covered). La punta de la flecha con poción queda casi neutra para conservar el tinte del juego; también se recolorea su astil. Genera `previews/extras.png` con comparaciones vanilla/Aurora. Solo requiere volver a copiar `dist/Aurora Pack.zip`.
 - `magic.py`: "Marco mágico". Menús (inventario, mesa de crafteo, hornos, cofre grande y shulker) y sprites animados (hotbar, selección, casilla resaltada, botón del libro de recetas, fuego y flecha del horno, XP).
 - `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (ópalo claro, iconos y armadura puesta con el mismo estilo: contorno lavanda, ribete iridiscente pastel por dentro y metal perla en 4 tonos suaves sobre la silueta vanilla), también puestas en bebés, caballos y nautilus. Sin capa.
 - `hud_xl.py`: texturas de Aurora HUD XL (hotbar con alas de cristal, selección con corona y halo, mano secundaria con aguja, fondo de las barras de jefe con gemas en los extremos) y previsualización del HUD en `previews/`.
@@ -135,3 +135,13 @@ textura más grande solo se vería aplastada. Para que sobresalga:
   abajo), así cada lámina se separa de la siguiente. Las piezas del lado izquierdo son el espejo de las del derecho.
 - `HUMANOID_BOXES`/`opal_regions()` en `gear.py`: los contornos solo se dibujan donde la placa termina dentro de una cara,
   no en las costuras entre caras de la caja.
+
+## Repaso final (2026-10-18)
+Nueve agentes revisaron todo con la idea de "más bonito y elegante, menos recargado". Notas de cada uno en
+[`repaso/`](repaso/) y comparativas antes/después en `previews/repaso/`. Capturas dentro del juego real (Fabric 26.3,
+con Aurora Pack + HUD XL + Outline + Extras) en `previews/juego/`.
+- Herramientas: brillo tranquilo (una franja cada 7 s), netherita más limpia, aura de encantado más fina.
+- HUD: corazones sin arcoíris, un degradado suave por estado; hardcore con marcas en ciruela.
+- Menús: casillas en tono medio para que se lean los objetos; menos ruido en los temas.
+- Pantallas, armas, extras (auras solo como icono, huevo con aurora), sonidos al volumen vanilla.
+- Celestial/EMF: nada atraviesa el cuerpo en las poses vanilla y el brillo queda solo en la aureola.

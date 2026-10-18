@@ -258,3 +258,12 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
 - Comprobado: frente a los packs de Celestial solo cambian auras, partículas, sonidos, `items/` de herramientas,
   huevo, libro de la mesa y el agua quitada. Armaduras, corazones y menús quedan idénticos.
 
+
+#### Repaso final con 9 agentes (2026-10-18)
+- Áreas: herramientas (`gear.py`, `gen.py`), HUD (`icons.py`, `hud_xl.py`), menús (`menus_xl.py`, `menu_themes.py`),
+  pantallas (`screens.py`, `magic.py`), armas (`extras.py`), extras (`grimorio.py`, `hardcore.py`), sonidos
+  (`sonidos.py`), 3D (`celestial.py`, `emf.py`) y mod. Notas en `repaso/*.md`.
+- Build: 0 errores y determinista. Prueba en el juego con los packs finales sin errores de carga; 20 capturas en
+  `previews/juego/`.
+- Pendiente de comprobar en el juego del usuario: volumen de los sonidos (subir `TARGET['enchant']` si el de encantar
+  queda bajo) y Celestial con EMF real. No activar Aurora EMF y Aurora Celestial a la vez.

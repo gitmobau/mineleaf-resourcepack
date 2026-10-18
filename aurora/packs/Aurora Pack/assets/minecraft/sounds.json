@@ -18,8 +18,10 @@
     "replace": true,
     "sounds": [
       {
-        "name": "minecraft:aurora/anvil_use",
-        "volume": 0.5
+        "name": "minecraft:aurora/anvil_use1"
+      },
+      {
+        "name": "minecraft:aurora/anvil_use2"
       }
     ],
     "subtitle": "subtitles.block.anvil.use"
@@ -41,6 +43,9 @@
       },
       {
         "name": "minecraft:aurora/orb2"
+      },
+      {
+        "name": "minecraft:aurora/orb3"
       }
     ],
     "subtitle": "subtitles.entity.experience_orb.pickup"
