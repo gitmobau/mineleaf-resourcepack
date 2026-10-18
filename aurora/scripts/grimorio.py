@@ -1,68 +1,133 @@
-# Aurora "Grimorio": rarity auras for tools, enchanting table / anvil / grindstone menus and sprites,
-# the enchanting table book and magic particles. (Enchanted book items are left to the user's own pack.)
-# Runs after gear.py: it rewrites the tool item definitions that gear.py wrote.
-import os, sys, math, json, random
+# Aurora "Grimorio": rarity auras for diamond / netherite tools, the enchanting table book and the magic particles
+# (enchanting glyphs + hit particles). Enchanted book items and the enchanting menus are left to other packs/scripts.
+# Runs after gear.py: it wraps the tool item definitions that gear.py wrote.
+import os, sys, math, json
 from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # build.py runs scripts with -I
-import gear, magic
-from gear import mix, C, WHITE, OUT
+import gear
+from gear import mix, C, WHITE
 
 REF = gear.REF                     # .../assets/minecraft/
 PACK = gear.PACK
 PREVIEWS = gear.PREVIEWS
 save_tex, save_json = gear.save_tex, gear.save_json
-VIVID = gear.VIVID
 
 def ref(rel):
     return Image.open(REF + 'textures/' + rel).convert('RGBA')
 
-def cyc(t, pal=VIVID):
+# ------------------------------------------------------------------ rarity auras
+# normal aura (gear.py) -> "rare": a thin gold ring with Mending -> "legendary": a thin pastel-rainbow ring with a soft
+# glow and star twinkles with Mending + Unbreaking III + Sharpness/Smite/Bane V (swords, spears) or Efficiency V.
+# The ring floats one pixel away from the item (the Enchantment Outlines mod draws its outline right on the edge).
+# Auras are only shown where the item is an icon: inventory/hotbar (gui), item frames (fixed) and shelves (on_shelf).
+ICON_CONTEXTS = ['gui', 'fixed', 'on_shelf']
+N, FT = 32, 3                      # 32 frames x 3 ticks = 4.8 s per loop: slow and calm
+W, OFF = 24, 4                     # 24x24 plane around the 16x16 item (same geometry as the aura of gear.py)
+GOLD = [(255, 214, 110), (255, 236, 160), (246, 190, 96), (255, 226, 132)]
+PASTEL = [(120, 214, 255), (170, 156, 255), (226, 146, 250), (255, 150, 206), (255, 196, 146), (255, 232, 140),
+          (166, 244, 170), (120, 236, 220)]
+STAR = (255, 248, 222)
+
+def cyc(t, pal):
     return gear.cyc(t, pal)
 
-GOLD = (255, 222, 120)
-
-# ------------------------------------------------------------------ rarity auras
-RARE = [(255, 230, 140), (255, 205, 160), (255, 245, 190), (255, 220, 120), (255, 252, 225)]          # gold
-LEGEND = [(255, 120, 220), (130, 220, 255), (255, 240, 140), (170, 140, 255), (120, 255, 200), (255, 255, 255)]
-
-def aura_tier(base, pal, N=16, reach=3.6, sparks=3, speed=1, alpha=(215, 135, 55)):
-    W = 24
-    sil = [[False] * W for _ in range(W)]
-    for y in range(16):
-        for x in range(16):
-            if base.getpixel((x, y))[3]:
-                sil[x + 4][y + 4] = True
-    pts = [(x, y) for y in range(W) for x in range(W) if sil[x][y]]
-    cx = sum(p[0] for p in pts) / len(pts); cy = sum(p[1] for p in pts) / len(pts)
-    dist = {}
+def field(base):
+    """distance from each free texel of the 24x24 plane to the item silhouette, and each texel's angle"""
+    sil = {(x + OFF, y + OFF) for y in range(16) for x in range(16) if base.getpixel((x, y))[3]}
+    cx = sum(p[0] for p in sil) / len(sil); cy = sum(p[1] for p in sil) / len(sil)
+    dist, ang = {}, {}
     for y in range(W):
         for x in range(W):
-            if not sil[x][y]:
-                d = min(math.hypot(x - a, y - b) for a, b in pts)
-                if d <= reach:
-                    dist[(x, y)] = d
-    ring = sorted([k for k, d in dist.items() if 1.6 < d <= reach], key=lambda k: math.atan2(k[1] - cy, k[0] - cx))
+            if (x, y) in sil: continue
+            d = min(math.hypot(x - a, y - b) for a, b in sil)
+            if d <= 3.3:
+                dist[(x, y)] = d
+                ang[(x, y)] = (math.atan2(y - cy, x - cx) / (2 * math.pi)) % 1.0
+    return dist, ang
+
+def adist(a, b):
+    d = abs(a - b) % 1.0
+    return min(d, 1 - d)
+
+def star_spots(dist, ang, n, phase0):
+    """n twinkle spots spread around the ring, just outside it (deterministic)"""
+    cand = sorted((p for p, d in dist.items() if 2.3 < d <= 3.1), key=lambda p: (ang[p], p))
+    spots = []
+    for k in range(n):
+        t = (phase0 + k / n) % 1.0
+        spots.append(min(cand, key=lambda p: (adist(ang[p], t), p)))
+    return spots
+
+def aura_tier(base, kind):
+    dist, ang = field(base)
+    legend = kind == 'legend'
     strip = Image.new('RGBA', (W, W * N))
+    spots = star_spots(dist, ang, 3 if legend else 2, 0.12 if legend else 0.3)
     for f in range(N):
         ph = f / N
-        pulse = 0.72 + 0.28 * math.sin(ph * 2 * math.pi)
-        for (x, y), d in dist.items():
-            ang = math.atan2(y - cy, x - cx) / (2 * math.pi)
-            col = cyc(ang + ph * speed, pal)
-            if d <= 1.5:   a = alpha[0]; col = mix(col, WHITE, 0.35)
-            elif d <= 2.6: a = alpha[1]
-            else:          a = alpha[2]
-            strip.putpixel((x, f * W + y), C(col, a * pulse))
-        for k in range(sparks):
-            if ring:
-                x, y = ring[int((ph * speed + k / sparks) * len(ring)) % len(ring)]
-                strip.putpixel((x, f * W + y), C(WHITE, 255))
-    return strip, {"animation": {"frametime": 2}}
+        breath = 0.9 + 0.1 * math.cos(ph * 2 * math.pi)
+        fr = Image.new('RGBA', (W, W))
+        for p, d in dist.items():
+            a = ang[p]
+            if legend:
+                col = cyc(a - ph, PASTEL)                       # the rainbow flows slowly around the item
+            else:
+                col = cyc(a * 2 + ph * 0.5, GOLD)
+            glint = max(0.0, 1 - adist(a, ph) / 0.12)           # one soft light travelling around the ring
+            if 1.5 < d <= 2.3:                                  # the ring: 1 px line, 1 px away from the item
+                al = (175 if legend else 165) + 90 * glint
+                col = mix(col, WHITE, (0.12 if legend else 0.04) + 0.7 * glint)
+            elif d <= 1.5:                                      # faint fill between item and ring
+                al = (46 if legend else 34) + 40 * glint
+                col = mix(col, WHITE, 0.35)
+            else:                                               # soft outer glow
+                al = (40 if legend else 0) * (1 - (d - 2.3) / 1.0)
+            if al > 0:
+                fr.putpixel(p, C(col, al * breath))
+        for k, (x, y) in enumerate(spots):                      # twinkles: fade in and out, one after another
+            t = (ph - k / len(spots)) % 1.0
+            if t < 0.2:
+                s = math.sin(t / 0.2 * math.pi)
+                fr.putpixel((x, y), C(mix(STAR, WHITE, s), 120 + 135 * s))
+                if legend and s > 0.6:                          # tiny 4-point star at the peak
+                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        q = (x + dx, y + dy)
+                        if 0 <= q[0] < W and 0 <= q[1] < W and q in dist and dist[q] > 1.5:
+                            fr.putpixel(q, C(STAR, 110 * s))
+        strip.paste(fr, (0, f * W))
+    return strip, {"animation": {"frametime": FT}}
 
 def legendary_pred(tool):
-    main = ([{"enchantments": ["minecraft:sharpness", "minecraft:smite", "minecraft:bane_of_arthropods"], "levels": 5}]
-            if tool in ('sword', 'spear') else [{"enchantments": "minecraft:efficiency", "levels": 5}])
+    main = ([{"enchantments": ["minecraft:sharpness", "minecraft:smite", "minecraft:bane_of_arthropods"],
+              "levels": {"min": 5}}]
+            if tool in ('sword', 'spear') else [{"enchantments": "minecraft:efficiency", "levels": {"min": 5}}])
     return [{"enchantments": "minecraft:mending"}, {"enchantments": "minecraft:unbreaking", "levels": {"min": 3}}] + main
+
+def aura_model(tex):
+    """flat 24x24 plane behind the item; same geometry as gear.aura_model, kept here so the tiers own it"""
+    return {
+        "parent": "minecraft:item/handheld",
+        "textures": {"aura": tex, "particle": tex},
+        "elements": [{
+            "from": [-4, -4, 8], "to": [20, 20, 8], "shade_direction_override": "up", "light_emission": 15,
+            "faces": {"south": {"uv": [0, 0, 16, 16], "texture": "#aura"},
+                      "north": {"uv": [16, 0, 0, 16], "texture": "#aura"}}
+        }]
+    }
+
+def is_enchant_cond(node):
+    return (isinstance(node, dict) and node.get('type') == 'minecraft:condition'
+            and node.get('property') == 'minecraft:has_component' and node.get('component') == 'minecraft:enchantments')
+
+def rewrite(node, fn):
+    """apply fn to the first has_component(enchantments) condition found (depth first); returns a new tree"""
+    if is_enchant_cond(node):
+        return fn(node)
+    if isinstance(node, dict):
+        return {k: rewrite(v, fn) for k, v in node.items()}
+    if isinstance(node, list):
+        return [rewrite(v, fn) for v in node]
+    return node
 
 def rarity():
     out = {}
@@ -70,148 +135,47 @@ def rarity():
         for t in gear.TOOLS:
             n = '%s_%s' % (mat, t)
             base, _ = gear.recolor_tool(n, mat)
-            tiers = {'rare': aura_tier(base, RARE, sparks=4, alpha=(240, 170, 75)),
-                     'legend': aura_tier(base, LEGEND, reach=4.4, sparks=6, speed=2, alpha=(235, 165, 80))}
-            d = json.load(open(PACK + 'items/%s.json' % n))
-            cond = d['model']                      # gear.py: has_component enchantments -> normal aura
-            vm = cond['on_false']
-            normal = cond['on_true']
-            def with_aura(kind):
-                aid = 'minecraft:item/aurora/aura_%s_%s' % (kind, n)
-                s = json.dumps(normal).replace('"minecraft:item/aurora/aura_%s"' % n, '"%s"' % aid)
-                return json.loads(s)
+            tiers = {kind: aura_tier(base, kind) for kind in ('rare', 'legend')}
             for kind, (st, meta) in tiers.items():
-                save_tex(st, 'item/aurora/aura_%s_%s.png' % (kind, n), meta)
-                m = gear.aura_model(n)
                 tex = 'minecraft:item/aurora/aura_%s_%s' % (kind, n)
-                m['textures'] = {"aura": tex, "particle": tex}
-                save_json(m, 'models/item/aurora/aura_%s_%s.json' % (kind, n))
-            comp = lambda value, on_true, on_false: {"type": "minecraft:condition", "property": "minecraft:component",
-                                                    "predicate": "minecraft:enchantments", "value": value,
-                                                    "on_true": on_true, "on_false": on_false}
-            cond['on_true'] = comp(legendary_pred(t), with_aura('legend'),
-                                   comp([{"enchantments": "minecraft:mending"}], with_aura('rare'), normal))
+                save_tex(st, 'item/aurora/aura_%s_%s.png' % (kind, n), meta)
+                save_json(aura_model(tex), 'models/item/aurora/aura_%s_%s.json' % (kind, n))
+            d = json.load(open(PACK + 'items/%s.json' % n))
+            normal_ref = '"minecraft:item/aurora/aura_%s"' % n
+
+            def tiered(cond):                     # gear.py: enchanted -> normal aura, else plain model
+                normal = cond['on_true']
+                s = json.dumps(normal)
+                assert normal_ref in s, 'gear.py no longer references %s' % normal_ref
+                with_aura = lambda kind: json.loads(s.replace(normal_ref, '"minecraft:item/aurora/aura_%s_%s"' % (kind, n)))
+                comp = lambda value, on_true, on_false: {
+                    "type": "minecraft:condition", "property": "minecraft:component",
+                    "predicate": "minecraft:enchantments", "value": value, "on_true": on_true, "on_false": on_false}
+                new = dict(cond)
+                new['on_true'] = comp(legendary_pred(t), with_aura('legend'),
+                                      comp([{"enchantments": "minecraft:mending"}], with_aura('rare'), normal))
+                return new
+
+            icon = rewrite(d['model'], tiered)
+            hand = rewrite(d['model'], lambda cond: cond['on_false'])    # held / worn / dropped: no aura at all
+            d['model'] = {"type": "minecraft:select", "property": "minecraft:display_context",
+                          "cases": [{"when": ICON_CONTEXTS, "model": icon}], "fallback": hand}
             save_json(d, 'items/%s.json' % n)
             out[n] = (base, tiers)
     return out
 
-# ------------------------------------------------------------------ menus + sprites
-def menus():
-    res = {}
-    S = magic
-    for name, excl, cats, seed in (
-            ('enchanting_table', [S.TITLE, S.inv_label(166), (59, 13, 169, 72), (10, 12, 58, 44)], [], 21),
-            ('anvil', [(58, 18, 170, 36), S.inv_label(166), (58, 66, 170, 80), (0, 0, 60, 46)], [], 23),
-            ('grindstone', [S.TITLE, S.inv_label(166), (40, 2, 104, 76)], [(S.CAT_PEEK, 138, 4)], 25)):
-        img, sl = S.build_container(name, 176, 166, cats=cats, excl=excl, seed=seed)
-        if name == 'anvil':   # keep the hammer readable: aurora hammer over the panel
-            v = ref('gui/container/anvil.png')
-            for y in range(6, 42):
-                for x in range(10, 50):
-                    p = v.getpixel((x, y))
-                    if p[3] and not magic.is_rgb(p, 198):
-                        l = sum(p[:3]) / 765
-                        c = OUT if l < 0.25 else mix(cyc(x / 50 + y / 60), WHITE, max(0, l - 0.4) * 1.4)
-                        img.putpixel((x, y), C(c))
-        S.save(img, 'gui/container/%s.png' % name)
-        res[name] = img
-    return res
-
-def button(w, h, kind, N=1, ph0=0.0):
-    """pearl glass buttons. kind: normal | hi (animated, dark enough for yellow text) | off"""
-    st = Image.new('RGBA', (w, h * N))
-    for f in range(N):
-        ph = f / max(1, N)
-        for y in range(h):
-            for x in range(w):
-                e = min(x, y, w - 1 - x, h - 1 - y)
-                t = x / w * 0.8 + ph
-                if kind == 'normal':
-                    c = OUT if e == 0 else (mix(cyc(t), WHITE, 0.3) if e == 1 else mix((238, 232, 253), (214, 202, 246), y / h))
-                    if e > 1 and (x + y) % 23 in (0, 1): c = mix(c, WHITE, 0.6)
-                elif kind == 'hi':
-                    c = OUT if e == 0 else (mix(cyc(t), WHITE, 0.15) if e <= 1 else mix((92, 62, 160), (126, 84, 196), y / h))
-                    if e > 1:
-                        s = (x / w - y / h * 0.15)
-                        dd = abs(s - (ph * 1.4 - 0.2))
-                        if dd < 0.05: c = mix(c, (190, 160, 255), 1 - dd / 0.05)
-                else:
-                    c = OUT if e == 0 else mix((84, 72, 118), (70, 60, 100), y / h)
-                st.putpixel((x, f * h + y), C(c))
-    return st
-
-def level_icon(n, enabled, N=12):
-    """16x16 gem + numeral."""
-    digits = {1: [".#.", "##.", ".#.", ".#.", "###"], 2: ["##.", "..#", ".#.", "#..", "###"], 3: ["##.", "..#", ".#.", "..#", "##."]}
-    st = Image.new('RGBA', (16, 16 * N))
-    for f in range(N):
-        ph = f / N
-        im = Image.new('RGBA', (16, 16))
-        cx, cy, r = 6, 8, 4.6
-        for y in range(16):
-            for x in range(11):
-                d = math.hypot(x - cx, y - cy)
-                if d <= r + 0.5:
-                    if d > r - 0.6:
-                        c = OUT
-                    elif enabled:
-                        c = mix(cyc(ph + (x + y) / 20), WHITE, 0.45 - (y - cy) / 20)
-                        if (x - cx + 1.5) ** 2 + (y - cy + 1.5) ** 2 < 2: c = WHITE
-                    else:
-                        c = (110, 100, 140)
-                    im.putpixel((x, y), C(c))
-        for j, row in enumerate(digits[n]):
-            for i, ch in enumerate(row):
-                if ch == '#':
-                    im.putpixel((11 + i, 6 + j), C((255, 236, 140) if enabled else (120, 110, 140)))
-        for j, row in enumerate(digits[n]):          # drop shadow under the numeral
-            for i, ch in enumerate(row):
-                if ch == '#' and im.getpixel((12 + i, 7 + j))[3] == 0:
-                    im.putpixel((12 + i, 7 + j), C(OUT))
-        if enabled and f % N in (0, 1):
-            im.putpixel((9, 4), C(WHITE))
-        st.paste(im, (0, f * 16))
-    return st
-
-def sprites():
-    E = 'gui/sprites/container/enchanting_table/'
-    save_tex(button(108, 19, 'normal'), E + 'enchantment_slot.png')
-    save_tex(button(108, 19, 'off'), E + 'enchantment_slot_disabled.png')
-    N = 16
-    save_tex(button(108, 19, 'hi', N), E + 'enchantment_slot_highlighted.png', magic.anim_meta(N, 2, None, 108, 19))
-    for n in (1, 2, 3):
-        save_tex(level_icon(n, True), E + 'level_%d.png' % n, magic.anim_meta(12, 3))
-        save_tex(level_icon(n, False, 1), E + 'level_%d_disabled.png' % n)
-    A = 'gui/sprites/container/anvil/'
-    tf = Image.new('RGBA', (110, 16))
-    for y in range(16):
-        for x in range(110):
-            e = min(x, y, 109 - x, 15 - y)
-            c = OUT if e == 0 else (mix(cyc(x / 110), WHITE, 0.2) if e == 1 else mix((96, 70, 160), (78, 56, 136), y / 16))
-            tf.putpixel((x, y), C(c))
-    save_tex(tf, A + 'text_field.png')
-    tfd = Image.new('RGBA', (110, 16))
-    for y in range(16):
-        for x in range(110):
-            e = min(x, y, 109 - x, 15 - y)
-            tfd.putpixel((x, y), C(OUT if e == 0 else (70, 60, 100)))
-    save_tex(tfd, A + 'text_field_disabled.png')
-    # error cross (anvil + grindstone): pastel arrow with a soft red cross
-    for d in ('anvil', 'grindstone'):
-        v = ref('gui/sprites/container/%s/error.png' % d)
-        o = Image.new('RGBA', v.size)
-        for y in range(v.height):
-            for x in range(v.width):
-                p = v.getpixel((x, y))
-                if p[3] == 0: continue
-                hh, s, vv = gear.hsv(p)
-                if s > 0.4:   c = mix((255, 110, 150), WHITE, max(0, vv - 0.7))
-                else:         c = mix((150, 130, 210), WHITE, max(0, vv - 0.5))
-                o.putpixel((x, y), C(c, p[3]))
-        save_tex(o, 'gui/sprites/container/%s/error.png' % d)
-
 # ------------------------------------------------------------------ enchanting table book + particles
+def ramp(t, pal):
+    t = max(0.0, min(1.0, t)) * (len(pal) - 1)
+    i = min(int(t), len(pal) - 2)
+    return mix(pal[i], pal[i + 1], t - i)
+
+LEATHER = [(58, 38, 106), (92, 64, 156), (144, 118, 208)]     # plum -> violet -> lavender, by vanilla brightness
+PAPER = [(150, 138, 198), (214, 206, 242), (250, 247, 255)]   # lavender ink -> pearl paper
+
 def table_book():
+    """the book floating over the enchanting table: plum leather with a faint sheen, pastel gold corners and pearl
+    pages. Keeps every shade of the vanilla sheet (leather grain, text lines), only the colours change."""
     v = ref('entity/enchantment/enchanting_table_book.png')
     o = Image.new('RGBA', v.size)
     for y in range(v.height):
@@ -219,89 +183,84 @@ def table_book():
             p = v.getpixel((x, y))
             if p[3] == 0: continue
             hh, s, vv = gear.hsv(p)
-            if vv < 0.08:                                # unused black area of the sheet
+            l = (0.3 * p[0] + 0.59 * p[1] + 0.11 * p[2]) / 255
+            if vv < 0.08:                                       # unused black area of the sheet
                 o.putpixel((x, y), p); continue
-            if s < 0.35 and vv > 0.6:                   # pages
-                c = mix((236, 230, 252), WHITE, (vv - 0.6) * 1.5)
-            elif 40 <= hh <= 62 and s > 0.6 and vv > 0.7:   # gold corners
-                c = mix(GOLD, WHITE, 0.3)
-            else:                                        # leather cover
-                c = mix(mix((70, 44, 130), cyc(x / 64 + y / 32 * 0.3), 0.55), WHITE, max(0, vv - 0.45) * 0.8)
+            if y >= 10:                                         # pages
+                c = ramp((l - 0.5) / 0.42, PAPER)
+            elif 35 <= hh <= 62 and s > 0.6 and vv > 0.7:       # gold corners
+                c = mix(GOLD[1], GOLD[2], (1 - vv) * 3)
+            elif s < 0.2:                                       # light bands on the spine
+                c = mix((232, 224, 252), WHITE, (l - 0.8) * 3)
+            else:                                               # leather cover
+                c = ramp((l - 0.3) / 0.25, LEATHER)
+                c = mix(c, cyc(x / 28 * 0.5 + 0.1, gear.P), 0.14)   # faint iridescent sheen across the cover
             o.putpixel((x, y), C(c, p[3]))
     save_tex(o, 'entity/enchantment/enchanting_table_book.png')
     return o
 
 def particles():
+    """enchanting glyphs and hit particles. The game multiplies them by its own colour (glyphs get darkened at random,
+    hits get tinted), so they stay light: soft pastels close to white."""
     out = []
     letters = 'abcdefghijklmnopqrstuvwxyz'
     for i, ch in enumerate(letters):
         v = ref('particle/sga_%s.png' % ch)
         o = Image.new('RGBA', v.size)
-        col = cyc(i / len(letters))
+        col = mix(cyc(i / len(letters), gear.P), WHITE, 0.2)
         for y in range(v.height):
             for x in range(v.width):
                 p = v.getpixel((x, y))
-                if p[3]: o.putpixel((x, y), C(mix(col, WHITE, 0.25 * (p[0] / 255)), p[3]))
+                if p[3]: o.putpixel((x, y), C(mix(col, WHITE, 0.2 * (p[0] / 255)), p[3]))
         save_tex(o, 'particle/sga_%s.png' % ch)
         out.append(o)
-    # hit particles: the game tints them, so keep them light with a pastel core
-    for n, core in (('enchanted_hit', (200, 160, 255)), ('critical_hit', (255, 225, 170))):
+    for n, core in (('enchanted_hit', (206, 182, 255)), ('critical_hit', (255, 222, 178))):
         v = ref('particle/%s.png' % n)
         o = Image.new('RGBA', v.size)
         for y in range(v.height):
             for x in range(v.width):
                 p = v.getpixel((x, y))
                 if p[3]:
-                    l = p[0] / 255
-                    o.putpixel((x, y), C(mix(core, WHITE, l * 0.7), p[3]))
+                    o.putpixel((x, y), C(mix(core, WHITE, (p[0] / 255) ** 2 * 0.8), p[3]))
         save_tex(o, 'particle/%s.png' % n)
         out.append(o)
     return out
 
 # ------------------------------------------------------------------ preview
-def preview(rar, mn, parts, tbook):
-    sheet = Image.new('RGBA', (1240, 760), (60, 52, 84, 255))
-    x0, y = 10, 10
-    for i, n in enumerate(['diamond_sword', 'diamond_pickaxe', 'netherite_sword', 'netherite_pickaxe']):
+def preview(rar, parts, tbook):
+    names = ['diamond_sword', 'diamond_pickaxe', 'netherite_sword', 'netherite_pickaxe']
+    sheet = Image.new('RGBA', (1140, 420), (60, 52, 84, 255))
+    for i, n in enumerate(names):
         base, tiers = rar[n]
-        strip = Image.open(PACK + 'textures/item/%s.png' % n).convert('RGBA').crop((0, 0, 16, 16))
+        tool = Image.open(PACK + 'textures/item/%s.png' % n).convert('RGBA').crop((0, 0, 16, 16))
         normal = Image.open(PACK + 'textures/item/aurora/aura_%s.png' % n).convert('RGBA').crop((0, 0, 24, 24))
         for k, au in enumerate([normal, tiers['rare'][0].crop((0, 0, 24, 24)), tiers['legend'][0].crop((0, 0, 24, 24))]):
-            fr = au.copy(); fr.alpha_composite(strip, (4, 4))
-            sheet.alpha_composite(fr.resize((72, 72), Image.NEAREST), (x0 + k * 84 + i * 280, y))
-    y += 100
-    for i, n in enumerate(['enchanting_table', 'anvil', 'grindstone'] if mn else []):
-        sheet.alpha_composite(mn[n].crop((0, 0, 176, 166)).resize((352, 332), Image.NEAREST), (x0 + i * 400, y))
-    E = PACK + 'textures/gui/sprites/container/enchanting_table/'
-    for k, nm in enumerate(['enchantment_slot', 'enchantment_slot_highlighted', 'enchantment_slot_disabled'] if mn else []):
-        b = Image.open(E + nm + '.png').convert('RGBA').crop((0, 0, 108, 19))
-        sheet.alpha_composite(b.resize((216, 38), Image.NEAREST), (x0 + 60 * 2, y + (14 + 19 * k) * 2))
-        lv = Image.open(E + 'level_%d%s.png' % (k + 1, '' if k < 2 else '_disabled')).convert('RGBA').crop((0, 0, 16, 16))
-        sheet.alpha_composite(lv.resize((32, 32), Image.NEAREST), (x0 + 61 * 2, y + (15 + 19 * k) * 2))
-    if mn:
-        tf = Image.open(PACK + 'textures/gui/sprites/container/anvil/text_field.png').convert('RGBA')
-        sheet.alpha_composite(tf.resize((220, 32), Image.NEAREST), (x0 + 400 + 59 * 2, y + 20 * 2))
-    y += 350
+            fr = au.copy(); fr.alpha_composite(tool, (4, 4))
+            sheet.alpha_composite(fr.resize((72, 72), Image.NEAREST), (10 + k * 84 + i * 280, 10))
     for i, p in enumerate(parts):
-        sheet.alpha_composite(p.resize((32, 32), Image.NEAREST), (x0 + i * 40, y))
-    sheet.alpha_composite(tbook.resize((256, 128), Image.NEAREST), (x0, y + 50))
+        sheet.alpha_composite(p.resize((32, 32), Image.NEAREST), (10 + i * 40, 110))
+    sheet.alpha_composite(tbook.resize((256, 128), Image.NEAREST), (10, 160))
     sheet.save(PREVIEWS + '/preview_grimorio.png')
     frames = []
-    for f in range(16):
+    for f in range(N):
         g = Image.new('RGBA', (3 * 84 * 2 + 20, 90), (60, 52, 84, 255))
         for i, n in enumerate(['diamond_sword', 'netherite_pickaxe']):
             base, tiers = rar[n]
-            tool = Image.open(PACK + 'textures/item/%s.png' % n).convert('RGBA').crop((0, f * 16, 16, f * 16 + 16))
+            tool = Image.open(PACK + 'textures/item/%s.png' % n).convert('RGBA')
+            tool = tool.crop((0, 0, 16, 16)) if tool.height == 16 else tool.crop((0, (f % (tool.height // 16)) * 16, 16, (f % (tool.height // 16)) * 16 + 16))
             normal = Image.open(PACK + 'textures/item/aurora/aura_%s.png' % n).convert('RGBA')
-            for k, au in enumerate([normal, tiers['rare'][0], tiers['legend'][0]]):
-                fr = au.crop((0, f * 24, 24, f * 24 + 24)); fr.alpha_composite(tool, (4, 4))
+            nf = normal.height // 24
+            for k, au in enumerate([normal.crop((0, (f % nf) * 24, 24, (f % nf) * 24 + 24)),
+                                    tiers['rare'][0].crop((0, f * 24, 24, f * 24 + 24)),
+                                    tiers['legend'][0].crop((0, f * 24, 24, f * 24 + 24))]):
+                fr = au.copy(); fr.alpha_composite(tool, (4, 4))
                 g.alpha_composite(fr.resize((72, 72), Image.NEAREST), (10 + (i * 3 + k) * 84, 8))
         frames.append(g.convert('RGB'))
-    frames[0].save(PREVIEWS + '/anim_grimorio.gif', save_all=True, append_images=frames[1:], duration=100, loop=0)
+    frames[0].save(PREVIEWS + '/anim_grimorio.gif', save_all=True, append_images=frames[1:], duration=FT * 50, loop=0)
 
 if __name__ == '__main__':
     rar = rarity()
     tb = table_book(); pa = particles()
     os.makedirs(PREVIEWS, exist_ok=True)
-    preview(rar, None, pa, tb)
+    preview(rar, pa, tb)
     print('ok')
