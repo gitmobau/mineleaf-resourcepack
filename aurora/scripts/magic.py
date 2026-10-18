@@ -172,20 +172,20 @@ def build_container(name, w, h, cut_safe=False, cats=(), excl=(), stars=True, se
             if e == 0:
                 c = OUT
             elif e == 1:
-                c = cyc(t)
+                c = mix(cyc(t), WHITE, 0.25)
             elif e == 2:
-                c = mix(cyc(t + 0.05), WHITE, 0.35)
+                c = mix(cyc(t + 0.05), WHITE, 0.6)
             elif e == 3:
                 c = WHITE
             else:
-                c = mix(PEARL, cyc(t + 0.1), 0.07)
-                if not cut_safe and (x + y) % 29 in (0, 1, 2):
-                    c = mix(c, WHITE, 0.8)
+                c = mix(PEARL, cyc(t + 0.1), 0.06)          # plain pearl panel (no diagonal stripes)
             img.putpixel((x, y), C(c))
             if e <= 3:
                 used[x][y] = True
     # --- player window / black areas -> aurora night sky
-    blk = [(x, y) for y in range(h) for x in range(w) if is_rgb(v.getpixel((x, y)), 0)]
+    # (only black inside the frame: the vanilla outline is black too, and counting it spread the window's stars and
+    # moon over the whole panel)
+    blk = [(x, y) for y in range(4, h - 4) for x in range(4, w - 4) if is_rgb(v.getpixel((x, y)), 0)]
     if blk:
         bx0 = min(p[0] for p in blk); bx1 = max(p[0] for p in blk)
         by0 = min(p[1] for p in blk); by1 = max(p[1] for p in blk)
@@ -200,7 +200,7 @@ def build_container(name, w, h, cut_safe=False, cats=(), excl=(), stars=True, se
                     c = mix(c, cyc(u * 0.6 + k * 0.3), (1 - d / th) * 0.75)
             img.putpixel((x, y), C(c))
             used[x][y] = True
-        for _ in range(int((bx1 - bx0) * (by1 - by0) / 45)):
+        for _ in range(int((bx1 - bx0) * (by1 - by0) / 90)):
             sx = rnd.randint(bx0 + 1, bx1 - 1); sy = rnd.randint(by0 + 1, by1 - 1)
             img.putpixel((sx, sy), C(mix(WHITE, cyc(rnd.random()), 0.3)))
         # crescent moon
@@ -220,16 +220,12 @@ def build_container(name, w, h, cut_safe=False, cats=(), excl=(), stars=True, se
                 if corner:
                     continue   # keep panel colour -> rounded slot
                 if i == 0 or j == 0:
-                    c = cyc(sx / w * 0.8) if big else (150, 128, 214)
+                    c = mix(cyc(sx / w * 0.8), (150, 128, 214), 0.4) if big else (150, 128, 214)
                 elif i == s - 1 or j == s - 1:
                     c = WHITE
                 else:
                     c = mix((238, 232, 253), (222, 210, 249), j / s)
-                    if (i + j) in (3, 4) or (i + j) in (s + 6, s + 7):
-                        c = mix(c, WHITE, 0.7)     # glassy shine
                 img.putpixel((x, y), C(c))
-        if big:
-            sparkle(img, sx + s - 3, sy + 2, 0.4, big=False)
     # --- remaining vanilla decorations (arrows, flame icons, labels art): aurora
     for y in range(h):
         for x in range(w):
@@ -243,15 +239,8 @@ def build_container(name, w, h, cut_safe=False, cats=(), excl=(), stars=True, se
             img.putpixel((x, y), C(c))
             used[x][y] = True
     # --- corner gems + edge ornaments
-    for (gx, gy) in ((3, 3), (w - 4, 3), (3, h - 4), (w - 4, h - 4)):
-        gem(img, gx, gy)
-    for gx in range(28, w - 24, 30):
-        gem(img, gx, 2, r=2)
-        gem(img, gx, h - 3, r=2)
-    if not cut_safe:
-        for gy in range(30, h - 24, 34):
-            gem(img, 2, gy, r=2)
-            gem(img, w - 3, gy, r=2)
+    for (gx, gy) in ((3, 3), (w - 4, 3), (3, h - 4), (w - 4, h - 4)):   # only the four corner gems (calmer frame)
+        gem(img, gx, gy, r=2)
     # --- cats
     for art, cx, cy in cats:
         draw_art(img, art, cx, cy)
@@ -274,14 +263,14 @@ def build_container(name, w, h, cut_safe=False, cats=(), excl=(), stars=True, se
         placed = 0
         for _ in range(4000):
             x = rnd.randint(4, w - 5); y = rnd.randint(4, h - 5)
-            big = rnd.random() < 0.45
+            big = False
             if free(x, y, 3 if big else 2):
                 sparkle(img, x, y, rnd.random(), big)
                 for yy in range(y - 2, y + 3):
                     for xx in range(x - 2, x + 3):
                         used[xx][yy] = True
                 placed += 1
-                if placed >= 14:
+                if placed >= 5:
                     break
     return img, slots
 
@@ -290,21 +279,22 @@ def inv_label(h):
     return (0, h - 96, 120, h - 83)
 
 def containers():
+    # one cat only (asleep in the inventory); the other menus stay clean
     res = {}
     img, sl = build_container('inventory', 176, 166, cats=[(CAT_SLEEP, 128, 63)],
                               excl=[(96, 5, 160, 17), inv_label(166), (102, 59, 126, 80)], seed=3)
     save(img, 'gui/container/inventory.png'); res['inventory'] = (img, 166, len(sl))
-    img, sl = build_container('crafting_table', 176, 166, cats=[(CAT_SIT, 150, 52)],
+    img, sl = build_container('crafting_table', 176, 166,
                               excl=[TITLE, inv_label(166), (3, 32, 27, 54)], seed=5)
     save(img, 'gui/container/crafting_table.png'); res['crafting_table'] = (img, 166, len(sl))
     for n, s in (('furnace', 7), ('blast_furnace', 8), ('smoker', 9)):
-        img, sl = build_container(n, 176, 166, cats=[(CAT_SIT, 148, 6)],
+        img, sl = build_container(n, 176, 166,
                                   excl=[(20, 3, 156, 16), inv_label(166), (18, 32, 42, 54)], seed=s)
         save(img, 'gui/container/%s.png' % n); res[n] = (img, 166, len(sl))
-    img, sl = build_container('generic_54', 176, 222, cut_safe=True, cats=[(CAT_PEEK, 152, 3)],
+    img, sl = build_container('generic_54', 176, 222, cut_safe=True,
                               excl=[TITLE], stars=False, seed=11)
     save(img, 'gui/container/generic_54.png'); res['generic_54'] = (img, 222, len(sl))
-    img, sl = build_container('shulker_box', 176, 166, cats=[(CAT_PEEK, 152, 3)],
+    img, sl = build_container('shulker_box', 176, 166,
                               excl=[TITLE, inv_label(166)], seed=13)
     save(img, 'gui/container/shulker_box.png'); res['shulker_box'] = (img, 166, len(sl))
     return res
@@ -318,37 +308,24 @@ def anim_meta(n, ft, extra=None, w=None, h=None):
     return m
 
 def slot_highlights():
+    """hovered slot: soft pearl glow inside the 16x16 item area (back) and a thin iridescent ring on the slot's own
+    border (front). Nothing is drawn over the neighbouring slots; the ring's colours drift slowly."""
     N = 16
     back = Image.new('RGBA', (24, 24 * N)); front = Image.new('RGBA', (24, 24 * N))
-    ring = [(x, 0) for x in range(24)] + [(23, y) for y in range(1, 24)] + \
-           [(x, 23) for x in range(22, -1, -1)] + [(0, y) for y in range(22, 0, -1)]
     for f in range(N):
         ph = f / N
         pulse = 0.5 + 0.5 * math.sin(ph * 2 * math.pi)
         for y in range(24):
             for x in range(24):
                 e = min(x, y, 23 - x, 23 - y)
-                if 3 <= e:
-                    c = mix(WHITE, cyc((x + y) / 46 + ph), 0.35 + 0.15 * pulse)
-                    back.putpixel((x, f * 24 + y), C(c, 150 + 40 * pulse))
-                elif e >= 1:
-                    back.putpixel((x, f * 24 + y), C(cyc((x + y) / 46 + ph), 70 + 50 * pulse * (e / 3)))
-        # front: aurora ring with travelling sparkle
-        for i, (x, y) in enumerate(ring):
-            front.putpixel((x, f * 24 + y), C(cyc(i / len(ring) + ph), 230))
-            if 0 < x < 23 and 0 < y < 23:
-                pass
-        for k in range(2):
-            i = int((ph + k * 0.5) * len(ring)) % len(ring)
-            x, y = ring[i]
-            front.putpixel((x, f * 24 + y), C(WHITE))
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                xx, yy = x + dx, y + dy
-                if 0 <= xx < 24 and 0 <= yy < 24:
-                    front.putpixel((xx, f * 24 + yy), C(mix(WHITE, cyc(ph), 0.3), 240))
+                if e >= 4:                                      # item area: like vanilla (white ~96) with a pastel tint
+                    back.putpixel((x, f * 24 + y), C(mix(WHITE, cyc((x + y) / 46 + ph), 0.3), 104 + 16 * pulse))
+                    front.putpixel((x, f * 24 + y), C(WHITE, 26))
+                elif e == 3:                                    # the slot's border ring
+                    front.putpixel((x, f * 24 + y), C(mix(cyc((x - y) / 46 + ph), WHITE, 0.25), 235))
     gui = {"gui": {"scaling": {"type": "nine_slice", "width": 24, "height": 24, "border": 4}}}
-    save(back, 'gui/sprites/container/slot_highlight_back.png', anim_meta(N, 2, gui, 24, 24))
-    save(front, 'gui/sprites/container/slot_highlight_front.png', anim_meta(N, 2, gui, 24, 24))
+    save(back, 'gui/sprites/container/slot_highlight_back.png', anim_meta(N, 4, gui, 24, 24))
+    save(front, 'gui/sprites/container/slot_highlight_front.png', anim_meta(N, 4, gui, 24, 24))
     return back, front
 
 CAT_FACE_OPEN = [
@@ -379,11 +356,9 @@ def recipe_button():
                 elif e == 1:
                     c = cyc(x / 20 * 0.6 + ph) if hi else mix(cyc(x / 20 * 0.6), WHITE, 0.3)
                 else:
-                    c = mix(WHITE, cyc((x + y) / 40 + ph), 0.22 if hi else 0.12)
+                    c = mix(WHITE, cyc((x + y) / 40 + ph), 0.18 if hi else 0.1)
                 im.putpixel((x, y), C(c))
         draw_art(im, face, 4, 5)
-        if hi:
-            sparkle(im, 3, 3, ph, big=False); sparkle(im, 16, 3, ph + 0.5, big=False)
         return im
     # normal: blink every ~4s
     frames = [frame(CAT_FACE_OPEN, False, 0), frame(CAT_FACE_BLINK, False, 0)]
@@ -396,7 +371,7 @@ def recipe_button():
     strip2 = Image.new('RGBA', (20, 18 * N))
     for i in range(N):
         strip2.paste(frame(CAT_FACE_HAPPY, True, i / N), (0, i * 18))
-    save(strip2, 'gui/sprites/recipe_book/button_highlighted.png', anim_meta(N, 2, None, 20, 18))
+    save(strip2, 'gui/sprites/recipe_book/button_highlighted.png', anim_meta(N, 4, None, 20, 18))
     return strip, strip2
 
 def furnace_sprites():
@@ -412,10 +387,11 @@ def furnace_sprites():
                     if p[3] == 0 or (p[0] == p[1] == p[2] and p[0] in (198, 139)):
                         continue
                     l = (p[0] + p[1] + p[2]) / 765
-                    flick = 0.5 + 0.5 * math.sin((y / 14 + f / N) * 2 * math.pi * 2 + x)
-                    c = mix(cyc(0.95 - y / 14 * 0.5 + f / N * 0.3), WHITE, max(0, l - 0.5) + 0.25 * flick)
+                    flick = 0.5 + 0.5 * math.sin((y / 14 + f / N) * 2 * math.pi + x * 0.7)
+                    c = mix(cyc(0.95 - y / 14 * 0.5 + 0.1 * math.sin(f / N * 2 * math.pi)), WHITE,
+                            0.15 + max(0, l - 0.5) + 0.12 * flick)
                     st.putpixel((x, f * 14 + y), C(c, p[3]))
-        save(st, 'gui/sprites/container/%s/lit_progress.png' % kind, anim_meta(N, 2, None, 14, 14))
+        save(st, 'gui/sprites/container/%s/lit_progress.png' % kind, anim_meta(N, 3, None, 14, 14))
         arr = ref('gui/sprites/container/%s/burn_progress.png' % kind)
         N2 = 12
         st2 = Image.new('RGBA', (24, 16 * N2))
@@ -426,12 +402,13 @@ def furnace_sprites():
                     if p[3] == 0 or (p[0] == p[1] == p[2] and p[0] in (198, 139)):
                         continue
                     l = (p[0] + p[1] + p[2]) / 765
-                    c = cyc(x / 24 * 0.7 - f / N2)
-                    if (x - f * 2) % 24 in (0, 1):
-                        c = mix(c, WHITE, 0.8)
+                    c = mix(cyc(x / 24 * 0.5 + 0.55), WHITE, 0.15)
+                    d = abs((x - f * 2) % 24 - 1)
+                    if d < 3:
+                        c = mix(c, WHITE, 0.45 * (1 - d / 3))   # soft glint gliding along the arrow
                     c = mix(c, WHITE, max(0, l - 0.6))
                     st2.putpixel((x, f * 16 + y), C(c, p[3]))
-        save(st2, 'gui/sprites/container/%s/burn_progress.png' % kind, anim_meta(N2, 2, None, 24, 16))
+        save(st2, 'gui/sprites/container/%s/burn_progress.png' % kind, anim_meta(N2, 3, None, 24, 16))
         out[kind] = (st, st2)
     return out
 
@@ -440,7 +417,7 @@ def hud():
     hb = ref(H + 'hotbar.png')
     N = 24
     rnd = random.Random(42)
-    twinkles = [(rnd.randint(0, 181), rnd.choice([0, 1, 20, 21]), rnd.random()) for _ in range(14)]
+    twinkles = [(rnd.randint(0, 181), rnd.choice([0, 1, 20, 21]), rnd.random()) for _ in range(6)]
     st = Image.new('RGBA', (182, 22 * N))
     for f in range(N):
         ph = f / N
@@ -456,13 +433,13 @@ def hud():
                 if l < 0.2:
                     c = OUT
                 else:
-                    c = mix(cyc(x / 182 * 0.9 - ph), WHITE, 0.15 + max(0, l - 0.45) * 1.2)
+                    c = mix(cyc(x / 182 * 0.9 - ph), WHITE, 0.3 + max(0, l - 0.45) * 1.2)
                 st.putpixel((x, f * 22 + y), C(c))
         for (tx, ty, tp) in twinkles:
             b = max(0, math.sin((ph + tp) * 2 * math.pi)) ** 3
             if b > 0.05 and hb.getpixel((tx, ty))[3] == 255:
                 st.putpixel((tx, f * 22 + ty), C(mix(st.getpixel((tx, f * 22 + ty)), WHITE, b)))
-    save(st, H + 'hotbar.png', anim_meta(N, 3, None, 182, 22))
+    save(st, H + 'hotbar.png', anim_meta(N, 5, None, 182, 22))
     sel = ref(H + 'hotbar_selection.png')
     N = 16
     st2 = Image.new('RGBA', (24, 23 * N))
@@ -478,12 +455,12 @@ def hud():
                 if l < 0.25:
                     c = OUT
                 else:
-                    c = mix(cyc((x + y) / 47 + ph), WHITE, 0.25 + 0.55 * pulse * l)
+                    c = mix(cyc((x + y) / 47 + ph), WHITE, 0.35 + 0.25 * pulse * l)
                 st2.putpixel((x, f * 23 + y), C(c, p[3]))
         for k, (cx, cy) in enumerate(((1, 1), (22, 1), (22, 21), (1, 21))):
             if int(ph * 4) == k:
                 st2.putpixel((cx, f * 23 + cy), C(WHITE))
-    save(st2, H + 'hotbar_selection.png', anim_meta(N, 2, None, 24, 23))
+    save(st2, H + 'hotbar_selection.png', anim_meta(N, 3, None, 24, 23))
     for n in ('hotbar_offhand_left', 'hotbar_offhand_right'):
         im = ref(H + n + '.png'); o = Image.new('RGBA', im.size)
         for y in range(im.height):
@@ -505,10 +482,11 @@ def hud():
                 p = xp.getpixel((x, y))
                 if p[3] == 0: continue
                 l = (p[0] + p[1] + p[2]) / 765
-                c = mix(cyc(x / 182 * 0.9 - f / N), WHITE, 0.1 + l * 0.5)
-                if (x - f * 12) % 182 in (0, 1, 2): c = mix(c, WHITE, 0.7)
+                c = mix(cyc(x / 182 * 0.9 - f / N), WHITE, 0.15 + l * 0.5)
+                d = abs((x - f * 12) % 182 - 3)
+                if d < 5: c = mix(c, WHITE, 0.35 * (1 - d / 5))
                 st3.putpixel((x, f * 5 + y), C(c, p[3]))
-    save(st3, H + 'experience_bar_progress.png', anim_meta(N, 2, None, 182, 5))
+    save(st3, H + 'experience_bar_progress.png', anim_meta(N, 3, None, 182, 5))
     return st, st2, st3
 
 if __name__ == '__main__':
