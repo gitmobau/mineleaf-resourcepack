@@ -1,5 +1,10 @@
-import os, math, json, colorsys, shutil
-from PIL import Image
+# Aurora base: crosshair, attack indicators, XP bar background, container slot, pack.png and pack.mcmeta.
+# (Hotbar, selection, XP progress, inventory and tools used to be drawn here too; magic.py, gear.py and Aurora HUD XL
+# replace all of them, so only what survives in the final pack is generated now. Water was removed on purpose.)
+import os, sys, math, json
+from PIL import Image, ImageFilter
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # build.py runs scripts with -I
+import gear
 
 HOME = os.path.expanduser('~')
 # Paths can be overridden by build.py (AURORA_REF = folder holding assets/minecraft of vanilla 26.3,
@@ -62,22 +67,11 @@ def hud_map(im, t0=0.0, span=0.9, bright=1.0, axis='x'):
     return out
 
 H = 'gui/sprites/hud/'
-save(hud_map(load(H + 'hotbar.png')), H + 'hotbar.png')
-for n in ['hotbar_offhand_left', 'hotbar_offhand_right']:
-    save(hud_map(load(H + n + '.png'), 0.2, 0.3), H + n + '.png')
 for n in ['hotbar_attack_indicator_background', 'hotbar_attack_indicator_progress',
           'crosshair_attack_indicator_background', 'crosshair_attack_indicator_full',
           'crosshair_attack_indicator_progress']:
     if os.path.exists(REF + '/' + H + n + '.png'):
         save(hud_map(load(H + n + '.png'), 0.1, 0.5, 1.2), H + n + '.png')
-
-sel = load(H + 'hotbar_selection.png')
-FR = 16
-anim = Image.new('RGBA', (sel.width, sel.height * FR))
-for f in range(FR):
-    fr = hud_map(sel, f / FR, 0.9, 1.3, axis='diag')
-    anim.paste(fr, (0, f * sel.height))
-save(anim, H + 'hotbar_selection.png', {"animation": {"frametime": 3, "interpolate": True}})
 
 bg = load(H + 'experience_bar_background.png')
 out = Image.new('RGBA', bg.size)
@@ -87,26 +81,15 @@ for y in range(bg.height):
         if p[3]:
             out.putpixel((x, y), clamp(mix((22, 17, 40), cyc(x / 182 * 0.9), 0.18 + lum(p) / 255 * 0.25), p[3]))
 save(out, H + 'experience_bar_background.png')
-pr = load(H + 'experience_bar_progress.png')
-out = Image.new('RGBA', pr.size)
-for y in range(pr.height):
-    for x in range(pr.width):
-        p = pr.getpixel((x, y))
-        if p[3]:
-            l = lum(p) / 255
-            out.putpixel((x, y), clamp(mix((40, 30, 70), cyc(x / 182 * 0.9), 0.35 + l * 0.9), p[3]))
-save(out, H + 'experience_bar_progress.png')
 
+# Crosshair. The game draws it with an INVERT blend (result = src * (1 - dst) + dst * (1 - src)), so near-white keeps
+# the vanilla contrast everywhere and a light tint shows as pastel only against dark scenes. Small centre dot, 1 px gap,
+# four short arms whose tips take a hint of cyan / lavender / pink / peach. No diagonal dots: clean and calm.
 ch = Image.new('RGBA', (15, 15), (0, 0, 0, 0))
 ch.putpixel((7, 7), (255, 255, 255, 255))
-arms = {(0, -1): 0.0, (1, 0): 0.25, (0, 1): 0.5, (-1, 0): 0.75}
-for (dx, dy), t in arms.items():
-    for d in range(2, 7):
-        a = 255 if d <= 5 else 150
-        col = mix((255, 255, 255), cyc(t + d * 0.02), 0.35 + d * 0.06)
-        ch.putpixel((7 + dx * d, 7 + dy * d), clamp(col, a))
-for dx, dy in [(-1, -1), (1, -1), (1, 1), (-1, 1)]:
-    ch.putpixel((7 + dx, 7 + dy), (235, 230, 255, 170))
+for (dx, dy), t in {(0, -1): 0.0, (1, 0): 0.2, (0, 1): 0.4, (-1, 0): 0.6}.items():
+    for d in range(2, 6):
+        ch.putpixel((7 + dx * d, 7 + dy * d), clamp(mix((255, 255, 255), cyc(t), (d - 2) * 0.22)))
 save(ch, H + 'crosshair.png')
 
 STOPS = [(0, (26, 20, 46)), (55, (60, 46, 96)), (85, (98, 80, 146)), (139, None), (198, None), (255, (255, 255, 255))]
@@ -137,89 +120,33 @@ def inv_map(im, scale_t=1.0, t0=0.0):
             out.putpixel((x, y), clamp(inv_color(lum(p), t), p[3]))
     return out
 
-save(inv_map(load('gui/container/inventory.png')), 'gui/container/inventory.png')
 save(inv_map(load('gui/sprites/container/slot.png'), 0, 0.3), 'gui/sprites/container/slot.png')
-for n in ['slot_highlight_back', 'slot_highlight_front']:
-    im = load('gui/sprites/container/' + n + '.png')
-    out = Image.new('RGBA', im.size)
-    for y in range(im.height):
-        for x in range(im.width):
-            p = im.getpixel((x, y))
-            if p[3]:
-                out.putpixel((x, y), clamp(mix((255, 255, 255), cyc((x + y) / 46 * 0.8), 0.75), p[3]))
-    save(out, 'gui/sprites/container/' + n + '.png')
-    shutil.copy(REF + '/gui/sprites/container/' + n + '.png.mcmeta', TX + '/gui/sprites/container/' + n + '.png.mcmeta')
 
-# (water was removed: the user wants the normal water of their base packs)
-
-def hsv(p):
-    h, s, v = colorsys.rgb_to_hsv(*[q / 255 for q in p[:3]])
-    return h * 360, s, v
-
-def tool(name, kind):
-    im = load('item/' + name + '.png')
-    w, h = im.size
-    out = Image.new('RGBA', im.size)
-    W = (255, 255, 255)
-    head = []
-    for yy in range(h):
-        for xx in range(w):
-            q = im.getpixel((xx, yy))
-            if q[3]:
-                qh, qs, qv = hsv(q)
-                if (kind == 'diamond' and (140 <= qh <= 200)) or (kind != 'diamond' and not ((qh >= 340 or qh <= 15) and qs >= 0.28)):
-                    head.append(xx - yy)
-    dmin, dmax = (min(head), max(head)) if head else (0, 1)
-    for y in range(h):
-        for x in range(w):
-            p = im.getpixel((x, y))
-            if p[3] == 0:
-                continue
-            hh, s, v = hsv(p)
-            t = 0.5 * max(0, min(1, ((x - y) - dmin) / max(1, dmax - dmin)))
-            t = round(t * 8) / 8
-            c = cyc(t)
-            if kind == 'diamond':
-                if 140 <= hh <= 200 or s < 0.1:
-                    if v < 0.2:   col = (46, 30, 92)
-                    elif v < 0.3: col = (84, 62, 150)
-                    elif v < 0.45: col = mix(c, (96, 74, 170), 0.55)
-                    elif v < 0.6: col = mix(c, (120, 100, 200), 0.30)
-                    elif v < 0.85: col = mix(c, (150, 130, 230), 0.10)
-                    elif s > 0.4: col = mix(c, W, 0.30)
-                    else: col = mix(c, W, 0.70)
-                elif 10 <= hh < 30 and s > 0.6:
-                    col = mix((90, 30, 80), (248, 176, 234), min(1, v * 1.5))
-                else:
-                    col = mix((40, 26, 44), (196, 140, 170), min(1, (v - 0.12) / 0.45))
-            else:
-                is_handle = (hh >= 340 or hh <= 15) and s >= 0.28
-                if is_handle:
-                    col = mix((26, 18, 34), (150, 110, 150), min(1, max(0, (v - 0.12) / 0.38)))
-                elif 300 <= hh <= 330 and s > 0.35:
-                    col = (72, 52, 116)
-                else:
-                    if v < 0.22:   col = (30, 24, 46)
-                    elif v < 0.30: col = mix((52, 44, 74), c, 0.18)
-                    elif v < 0.40: col = mix(c, (60, 50, 86), 0.50)
-                    elif v < 0.48: col = mix(c, (70, 60, 100), 0.35)
-                    else: col = mix(c, W, 0.15)
-            out.putpixel((x, y), clamp(col, p[3]))
-    save(out, 'item/' + name + '.png')
-    return out
-
-icons = {}
-for mat in ['diamond', 'netherite']:
-    for n in ['sword', 'pickaxe', 'axe', 'shovel', 'hoe', 'spear', 'spear_in_hand']:
-        if os.path.exists(REF + '/item/%s_%s.png' % (mat, n)):
-            icons[mat + '_' + n] = tool('%s_%s' % (mat, n), mat)
-
-icon = Image.new('RGBA', (128, 128))
-for y in range(128):
-    for x in range(128):
-        c = mix((20, 16, 38), cyc((x + y) / 256 + 0.05 * math.sin(x / 9)), 0.35 + 0.35 * (1 - y / 128))
+# pack.png: night sky with two soft aurora ribbons and the Aurora diamond pickaxe with a gentle glow.
+S = 128
+icon = Image.new('RGBA', (S, S))
+for y in range(S):
+    for x in range(S):
+        c = mix((44, 34, 86), (18, 14, 36), y / S)
+        for k, (y0, amp, ph, w) in enumerate(((44, 10, 0.0, 15.0), (70, 8, 1.7, 11.0))):
+            yc = y0 + amp * math.sin(x / 21 + ph) + (x - 64) * 0.18
+            g = math.exp(-((y - yc) / w) ** 2)
+            c = mix(c, gear.cyc(x / 190 + k * 0.33, gear.P), 0.55 * g)
         icon.putpixel((x, y), clamp(c))
-icon.alpha_composite(icons['diamond_pickaxe'].resize((96, 96), Image.NEAREST), (16, 16))
+for x, y in ((14, 18), (101, 12), (116, 52), (22, 96), (108, 108), (60, 8), (8, 60)):
+    icon.putpixel((x, y), (255, 255, 255, 255))
+    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        icon.putpixel((x + dx, y + dy), clamp(mix(icon.getpixel((x + dx, y + dy)), (255, 255, 255), 0.45)))
+pick, _ = gear.recolor_tool('diamond_pickaxe', 'diamond')
+big = pick.resize((96, 96), Image.NEAREST)
+glow = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+halo = Image.new('RGBA', big.size, (236, 226, 255, 0))
+halo.putalpha(big.getchannel('A'))
+glow.alpha_composite(halo, (16, 16))
+glow = glow.filter(ImageFilter.GaussianBlur(5))
+glow.putalpha(glow.getchannel('A').point(lambda a: int(a * 0.8)))
+icon.alpha_composite(glow)
+icon.alpha_composite(big, (16, 16))
 icon.save(PACK + '/pack.png', optimize=True)
 
 with open(PACK + '/pack.mcmeta', 'w') as f:
