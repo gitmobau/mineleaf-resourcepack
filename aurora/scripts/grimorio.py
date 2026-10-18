@@ -270,16 +270,17 @@ def preview(rar, mn, parts, tbook):
             fr = au.copy(); fr.alpha_composite(strip, (4, 4))
             sheet.alpha_composite(fr.resize((72, 72), Image.NEAREST), (x0 + k * 84 + i * 280, y))
     y += 100
-    for i, n in enumerate(['enchanting_table', 'anvil', 'grindstone']):
+    for i, n in enumerate(['enchanting_table', 'anvil', 'grindstone'] if mn else []):
         sheet.alpha_composite(mn[n].crop((0, 0, 176, 166)).resize((352, 332), Image.NEAREST), (x0 + i * 400, y))
     E = PACK + 'textures/gui/sprites/container/enchanting_table/'
-    for k, nm in enumerate(['enchantment_slot', 'enchantment_slot_highlighted', 'enchantment_slot_disabled']):
+    for k, nm in enumerate(['enchantment_slot', 'enchantment_slot_highlighted', 'enchantment_slot_disabled'] if mn else []):
         b = Image.open(E + nm + '.png').convert('RGBA').crop((0, 0, 108, 19))
         sheet.alpha_composite(b.resize((216, 38), Image.NEAREST), (x0 + 60 * 2, y + (14 + 19 * k) * 2))
         lv = Image.open(E + 'level_%d%s.png' % (k + 1, '' if k < 2 else '_disabled')).convert('RGBA').crop((0, 0, 16, 16))
         sheet.alpha_composite(lv.resize((32, 32), Image.NEAREST), (x0 + 61 * 2, y + (15 + 19 * k) * 2))
-    tf = Image.open(PACK + 'textures/gui/sprites/container/anvil/text_field.png').convert('RGBA')
-    sheet.alpha_composite(tf.resize((220, 32), Image.NEAREST), (x0 + 400 + 59 * 2, y + 20 * 2))
+    if mn:
+        tf = Image.open(PACK + 'textures/gui/sprites/container/anvil/text_field.png').convert('RGBA')
+        sheet.alpha_composite(tf.resize((220, 32), Image.NEAREST), (x0 + 400 + 59 * 2, y + 20 * 2))
     y += 350
     for i, p in enumerate(parts):
         sheet.alpha_composite(p.resize((32, 32), Image.NEAREST), (x0 + i * 40, y))
@@ -300,8 +301,7 @@ def preview(rar, mn, parts, tbook):
 
 if __name__ == '__main__':
     rar = rarity()
-    mn = menus(); sprites()
     tb = table_book(); pa = particles()
     os.makedirs(PREVIEWS, exist_ok=True)
-    preview(rar, mn, pa, tb)
+    preview(rar, None, pa, tb)
     print('ok')

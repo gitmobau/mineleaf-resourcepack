@@ -10,7 +10,8 @@ dest = os.path.abspath(os.path.expanduser(args[0] if args else '~/ref63'))
 FOLDERS = ['assets/minecraft/' + p for p in (
     'atlases', 'blockstates', 'equipment', 'items', 'models/block', 'models/item', 'particles', 'shaders',
     'textures/block', 'textures/entity/enchantment', 'textures/entity/equipment', 'textures/entity/experience',
-    'textures/gui', 'textures/item', 'textures/misc', 'textures/particle')] + ['assets/minecraft/sounds.json']
+    'textures/entity/player/wide', 'textures/entity/shield', 'textures/gui', 'textures/item', 'textures/misc',
+    'textures/particle')] + ['assets/minecraft/sounds.json']
 
 tmp = tempfile.mkdtemp()
 try:

@@ -1,12 +1,13 @@
 {
   "pack": {
     "description": [
+      "",
       {
-        "text": "Aurora Extras",
-        "color": "#B48CFF"
+        "text": "Aurora Extras ",
+        "color": "#B9B9F8"
       },
       {
-        "text": "\nauras por rareza, huevo, magia y sonidos",
+        "text": "· auras por rareza, huevo, magia y sonidos",
         "color": "#F8B0EA"
       }
     ],

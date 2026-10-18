@@ -5,17 +5,25 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
 
 | Carpeta | Qué hay |
 |---|---|
-| `dist/` | **Los zips listos para instalar**: `Aurora Pack.zip`, `Aurora Outline.zip` y `Aurora Extras.zip` |
-| `packs/Aurora Extras/` | Solo lo nuevo (auras por rareza, huevo del dragón, letras mágicas, libro de la mesa y sonidos), para ponerlo **encima** de Aurora / Aurora Celestial / Aurora HUD XL sin tocar agua, corazones, menús ni armaduras. Lo monta `build.py` copiando de `Aurora Pack` |
+| `dist/` | **Los zips listos para instalar**: `Aurora Pack.zip`, `Aurora Outline.zip`, `Aurora HUD XL.zip`, `Aurora EMF.zip`, `Aurora Celestial.zip` y `Aurora Extras.zip` |
 | `packs/Aurora Pack/` | Pack principal. Se genera entero con los scripts (no editar a mano) |
 | `packs/Aurora Outline/` | Borde de bloque neón (core shader `rendertype_lines`). Escrito a mano |
+| `packs/Aurora HUD XL/` | Opcional: marcos del HUD y menús temáticos que sobresalen de su tamaño vanilla. Texturas generadas por `hud_xl.py` y `menus_xl.py` + core shader `position_tex_color` escrito a mano |
+| `packs/Aurora EMF/` | Opcional, necesita los mods **Entity Model Features** y **Entity Texture Features**: armadura de netherita en 3D (cresta y alas en el casco, joya en la frente y en el pecho, hombreras y faldones de láminas, cinturón, rodilleras, punteras). Generado por `emf.py` |
+| `packs/Aurora Celestial/` | Opcional (EMF + ETF), **en lugar de** Aurora EMF: netherita y diamante que no parecen armadura. Aureola doble con destellos; un gato que viaja en su mochila con cara de gato, se ha subido a tu hombro izquierdo, asoma la cabeza mirando alrededor y de vez en cuando se queda dormido; cinturón de cinta con lazo y nubes esponjosas alrededor de los pies. Netherita: gato blanco y tonos pastel; diamante: gato negro con ojos que brillan. Generado por `celestial.py` |
 | `scripts/` | Generadores en Python + Pillow, validador y `build.py` |
-| `previews/` | Capturas y GIFs para ver el resultado sin abrir el juego. `previews/juego/` son capturas reales dentro de Minecraft 26.3 (las genera `mod/`, `./gradlew runClientGameTest`) |
+| `packs/Aurora Extras/` | Solo lo nuevo: auras por rareza, huevo del dragón, letras mágicas, libro de la mesa y sonidos. Va **encima de todo** y no toca agua, corazones, menús ni armaduras. Lo monta `build.py` copiando de `Aurora Pack` |
+| `previews/` | Capturas y GIFs para ver el resultado sin abrir el juego. `previews/juego*/` son capturas reales dentro de Minecraft 26.3 (las genera `mod/`, `./gradlew runClientGameTest`) |
 | `HANDOFF.md` | Contexto técnico completo, decisiones verificadas y pendientes |
+| `PROMPT_CODEX.md` | Prompt listo para pegar en Codex y seguir con el pack |
+| `PROMPT_CODEX_ARMAS.md` | Prompt para Codex: arco, ballesta, maza, tótem, flechas, perla y escudo en estilo Aurora |
+| `PROMPT_CODEX_AUREOLA.md` | Prompt para Codex: netherita "celestial" con aureola y anillos de luz (EMF + ETF) |
 
 ## Instalar
-1. Copia los dos zips de `dist/` a `%APPDATA%\.minecraft\resourcepacks`.
-2. En el juego, activa **Aurora Outline encima de Aurora Pack**.
+1. Copia los zips de `dist/` a `%APPDATA%\.minecraft\resourcepacks`.
+2. En el juego, actívalos en este orden (de arriba a abajo): **Aurora Extras**, **Aurora EMF** (o **Aurora Celestial**, nunca los dos), **Aurora Outline**, **Aurora HUD XL**, **Aurora Pack**.
+   Aurora EMF solo hace algo con los mods Entity Model Features + Entity Texture Features instalados (Fabric o NeoForge 26.3).
+   Aurora HUD XL es opcional: si los marcos salen aplastados o raros, desactívalo y vuelves al HUD normal de Aurora.
 
 ## Regenerar
 ```bash
@@ -29,25 +37,101 @@ No están en el repo porque son assets de Mojang. Para conseguirlas:
 `ref63/` del zip de traspaso y genera exactamente los mismos zips. También vale el
 `versions/26.3/26.3.jar`.
 
-`build.py` borra y regenera `packs/Aurora Pack`, ejecuta `gen.py → magic.py → gear.py → grimorio.py →
-hardcore.py → sonidos.py` (en ese orden, porque los últimos sobrescriben a los primeros), pasa `validate.py`
-y crea los zips. `sonidos.py` necesita `numpy` y `ffmpeg` con libvorbis.
+`build.py` borra y regenera `packs/Aurora Pack`, ejecuta `gen.py → magic.py → gear.py → icons.py → extras.py → screens.py` (en ese
+orden, porque los últimos sobrescriben a los primeros), luego `hud_xl.py → menus_xl.py → emf.py → celestial.py → grimorio.py → hardcore.py → sonidos.py → optimize.py`, monta `Aurora Extras`, pasa `validate.py` y crea los zips.
 La salida es determinista: con la misma entrada salen los mismos bytes.
 
 ### Qué hace cada script
 - `gen.py`: base v1 (mira, fondo de la barra de XP, indicadores de ataque, `pack.png` y `pack.mcmeta`).
+- `icons.py`: corazones con la paleta Aurora (cada estado con sus colores: veneno, wither, congelado, absorción, montura, hardcore) y la comida convertida en estrellas, todo animado y sincronizado.
+- `extras.py`: arco (4 estados), ballesta (6 estados), maza, tótem, flechas, perla de ender y las dos bases de escudo en Aurora, más objetos de combate, magia y utilidad con un pintor genérico (cada familia de color va a su tono pastel): tridente, élitros (objeto y puestos), cohete, estrella de fuegos, carga de viento, varas de breeze y blaze, polvo de blaze, ojo de ender, estrella del Nether, fragmento de eco, botella de experiencia, libro encantado, pociones (botella), catalejo, caña de pescar, tijeras, mechero, cuerno, etiqueta, rienda y pincel. Tótem y manzana dorada con una gama dorada pastel; cuerdas y herrajes del arco y la ballesta en claro. Reutiliza los pintores de `gear.py`, mantiene exactamente tamaños y canales alpha vanilla y comprueba esa igualdad al generar. Texturas estáticas; madera/cuerda lavanda-perla y cristal iridiscente. La punta de la flecha con poción queda casi neutra para conservar el tinte del juego; también se recolorea su astil. Genera `previews/extras.png` con comparaciones vanilla/Aurora. Solo requiere volver a copiar `dist/Aurora Pack.zip`.
 - `magic.py`: "Marco mágico". Menús (inventario, mesa de crafteo, hornos, cofre grande y shulker) y sprites animados (hotbar, selección, casilla resaltada, botón del libro de recetas, fuego y flecha del horno, XP).
-- `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (túnica galáctica + capa 3D), también puestas en bebés, caballos y nautilus.
-- `grimorio.py`: auras por rareza en herramientas (normal → **rara** si tiene Reparación → **legendaria** con Reparación +
-  Irrompibilidad III + Filo/Castigo/Perdición V o Eficiencia V), menús de mesa de encantamientos, yunque y muela,
-  botones y gemas de nivel animados, el libro que flota sobre la mesa y las letras mágicas y partículas de golpe.
-  Los libros encantados (objeto) se dejan sin tocar: el usuario usa su propio pack para eso.
-- `hardcore.py`: corazones animados (normal y hardcore, con veneno, wither, congelado, absorción y montura),
-  hambre y armadura a juego, y el huevo del dragón como trofeo (galaxia con auroras animadas que brilla).
-- `sonidos.py`: sonidos sintetizados (campanillas) al encantar, usar el yunque, subir de nivel y coger
-  experiencia. Mono Ogg Vorbis, generados desde cero.
+- `gear.py`: herramientas animadas, aura de encantamiento, brillo de encantamiento, armaduras de diamante (cristal) y de netherita (ópalo claro, iconos y armadura puesta con el mismo estilo: contorno lavanda, ribete iridiscente pastel por dentro y metal perla en 4 tonos suaves sobre la silueta vanilla), también puestas en bebés, caballos y nautilus. Sin capa.
+- `hud_xl.py`: texturas de Aurora HUD XL (hotbar con alas de cristal, selección con corona y halo, mano secundaria con aguja, fondo de las barras de jefe con gemas en los extremos) y previsualización del HUD en `previews/`.
+- `menus_xl.py`: menús temáticos de Aurora HUD XL (ver abajo): lista de pantallas, construcción de cada fondo y una emulación del shader que comprueba que cada pantalla sale al píxel. Genera `previews/menus_xl.png` y `menus_xl_2.png`.
+- `screens.py`: quita los títulos de los menús (claves de idioma vacías), pantallas sin contenedor, retocadas en su sitio (sin shader): libro (cuero violeta, papel perla, cinta y amuleto), carteles y carteles colgantes de las 13 maderas en pastel, fondos de opciones y menús, separadores, botones y demás controles (deslizadores, campos de texto, casillas, pestañas, barras), tooltips, iconos del selector de modo y el logo del título. También las barras de jefe (los 7 colores en pastel, progreso con brillo animado y muescas violeta) y los toasts (recetas a medida, sistema, tutorial y "sonando ahora" por luminancia; iconos grises del tutorial en Aurora). Los logros (ventana de progresos y su toast) se dejan vanilla a propósito. Genera `previews/pantallas.png`.
+- `menu_themes.py`: utilidades de dibujo y los 25 temas (marco, fondo, casillas y adornos que sobresalen).
+- `emf.py`: pack Aurora EMF (modelos `.jem` de EMF para la netherita, con sus `.properties`) y vista 3D en `previews/emf_netherite.png` con un pequeño renderizador propio.
+- `celestial.py`: pack Aurora Celestial (modelos `.jem` animados por pieza, texturas 2D transparentes con capa emisiva `_e.png`) y vista previa animada `previews/celestial.gif` (netherita y diamante, frente y espalda).
+- `grimorio.py`: auras por rareza en herramientas de diamante y netherita (normal → **dorada** con Reparación →
+  **legendaria** con Reparación + Irrompibilidad III + Filo/Castigo/Perdición V o Eficiencia V), el libro que flota sobre
+  la mesa y las letras mágicas y partículas de golpe. Sus menús no se usan (los da `menus_xl.py`/`magic.py`).
+- `hardcore.py`: el huevo del dragón como trofeo (galaxia con auroras animadas que brilla). Sus corazones no se usan
+  (los da `icons.py`).
+- `sonidos.py`: sonidos sintetizados (campanillas) al encantar, usar el yunque, subir de nivel y coger experiencia.
+  Mono Ogg Vorbis, generados desde cero. Necesita `numpy` y `ffmpeg` con libvorbis.
+- `optimize.py`: optimización sin pérdida al final de la build (antes de validar). Junta fotogramas repetidos de las animaciones (el juego sube a la GPU cada cambio de fotograma; menos cambios = menos trabajo por tick y menos memoria) y guarda como PNG de paleta exacta las texturas con transparencia y ≤256 colores (comprobado píxel a píxel). Nada cambia en pantalla.
 - `validate.py`: validación estática contra la 26.3. Revisa JSON, tamaños y frames de las animaciones, nine-slice, referencias de modelos y texturas, definiciones de items, capas de equipamiento, compilación de los shaders en las 5 variantes OIT con `glslangValidator` y que las salidas del vsh coincidan con las entradas del fsh.
-- `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta.
-- `prev.py`: hoja de previsualización antigua de la v1, se conserva como referencia.
+- `fetch_ref.py`: descarga la referencia vanilla 26.3 desde misode/mcmeta, incluida `textures/entity/shield/` (en la 26.3 contiene `shield_base.png` y `shield_base_nopattern.png`).
 
 Recursos externos útiles (espejos de assets, esquemas, shaders, EMF/ETF y pixel art): ver `RECURSOS.md`.
+
+## Aurora HUD XL: menús temáticos
+Estilo "nubes" (el favorito del usuario, nacido en el ahumador): degradado pastel, nubes suaves de fondo, casillas
+claras, marco perla y nubes que sobresalen; cada pantalla tiene su tono de cielo y un emblema de su función arriba.
+El inventario, la mesa de crafteo, el crafteador y los hornos conservan su tema propio (petición del usuario).
+
+| Pantalla | Estética |
+|---|---|
+| Inventario | Observatorio estelar: lunas en las esquinas, rosa de los vientos, cielo nocturno y ventana de aurora |
+| Mesa de crafteo | Taller del fabricador: engranajes de latón, martillo y llave cruzados, fondo de plano |
+| Horno | Infierno celestial: llamas pastel con núcleo dorado, halo, alas de ángel y brasas |
+| Alto horno | Forja de supernova: estallido estelar, pernos, rejillas de plasma y grietas brillantes |
+| Ahumador | Ahumador de nubes: nubes esponjosas, bocanadas de humo, luna y cielo pastel |
+| Cofre (todos los tamaños) | Nubes (cielo crema → rosa → lila) con candado dorado |
+| Caja de shulker | Nubes (cielo lila) con el caparazón del shulker |
+| Yunque | Nubes (cielo perla lavanda) con un yunque |
+| Baliza | Santuario del faro: haz de luz hacia arriba, pirámides de bloques y gemas |
+| Soporte para pociones | Nubes (cielo menta → azul → lila) con un matraz |
+| Mesa de cartografía | Mesa del cartógrafo: rosa de los vientos, mapas enrollados y pergamino con rutas |
+| Crafteador | Taller autómata: antorchas de redstone, repetidor, pistones y circuitos |
+| Dispensador y soltador | Nubes (cielo azul) con una flecha |
+| Mesa de encantamientos | Nubes (cielo violeta → rosa) con un libro abierto y una estrella |
+| Afiladora | Nubes (cielo perla rosado) con una rueda de piedra |
+| Tolva | Nubes (cielo azul lavanda) con un embudo y estrellas |
+| Caballo | Nubes (cielo verde prado → crema) con una herradura |
+| Telar | Taller de la tejedora: banderines, ovillos, carretes y tela tejida |
+| Nautilus | Nubes (cielo de mar) con una concha de nautilus |
+| Mesa de herrería | Nubes (cielo dorado → lila) con una corona |
+| Cortapiedras | Nubes (cielo lila → azul) con una gema |
+| Aldeano | Mercado: toldo de rayas festoneado, esmeralda y cajas |
+| Inventario creativo (3 pestañas) | Estudio del creador: cristales arcoíris por la derecha (arriba y abajo van las pestañas, y el juego vuelve a dibujar la rejilla recortando la textura, así que el dibujo vanilla no se puede desplazar) |
+| Libro de recetas (panel) | Recetario estelar: libro abierto con estrellas, esquinas doradas y cintas marcapáginas colgando |
+| Selector de modo de juego (F3+F4) | Portal de modos: estrella portal arriba y flecos de cristal abajo |
+
+Sin títulos: Aurora Pack trae `lang/en_us.json`, `es_es.json` (y variantes) que dejan vacíos los títulos de los
+menús y el rótulo "Inventario" (`container.chest`, `container.inventory`...; lo genera `screens.py`). Siguen los
+títulos que son nombres de entidad o de pestaña (caballo, nautilus, aldeano, pestañas del creativo), porque vaciarlos
+borraría esos nombres en todo el juego.
+
+## Aurora HUD XL: cómo sobresalen los marcos
+El juego siempre mete un sprite de la GUI en su rectángulo fijo (la hotbar ocupa 182×22 pase lo que pase), así que una
+textura más grande solo se vería aplastada. Para que sobresalga:
+- Cada sprite XL lleva en las 4 esquinas de cada frame un píxel marcador casi invisible: RGBA = (sobresale_x,
+  sobresale_y, 167, esquina) con esquina 1 = arriba-izq, 2 = arriba-dcha, 3 = abajo-izq, 4 = abajo-dcha.
+- `shaders/core/position_tex_color.vsh` (el shader de los sprites de la GUI) lee en cada vértice el texel de su propia
+  esquina y, si es el marcador de esa esquina, empuja el vértice hacia fuera esos píxeles. El `.fsh` descarta los marcadores.
+- La esquina de cada vértice sale del orden en que el juego emite los quads de la GUI (arriba-izq, abajo-izq, abajo-dcha,
+  arriba-dcha). Así un sprite normal pegado a uno XL en el atlas nunca lee el marcador del vecino.
+- Cuánto sobresale cada uno: hotbar 12 px a los lados y 18 hacia arriba (las alas suben junto a la XP y los corazones),
+  selección 4 a los lados y 2 arriba, mano secundaria 5 hacia fuera y 18 arriba. Nada sobresale por abajo (borde de pantalla).
+- Los fondos de menú no son sprites del atlas: el juego recorta siempre una ventana fija (176×166 casi siempre, 230×219
+  la baliza, 276×166 el aldeano en una textura de 512×256, 195×136 el creativo). Por eso el dibujo grande empieza en (0,0) de la textura y, junto a cada marcador, hay un segundo texel
+  (du, dv, 168, esquina) que dice cuánto se desplaza la UV de esa esquina. El cofre se dibuja en dos trozos (filas +
+  inventario) y su textura lleva marcadores para 1 a 6 filas. El `.fsh` sustituye los texels marcadores por el de al lado.
+- `validate.py` acepta un sprite de la GUI más grande que el vanilla solo si sus marcadores son coherentes en todos los
+  frames, el tamaño es vanilla + márgenes, no usa nine-slice y el pack trae el shader.
+
+## Aurora EMF: netherita en 3D
+- Desde la 1.21.9 la armadura es un modelo por pieza: `helmet`, `chestplate`, `leggings` y `boots` (EMF busca
+  `player_helmet.jem`… y si no existe usa `helmet.jem`; los nombres viejos `player_outer_armor`/`player_inner_armor` ya
+  no se usan). El pack trae `player_helmet2.jem`, `player_slim_helmet2.jem` y `helmet2.jem` (respaldo para mobs), cada uno con su `.properties`, y lo mismo para las demás piezas. Cada `.properties` elige la variante 2 solo
+  mientras se lleva esa pieza de netherita (`items=netherite_helmet`, ...); si no, EMF usa el modelo vanilla. Vale para
+  el jugador (normal y slim) y para cualquier mob bípedo con netherita. Las demás armaduras no cambian.
+- Las piezas nuevas se añaden a las partes vanilla (`attach: true`) y sus caras usan UV por cara sobre "muestras de
+  material" (metal, ribete, gemas...) que `gear.py` pinta en las texturas de netherita, en texels que ninguna caja de
+  armadura vanilla usa. Sin EMF no se ven.
+- Las placas planas (hombreras, faldones, punteras) usan en sus cantos la muestra `lame` (brillo arriba, metal, contorno
+  abajo), así cada lámina se separa de la siguiente. Las piezas del lado izquierdo son el espejo de las del derecho.
+- `HUMANOID_BOXES`/`opal_regions()` en `gear.py`: los contornos solo se dibujan donde la placa termina dentro de una cara,
+  no en las costuras entre caras de la caja.

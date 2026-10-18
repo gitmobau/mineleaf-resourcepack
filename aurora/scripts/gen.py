@@ -150,7 +150,7 @@ for n in ['slot_highlight_back', 'slot_highlight_front']:
     save(out, 'gui/sprites/container/' + n + '.png')
     shutil.copy(REF + '/gui/sprites/container/' + n + '.png.mcmeta', TX + '/gui/sprites/container/' + n + '.png.mcmeta')
 
-# (water was removed: the user wants vanilla / their base pack's water)
+# (water was removed: the user wants the normal water of their base packs)
 
 def hsv(p):
     h, s, v = colorsys.rgb_to_hsv(*[q / 255 for q in p[:3]])
@@ -225,7 +225,7 @@ icon.save(PACK + '/pack.png', optimize=True)
 with open(PACK + '/pack.mcmeta', 'w') as f:
     json.dump({"pack": {
         "description": ["", {"text": "Aurora ", "color": "#B9B9F8"},
-                        {"text": "· pastel HUD y herramientas", "color": "#F8B0EA"}],
+                        {"text": "· menús, HUD, herramientas y armaduras", "color": "#F8B0EA"}],
         "min_format": 84,
         "max_format": 97
     }}, f, indent=2, ensure_ascii=False)

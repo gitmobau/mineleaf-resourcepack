@@ -1,4 +1,4 @@
-# Aurora gear: animated tools, enchantment aura, diamond crystal armor, netherite galactic robe + 3D cloak.
+# Aurora gear: animated tools, enchantment aura, diamond crystal armor, light opal netherite armor.
 import os, math, json, random, colorsys
 from PIL import Image
 
@@ -51,7 +51,7 @@ def save_json(obj, rel):
 def hsh(x, y, s=0):
     return ((x * 73856093) ^ (y * 19349663) ^ (s * 83492791)) & 0xffff
 
-# ------------------------------------------------------------------ crystal / galaxy painters
+# ------------------------------------------------------------------ crystal painter
 def crystal_px(p, t):
     """diamond-family pixel -> aurora crystal (by original brightness)"""
     hh, s, v = hsv(p)
@@ -63,20 +63,6 @@ def crystal_px(p, t):
     if v < 0.85:  return mix(c, (150, 130, 230), 0.10)
     if s > 0.4:   return mix(c, WHITE, 0.30)
     return mix(c, WHITE, 0.70)
-
-def galaxy_px(x, y, seed=0, scale=1.0, phase=0.0):
-    u, v = x * scale, y * scale
-    base = mix((18, 10, 44), (58, 28, 104), 0.5 + 0.5 * math.sin(u * 0.21 + v * 0.13 + seed))
-    neb = (math.sin(u * 0.33 + seed * 1.7 + phase * 6.283) + math.sin(v * 0.27 - u * 0.11 + seed)
-           + math.sin((u + v) * 0.19 + seed * 0.5)) / 3
-    if neb > 0.15:
-        base = mix(base, cyc(u * 0.02 + v * 0.015 + seed * 0.1 + phase, VIVID), min(0.42, (neb - 0.15) * 1.0))
-    r = hsh(x, y, seed) % 97
-    if r == 0:
-        base = WHITE
-    elif r in (1, 2):
-        base = mix(base, cyc(r * 0.3 + seed, P), 0.85)
-    return base
 
 # ------------------------------------------------------------------ tools
 TOOLS = ['sword', 'pickaxe', 'axe', 'shovel', 'hoe', 'spear']
@@ -258,162 +244,155 @@ def diamond_armor_icons():
         save_tex(strip, 'item/%s.png' % n, meta); out[n] = strip
     return out
 
-def netherite_armor_icons():
-    out = {}
-    N = 12
-    for k, a in enumerate(ARMOR):
-        n = 'netherite_' + a
-        im = ref('item/%s.png' % n)
-        mask = [[im.getpixel((x, y))[3] > 0 for y in range(16)] for x in range(16)]
-        strip = Image.new('RGBA', (16, 16 * N))
-        for f in range(N):
-            ph = f / N
-            for y in range(16):
-                for x in range(16):
-                    if not mask[x][y]:
-                        continue
-                    def inside(xx, yy):
-                        return 0 <= xx < 16 and 0 <= yy < 16 and mask[xx][yy]
-                    edge = any(not inside(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
-                    inner = (not edge) and any(not inside(x + dx, y + dy) for dx in (-2, 0, 2) for dy in (-2, 0, 2) if abs(dx) + abs(dy) == 2)
-                    if edge:
-                        c = OUT
-                    elif inner:
-                        c = mix(cyc((x + y) / 32 + ph, VIVID), WHITE, 0.25)
-                    else:
-                        c = mix((20, 12, 48), (54, 30, 100), (x + y) / 30)
-                        if hsh(x, y, k) % 9 == 0:
-                            b = max(0, math.sin((ph + (hsh(y, x) % 7) / 7) * 2 * math.pi)) ** 2
-                            c = mix(mix(c, cyc(x / 16, VIVID), 0.5), WHITE, b)
-                    strip.putpixel((x, f * 16 + y), C(c))
-        save_tex(strip, 'item/%s.png' % n, {"animation": {"frametime": 3}})
-        out[n] = strip
-    return out
-
 # ------------------------------------------------------------------ worn armor
 def box_faces(u, v, w, h, d):
     return {'top': (u + d, v, w, d), 'bottom': (u + d + w, v, w, d), 'right': (u, v + d, d, h),
             'front': (u + d, v + d, w, h), 'left': (u + d + w, v + d, d, h), 'back': (u + 2 * d + w, v + d, w, h)}
 
-def paint_face(img, face, fn):
-    x0, y0, w, h = face
-    for j in range(h):
-        for i in range(w):
-            c = fn(i, j, w, h, x0 + i, y0 + j)
-            if c is not None:
-                img.putpixel((x0 + i, y0 + j), C(c[:3], c[3] if len(c) > 3 else 255))
+def value_range(im):
+    vs = [hsv(im.getpixel((x, y)))[2] for y in range(im.height) for x in range(im.width) if im.getpixel((x, y))[3]]
+    return min(vs), max(vs)
 
-def trim(t):
-    return mix(cyc(t, VIVID), WHITE, 0.2)
+# Light opal netherite. One painter for icons and worn armour so they match: dark lavender outline where the plate
+# ends, a pastel iridescent rim just inside it, and smooth pearl metal (4 posterised tones) inside. The vanilla
+# brightness only decides which tone a pixel gets, after a light smoothing, so the netherite noise disappears.
+OPAL_LINE = (112, 90, 178)          # plate outline on worn armour
+OPAL_ICON_LINE = (66, 48, 124)      # icons need more contrast against the slot
+OPAL_TONES = [(158, 142, 214), (192, 182, 236), (220, 214, 250), (243, 241, 255)]
 
-def galaxy_robe():
-    S = 4
-    hum = Image.new('RGBA', (64, 32)); leg = Image.new('RGBA', (64, 32))
-    g = lambda gx, gy, s=S: galaxy_px(gx, gy, seed=s)
-    # --- hood (head 0,0 8x8x8)
-    hf = box_faces(0, 0, 8, 8, 8)
-    for name, face in hf.items():
-        if name == 'front':
-            def fn(i, j, w, h, X, Y):
-                inner = 1 <= i <= 6 and 2 <= j <= 7
-                if inner:
-                    return None                      # face opening
-                rim = (i in (1, 6) and j >= 2) or (j == 1 and 1 <= i <= 6)
-                return trim(i / 8 + 0.1) if rim else g(X, Y)
-        elif name == 'bottom':
-            fn = lambda i, j, w, h, X, Y: None
-        else:
-            def fn(i, j, w, h, X, Y, name=name):
-                if name != 'top' and j == h - 1:
-                    return trim(i / w * 0.3 + 0.4)
-                return g(X, Y)
-        paint_face(hum, face, fn)
-    gem = lambda: (120, 235, 255)
-    # --- robe torso (body 16,16 8x12x4)
-    for name, face in box_faces(16, 16, 8, 12, 4).items():
-        def fn(i, j, w, h, X, Y, name=name):
-            if name == 'bottom':
-                return g(X, Y)
-            if name == 'front':
-                if j <= 2 and (i == 3 - j or i == 4 + j):
-                    return trim(0.2 + j * 0.05)          # V collar
-                if 3 <= i <= 4 and j == 3:
-                    return WHITE if i == 3 else gem()    # crystal clasp
-                if i in (3, 4) and j > 3:
-                    return trim(0.55 + j / 40)           # front opening trim
-                if j == 8:
-                    return trim(0.8 + i / 30)            # sash
-            if name in ('left', 'right', 'back') and j == 8:
-                return trim(0.8 + i / 30)
-            return g(X, Y)
-        paint_face(hum, face, fn)
-    # --- sleeves (arm 40,16 4x12x4)
-    for name, face in box_faces(40, 16, 4, 12, 4).items():
-        def fn(i, j, w, h, X, Y, name=name):
-            if name not in ('top', 'bottom') and j >= h - 2:
-                return trim(0.35 + i / 12 + (j - h) * 0.05)
-            return g(X, Y)
-        paint_face(hum, face, fn)
-    # --- boots (leg 0,16 4x12x4) lower part only
-    for name, face in box_faces(0, 16, 4, 12, 4).items():
-        def fn(i, j, w, h, X, Y, name=name):
-            if name == 'top':
-                return None
-            if name == 'bottom':
-                return trim(0.6)
-            if j < 7:
-                return None
-            if j == 7:
-                return trim(0.15 + i / 10)
-            if j == h - 1:
-                return trim(0.6 + i / 10)
-            return g(X, Y)
-        paint_face(hum, face, fn)
-    # --- leggings layer: robe skirt over legs + waist
-    for name, face in box_faces(0, 16, 4, 12, 4).items():
-        def fn(i, j, w, h, X, Y, name=name):
-            if name == 'top':
-                return g(X, Y)
-            if name == 'bottom':
-                return None
-            if j >= h - 2:
-                return trim(0.05 + i / 10 + j * 0.02)    # glowing hem
-            if j == h - 3 and (i + X) % 2 == 0:
-                return mix(g(X, Y), WHITE, 0.5)
-            return g(X, Y)
-        paint_face(leg, face, fn)
-    for name, face in box_faces(16, 16, 8, 12, 4).items():
-        def fn(i, j, w, h, X, Y, name=name):
-            if name in ('top',):
-                return None
-            if name == 'bottom':
-                return g(X, Y)
-            if j < 7:
-                return None
-            if j == 8:
-                return trim(0.8 + i / 30)
-            return g(X, Y)
-        paint_face(leg, face, fn)
-    save_tex(hum, 'entity/equipment/humanoid/netherite.png')
-    save_tex(leg, 'entity/equipment/humanoid_leggings/netherite.png')
-    # --- 3D cloak on the elytra geometry (wing box texOffs 22,0 size 10x20x2)
-    cloak = Image.new('RGBA', (64, 32))
-    for name, face in box_faces(22, 0, 10, 20, 2).items():
-        def fn(i, j, w, h, X, Y, name=name):
-            if name in ('front', 'back'):
-                if j >= h - 2:
-                    return trim(0.1 + i / 20 + j * 0.03)
-                if (name == 'front' and i == 0) or (name == 'back' and i == w - 1):
-                    return trim(0.4 + j / 40)
-                if j == 0:
-                    return trim(0.7)
-            return galaxy_px(X * 2, Y * 2, seed=9)
-        paint_face(cloak, face, fn)
-    save_tex(cloak, 'entity/equipment/wings/aurora_cloak.png')
-    eq = json.load(open(REF + 'equipment/netherite.json'))
-    eq["layers"]["wings"] = [{"texture": "minecraft:aurora_cloak"}]
-    save_json(eq, 'equipment/netherite.json')
-    return hum, leg, cloak
+def opal_regions(size, boxes):
+    """pixel -> region rect; edges are only detected inside a region (box faces wrap, so a face border is no edge)"""
+    W, H = size
+    reg = {}
+    for (u, v, w, h, d) in boxes:
+        for fx, fy, fw, fh in box_faces(u, v, w, h, d).values():
+            for yy in range(fy, fy + fh):
+                for xx in range(fx, fx + fw):
+                    reg[(xx, yy)] = (fx, fy, fw, fh)
+    return lambda x, y: reg.get((x, y), (0, 0, W, H))
+
+def opal_clean(im, region):
+    """tidy the vanilla silhouette: drop opaque pixels hanging on by one side, fill notches closed on three sides"""
+    W, H = im.size
+    o = im.copy()
+    N4 = ((1, 0), (-1, 0), (0, 1), (0, -1))
+    def inside(x, y, nx, ny):
+        fx, fy, fw, fh = region(x, y)
+        return fx <= nx < fx + fw and fy <= ny < fy + fh
+    for y in range(H):
+        for x in range(W):
+            ns = [im.getpixel((x + dx, y + dy)) for dx, dy in N4 if inside(x, y, x + dx, y + dy)]
+            full = [q for q in ns if q[3]]
+            if im.getpixel((x, y))[3] and len(full) <= 1 and len(ns) >= 3:
+                o.putpixel((x, y), (0, 0, 0, 0))
+            elif not im.getpixel((x, y))[3] and len(full) >= 3 and len(ns) == 4:
+                o.putpixel((x, y), max(full, key=lambda q: sum(q[:3])))
+    return o
+
+def opal_layers(im, region=None):
+    """-> (edge set, rim set, smoothed 0..1 brightness) of the opaque pixels"""
+    W, H = im.size
+    region = region or (lambda x, y: (0, 0, W, H))
+    op = lambda x, y: 0 <= x < W and 0 <= y < H and im.getpixel((x, y))[3] > 0
+    vr = value_range(im)
+    t = {(x, y): (hsv(im.getpixel((x, y)))[2] - vr[0]) / max(1e-6, vr[1] - vr[0])
+         for y in range(H) for x in range(W) if op(x, y)}
+    def near(x, y, dx, dy):              # neighbour inside the same region, or None when it leaves the region
+        fx, fy, fw, fh = region(x, y)
+        nx, ny = x + dx, y + dy
+        return (nx, ny) if fx <= nx < fx + fw and fy <= ny < fy + fh else None
+    N4 = ((1, 0), (-1, 0), (0, 1), (0, -1))
+    edge = {p for p in t if any((q := near(*p, dx, dy)) is not None and q not in t for dx, dy in N4)}
+    rim = {p for p in t if p not in edge and any((q := near(*p, dx, dy)) in edge for dx, dy in N4)}
+    smooth = {}
+    for (x, y), v in t.items():
+        ns = [t[q] for dx, dy in N4 if (q := near(x, y, dx, dy)) in t]
+        smooth[(x, y)] = 0.5 * v + 0.5 * (sum(ns) / len(ns) if ns else v)
+    return edge, rim, smooth
+
+def opal_tone(s, x, y, region):
+    """smoothed brightness + soft top-lit gradient inside the region -> one of the pearl tones"""
+    fx, fy, fw, fh = region
+    g = 1 - (y - fy) / max(1, fh - 1)
+    k = s * 0.45 + g * 0.6
+    i = 0 if k < 0.3 else 1 if k < 0.55 else 2 if k < 0.8 else 3
+    c = OPAL_TONES[i]
+    return mix(c, cyc((x * 0.5 + y) / 24, VIVID), 0.18) if i == 3 else c
+
+def opal_paint(im, region=None, line=OPAL_LINE, ph=0.0):
+    W, H = im.size
+    region = region or (lambda x, y: (0, 0, W, H))
+    edge, rim, smooth = opal_layers(im, region)
+    o = Image.new('RGBA', im.size)
+    for (x, y), s in smooth.items():
+        if (x, y) in edge: c = line
+        elif (x, y) in rim: c = mix(cyc((x + y) / 28 + ph, VIVID), WHITE, 0.42)
+        else: c = opal_tone(s, x, y, region(x, y))
+        o.putpixel((x, y), C(c, im.getpixel((x, y))[3]))
+    return o
+
+def netherite_armor_icons():
+    """item icons painted like the worn armour; the rim shimmers and a few pixels twinkle (12 frames)"""
+    out = {}
+    N = 12
+    for k, a in enumerate(ARMOR):
+        n = 'netherite_' + a
+        im = ref('item/%s.png' % n)
+        edge, rim, smooth = opal_layers(im)
+        stars = [p for p in sorted(smooth) if p not in edge and p not in rim and smooth[p] > 0.45 and hsh(*p, k) % 11 == 0][:3]
+        strip = Image.new('RGBA', (16, 16 * N))
+        for f in range(N):
+            fr = opal_paint(im, line=OPAL_ICON_LINE, ph=f / N)
+            for i, (x, y) in enumerate(stars):
+                b = max(0.0, math.sin((f / N + i / len(stars)) * 2 * math.pi)) ** 3
+                if b > 0.05:
+                    fr.putpixel((x, y), C(mix(fr.getpixel((x, y)), WHITE, b)))
+            strip.alpha_composite(fr, (0, f * 16))
+        save_tex(strip, 'item/%s.png' % n, {"animation": {"frametime": 3}})
+        out[n] = strip
+    return out
+
+# Material swatches for the optional Aurora EMF pack (3D netherite pieces). They live in texels that no vanilla armour
+# box ever samples (corners of the box layouts), so without Entity Model Features they are never drawn.
+EMF_SWATCHES = {'metal': (0, 0, 8, 8), 'trim': (24, 0, 8, 8), 'dark': (32, 0, 8, 8), 'gem': (56, 0, 4, 4),
+                'gem2': (60, 0, 4, 4), 'gold': (56, 4, 4, 4), 'glow': (60, 4, 4, 4), 'trimv': (56, 16, 8, 16),
+                'lame': (36, 16, 8, 3)}   # thin plate edge: highlight / metal / outline, for the sides of flat plates
+
+def paint_swatches(o):
+    def swatch(name, fn, border=True):
+        x0, y0, w, h = EMF_SWATCHES[name]
+        for j in range(h):
+            for i in range(w):
+                edge = border and (i in (0, w - 1) or j in (0, h - 1))
+                o.putpixel((x0 + i, y0 + j), C(OPAL_LINE if edge else fn(i, j, w, h)))
+    swatch('metal', lambda i, j, w, h: OPAL_TONES[3] if j == 1 else OPAL_TONES[2 if j < h // 2 else 1])
+    swatch('trim', lambda i, j, w, h: mix(cyc((i + j) / (w + h) * 1.5, VIVID), WHITE, 0.4 if j > 1 else 0.7))
+    swatch('dark', lambda i, j, w, h: OPAL_TONES[2] if j == 1 else OPAL_TONES[1 if j < h - 3 else 0])
+    swatch('lame', lambda i, j, w, h: OPAL_TONES[3] if j == 0 else OPAL_TONES[2] if j == 1 else OPAL_LINE, border=False)
+    for j in range(3):
+        for i in (0, 7):
+            o.putpixel((36 + i, 16 + j), C(OPAL_LINE))
+    swatch('trimv', lambda i, j, w, h: mix(cyc(j / h, VIVID), WHITE, 0.6 if i == 1 else 0.35))
+    for name, a, b in (('gem', (255, 170, 220), (210, 80, 170)), ('gem2', (170, 240, 255), (70, 150, 230)),
+                       ('gold', (255, 236, 160), (210, 150, 60)), ('glow', (255, 255, 255), (220, 200, 255))):
+        swatch(name, lambda i, j, w, h, a=a, b=b: WHITE if (i, j) == (0, 0) else mix(a, b, (i + j) / (w + h - 2)), border=False)
+
+HUMANOID_BOXES = [(0, 0, 8, 8, 8), (32, 0, 8, 8, 8), (16, 16, 8, 12, 4), (40, 16, 4, 12, 4), (0, 16, 4, 12, 4)]
+
+def netherite_worn():
+    """player netherite armour, repainted in light opal over the vanilla shapes"""
+    out = []
+    for dst in ('entity/equipment/humanoid/netherite.png', 'entity/equipment/humanoid_leggings/netherite.png'):
+        im = ref(dst); reg = opal_regions(im.size, HUMANOID_BOXES)
+        if 'leggings' not in dst:                     # shoulder plates end on a straight line (no 1-2 px teeth)
+            for y in range(20, 32):
+                for x in range(40, 56):
+                    if y > 25: im.putpixel((x, y), (0, 0, 0, 0))
+                    elif not im.getpixel((x, y))[3]: im.putpixel((x, y), im.getpixel((x, y - 1)))
+        o = opal_paint(opal_clean(im, reg), reg)
+        paint_swatches(o)
+        save_tex(o, dst); out.append(o)
+    return tuple(out)
 
 def diamond_worn():
     out = []
@@ -435,29 +414,22 @@ def other_worn():
             rel = 'entity/equipment/%s/%s.png' % (layer, mat)
             if not os.path.exists(REF + 'textures/' + rel):
                 continue
-            im = ref(rel); o = Image.new('RGBA', im.size); W, H = im.size
-            vs = [hsv(im.getpixel((x, y)))[2] for y in range(H) for x in range(W) if im.getpixel((x, y))[3]]
-            vmean = sum(vs) / max(1, len(vs))
-            for y in range(H):
-                for x in range(W):
-                    p = im.getpixel((x, y))
-                    if not p[3]:
-                        continue
-                    if mat == 'diamond':
-                        c = crystal_px(p, (x * 0.6 + y) / W * 0.6)
-                    else:
-                        v = hsv(p)[2]
-                        c = galaxy_px(x, y, seed=4)
-                        c = tuple(q * max(0.45, min(1.6, 1 + (v - vmean) * 2.2)) for q in c)
-                        if v > vmean + 0.16:
-                            c = mix(c, trim((x + y) / (W + H)), 0.65)
-                    o.putpixel((x, y), C(c, p[3]))
+            im = ref(rel)
+            if mat == 'netherite':
+                o = opal_paint(im)
+            else:
+                o = Image.new('RGBA', im.size); W = im.width
+                for y in range(im.height):
+                    for x in range(W):
+                        p = im.getpixel((x, y))
+                        if p[3]:
+                            o.putpixel((x, y), C(crystal_px(p, (x * 0.6 + y) / W * 0.6), p[3]))
             save_tex(o, rel); out[(layer, mat)] = o
     return out
 
 # ------------------------------------------------------------------ preview
-def player_preview(hum, leg, cloak, skin_front=None):
-    """flat front + back of the robe on a player silhouette, plus cloak panel"""
+def player_preview(hum, leg):
+    """flat front + back of the armour on a player silhouette"""
     def face(img, u, v, w, h, d, which):
         f = box_faces(u, v, w, h, d)[which]
         return img.crop((f[0], f[1], f[0] + f[2], f[1] + f[3]))
@@ -468,15 +440,11 @@ def player_preview(hum, leg, cloak, skin_front=None):
             for yy in range(h):
                 for xx in range(w):
                     c.putpixel((x + xx, y + yy), skin if y else (120, 80, 50, 255))
-        if which == 'back':
-            cl = cloak.crop((36, 2, 46, 22)).resize((14, 26), Image.NEAREST)
         for img, parts in ((leg, [((4, 20), (0, 16, 4, 12, 4)), ((8, 20), (0, 16, 4, 12, 4)), ((4, 8), (16, 16, 8, 12, 4))]),
                            (hum, [((4, 0), (0, 0, 8, 8, 8)), ((4, 8), (16, 16, 8, 12, 4)), ((0, 8), (40, 16, 4, 12, 4)),
                                   ((12, 8), (40, 16, 4, 12, 4)), ((4, 20), (0, 16, 4, 12, 4)), ((8, 20), (0, 16, 4, 12, 4))])):
             for at, (u, v, w, h, d) in parts:
                 c.alpha_composite(face(img, u, v, w, h, d, which), at)
-        if which == 'back':
-            c.alpha_composite(cl, (1, 8))
         return c
     out = Image.new('RGBA', (60, 40), (40, 34, 60, 255))
     out.alpha_composite(body('front'), (6, 4)); out.alpha_composite(body('back'), (34, 4))
@@ -485,7 +453,7 @@ def player_preview(hum, leg, cloak, skin_front=None):
 if __name__ == '__main__':
     t = tools(); glint()
     di = diamond_armor_icons(); ni = netherite_armor_icons()
-    hum, leg, cloak = galaxy_robe(); diamond_worn(); ow = other_worn()
+    hum, leg = netherite_worn(); diamond_worn(); ow = other_worn()
     sheet = Image.new('RGBA', (760, 560), (60, 52, 84, 255))
     for i, n in enumerate(['diamond_sword', 'diamond_pickaxe', 'diamond_axe', 'netherite_sword', 'netherite_pickaxe', 'netherite_spear']):
         strip, au, sz = t[n]
@@ -496,9 +464,8 @@ if __name__ == '__main__':
                            'netherite_helmet', 'netherite_chestplate', 'netherite_leggings', 'netherite_boots']):
         s = (di.get(n) or ni.get(n))
         sheet.alpha_composite(s.crop((0, 0, 16, 16)).resize((64, 64), Image.NEAREST), (10 + i * 92, 200))
-    sheet.alpha_composite(player_preview(hum, leg, cloak), (10, 290))
+    sheet.alpha_composite(player_preview(hum, leg), (10, 290))
     sheet.alpha_composite(hum.resize((256, 128), Image.NEAREST), (390, 290))
-    sheet.alpha_composite(cloak.crop((22, 0, 46, 22)).resize((96, 88), Image.NEAREST), (650, 290))
     os.makedirs(PREVIEWS, exist_ok=True)
     sheet.save(PREVIEWS + '/preview_gear.png')
     # gif of tool animation + aura

@@ -53,5 +53,5 @@ tasks.named("runClientGameTest") {
 	// the test enables this pack before taking screenshots
 	// -PauroraPacks=DIR -PauroraOrder="A,B,C" test another set of packs (bottom to top)
 	jvmArgs "-Daurora.packs=${project.findProperty('auroraPacks') ?: "${rootDir}/../aurora/packs"}",
-		"-Daurora.order=${project.findProperty('auroraOrder') ?: 'Aurora Pack,Aurora Outline'}"
+		"-Daurora.order=${project.findProperty('auroraOrder') ?: 'Aurora Pack,Aurora HUD XL,Aurora Outline,Aurora Extras'}"
 }

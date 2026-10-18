@@ -11,7 +11,7 @@ Inspirado en la capa Aurora y la skin del usuario (skin_aurora_v2.png).
 - Scripts generadores: `Aurora_export\scripts\` (Python + Pillow)
   - `gen.py`   v1: HUD, agua, crosshair, herramientas (base)
   - `magic.py` "Marco mágico": menús (inventario, crafteo, hornos, cofres, shulker) + sprites animados
-  - `gear.py`  herramientas animadas, aura de encantamiento, armaduras, túnica galáctica + capa
+  - `gear.py`  herramientas animadas, aura de encantamiento, armaduras (netherita en ópalo claro)
   - `outline_shaders/` rendertype_lines.vsh/.fsh (borde de bloque neón Aurora)
 - Referencias vanilla: extraer de `versions\26.3\26.3.jar` (el jar NO está ofuscado en 26.x).
   Los scripts esperan las texturas vanilla en `~/ref63/assets/minecraft/...`.
@@ -27,8 +27,7 @@ Inspirado en la capa Aurora y la skin del usuario (skin_aurora_v2.png).
 - Aura de encantamiento: `items/*.json` con condition `has_component` enchantments,
   `"ignore_default": true`, `composite` [modelo base, plano 24x24 animado], `"oversized_in_gui": true`,
   elemento con `light_emission: 15`.
-- Capa 3D sin mods: `equipment/netherite.json` + capa `"wings"` → `entity/equipment/wings/aurora_cloak.png`
-  (WingsLayer no comprueba GLIDER).
+- (Quitado el 2026-10-10) Capa sin mods con `equipment/netherite.json` + capa `"wings"`: el usuario no la quiere.
 - Armadura puesta no se anima (texturas de entidad fuera de atlas). Geometría extra → necesita mods
   Entity Model Features + Entity Texture Features (Fabric).
 - Detección de casillas: borde 55 arriba/izq (run de 17/25), relleno 139, blanco abajo/der (18 y 26 px).
@@ -54,7 +53,174 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   `OIT_WAVELET_RANK` y `OIT_COEFF_ATTACHMENT_COUNT`. El validador usa 8, 3 y 2, y el
   `rendertype_lines` vanilla compila con esa misma configuración (sirve de control).
 
-### Sesión del 2026-10-13: Grimorio, HUD hardcore, huevo y sonidos
+### Aurora HUD XL (sesión del 2026-10-08)
+- Pack nuevo y opcional `packs/Aurora HUD XL`: hotbar, selección y mano secundaria más grandes que su rectángulo vanilla.
+  Explicación del truco (marcadores en las esquinas + `position_tex_color.vsh`) en `aurora/README.md`.
+- Supuesto NO verificado en el jar: los quads de la GUI se emiten en orden arriba-izq, abajo-izq, abajo-dcha, arriba-dcha
+  (como `innerBlit` de siempre) y `gl_VertexIndex % 4` da esa esquina. Si no fuera así, los marcos XL saldrían
+  deformados o aplastados: desactivar el pack y revisar el orden en `BlitRenderState.buildVertices`.
+- `position_tex_color` se usa al arrancar, así que no puede llevar `#include` (el validador lo comprueba).
+- Simulación del shader sobre un atlas con vecinos pegados por todos los lados: los sprites XL crecen exactos y el resto no se mueve.
+
+### Corazones, estrellas y menús XL (sesión del 2026-10-08, 2ª parte)
+- `icons.py` (Aurora Pack): corazones Aurora animados (8 frames × 4 ticks, todos iguales para ir sincronizados) y comida = estrellas.
+- `menus_xl.py` (Aurora HUD XL): 7 menús temáticos que sobresalen 14 px a los lados, 20-22 arriba y 10-12 abajo.
+- Supuestos NO verificados en el jar, además del orden de vértices:
+  - los fondos se dibujan con `blit(GUI_TEXTURED, tex, x, y, 0, 0, 176, h, 256, 256)` por `position_tex_color`;
+  - el cofre hace dos blits: filas (v 0..rows·18+17) e inventario (v 126..222), dibujado justo debajo;
+  - el título y la etiqueta del inventario van donde siempre (placas en `SCREENS` de `menus_xl.py`).
+- El shader ya no se limita a la franja inferior de la pantalla (los menús están en medio); la esquina por
+  `gl_VertexIndex` evita leer marcadores de sprites vecinos (simulado con vecinos pegados por todos los lados).
+- Si Aurora HUD XL está desactivado se ven los menús pastel normales de Aurora Pack.
+
+### Resto de pantallas (sesión del 2026-10-08, 3ª parte)
+- Todas las pantallas con fondo propio de la 26.3 tienen tema XL (25 texturas, tabla en `aurora/README.md`).
+  Temas en `menu_themes.py`; `menus_xl.py` saca ancho, alto y tamaño de textura del vanilla.
+- El creativo solo sobresale por la derecha (ver la 6ª parte) y su barra/caja de búsqueda van oscuras
+  porque el juego escribe ahí en blanco. La baliza no lleva placas: sus textos son claros.
+- Las placas de los títulos se pintan antes que casillas y decoraciones, así nunca tapan nada del juego.
+- Supuestos de posiciones de títulos sin verificar en el jar para: yunque (60,6), herrería (44,15), telar y
+  cartografía (y=4), aldeano (centrado + etiqueta del inventario en 107,72). Si un título queda fuera de su placa,
+  se ajusta en `SCREENS`.
+
+### Pantallas sin contenedor (sesión del 2026-10-08, 4ª parte)
+- Con shader (Aurora HUD XL): libro de recetas (blit desde (1,1), soportado con `origin`) y selector de modo de juego
+  (fondo translúcido conservado; casi llena su textura, 125 de 128, así que solo sobresale arriba/abajo). El motor también
+  conserva huecos del fondo vanilla (alpha 0).
+- Sin shader (Aurora Pack, `screens.py`): libro (cabe en los márgenes libres de su ventana de 192), carteles, fondos
+  y separadores de menús, todos los widgets (mismos nine-slice, color solo según luminancia), tooltips y logo.
+- No tocados a propósito: panoramas del título, logo de Mojang Studios, imágenes de Realms, toasts y barras de jefe.
+
+### Barras de jefe y toasts (sesión del 2026-10-08, 5ª parte)
+- Aurora Pack (`screens.py`): los 7 colores de barra en pastel (el progreso animado 16×2 ticks, 182×5 por frame) y toasts.
+  Los toasts de recetas y tutorial siguen claros (el juego escribe en morado/negro); sistema y "sonando ahora"
+  oscuros (texto blanco/amarillo).
+- Aurora HUD XL (`hud_xl.py`): fondo de barra de jefe 182×5 → 198×11 (gemas dentro del margen, el progreso tapa el resto).
+
+### Primera prueba en el juego (sesión del 2026-10-08, 6ª parte)
+- Capturas del usuario: el truco del shader FUNCIONA (los marcos sobresalen y la mesa de encantamientos cuadra), así que
+  el orden de vértices supuesto es correcto.
+- Creativo: el juego dibuja el fondo entero y además vuelve a dibujar la zona de la rejilla recortando la misma textura
+  en sus coordenadas vanilla. Con el dibujo desplazado (margen izquierdo) esa segunda pasada salía corrida 14 px.
+  Regla: si una pantalla vuelve a recortar su textura, su zona vanilla debe quedarse en su sitio (solo márgenes a la
+  derecha y abajo). El creativo ahora solo sobresale por la derecha. Si otra pantalla sale desplazada, igual.
+- El usuario usa además un pack de modo oscuro (pestañas del creativo y caja de efectos negras, títulos en blanco):
+  las placas de los títulos pasan a ser oscuras con borde claro.
+- Logros: el usuario NO quiere que se toquen. Ventana de progresos y toast de progreso vuelven a vanilla.
+- Netherita puesta: la "túnica galáctica" no gustaba nada. Ahora se recolorea la textura vanilla (y los élitros para la
+  capa) con el estilo del icono: ciruela oscuro, contorno violeta, reflejos iridiscentes y algún destello.
+- Versión 3D de la netherita hecha (ver Aurora EMF).
+
+### Aurora EMF (sesión del 2026-10-09)
+- Pack opcional para Entity Model Features 3.3.x (tiene versión 26.3 Fabric/NeoForge) + Entity Texture Features.
+- Revisado en el código de EMF (github Traben-0/Entity_Model_Features, master): nombres `player_outer_armor`,
+  `player_inner_armor`, `player_slim_*`, `elytra`; variantes sin .jem base permitidas por defecto (la 1 = vanilla);
+  piezas `attach` = hijas de la parte vanilla, posicionadas con la fórmula del exportador de EMF; `rx` se asigna tal cual
+  a xRot (positivo = la capa se abre hacia atrás); la propiedad `items=` de ETF mira armadura y manos.
+- Sin verificar en el juego: que los pivotes de la armadura de la 26.3 sigan siendo los de HumanoidModel
+  (cabeza/cuerpo 0,0,0; brazos ±5,2,0; piernas ±1.9,12,0) y el ala del élitro (5,0,0). Si algo sale desplazado, se
+  corrige en `PIVOT` de `emf.py`.
+
+### Sin capa y netherita clara (sesión del 2026-10-10)
+- El usuario no quiere la capa: fuera la textura `wings/aurora_cloak.png` y la variante `elytra` de Aurora EMF.
+  (El `equipment/netherite.json` que la activaba ya se había perdido sin querer al quitar la túnica galáctica.)
+- Netherita puesta en ópalo claro: perla/lavanda, contorno lavanda, reflejos iridiscentes pastel; las muestras de EMF
+  también pasan a tonos claros. Los iconos de netherita siguen como estaban (ciruela oscuro).
+
+### Iconos a juego y 3D pulido (sesión del 2026-10-10, 2)
+- Un solo pintor (`opal_paint` en `gear.py`) para iconos y armadura puesta: contorno donde acaba la placa, ribete
+  iridiscente pastel justo dentro y metal perla en 4 tonos (`OPAL_TONES`) según el brillo vanilla suavizado + degradado
+  de arriba a abajo. Se acabaron las manchas de colores al azar. Iconos: 12 frames, el ribete se desplaza y 3 destellos.
+- Hombreras sin dientes sueltos de 1-2 px (las caras del brazo terminan en línea recta en la fila 25); `opal_clean()`
+  quita píxeles colgando y rellena muescas.
+- Aurora EMF rehecho: cresta escalonada iridiscente, alas de 4 plumas en los lados del casco, joya en la frente con
+  engaste dorado, pecho con joya, cuello, espina dorsal y omóplatos; hombreras de tapa + 2 láminas + ribete + gema;
+  cinturón que da la vuelta con hebilla; faldones de 2 láminas, placa lateral y rodillera con gema; punteras y alas
+  en los tobillos. Nueva muestra `lame` (36,16,8,3), libre en la textura vanilla.
+- Las "manchitas" raras que salían en el pecho de las vistas previas eran z-fighting del renderizador (cara del brazo
+  coplanar con la del pecho), no de la textura: ahora usa LEQUAL como el juego.
+- Prompt de traspaso para Codex en `PROMPT_CODEX.md`.
+
+### Segunda prueba en el juego (2026-10-10)
+- El 3D no salía: desde la 1.21.9 la armadura es un modelo por pieza (capas `player_helmet`, `player_chestplate`,
+  `player_leggings`, `player_boots`) y EMF busca `<capa>.jem` con respaldo `helmet.jem`, etc. (EMFManager, rama
+  `MC >= 12109`). Los `player_outer_armor*.jem` de antes se ignoraban. Ahora: `helmet2.jem`, `chestplate2.jem`,
+  `leggings2.jem`, `boots2.jem` + sus `.properties`; validate.py rechaza los nombres viejos.
+  `enforceOptifineVariationRequiresDefaultModel_v2` es false por defecto, así que las variantes sin .jem base valen.
+- Captura del creativo con cristales a ambos lados y casillas corridas = el usuario tenía un Aurora HUD XL anterior al
+  arreglo del 2026-10-08 (le dije que ese zip no había cambiado en la sesión; había que reinstalarlo igualmente).
+- Tercera prueba: con solo los nombres genéricos (`helmet2.jem`...) el 3D seguía sin salir. La lista de modelos de EMF
+  del usuario muestra `player_helmet.jem`, `player_slim_helmet.jem`, etc., así que ahora el pack trae también esos
+  nombres exactos (sin depender del respaldo). Si aún no sale: pedir captura del detalle de `player_helmet.jem` en
+  los ajustes de EMF, o activar "log model creation data" y mirar el log.
+
+### Armas y objetos de combate (2026-10-10, codex/aurora-armas)
+- Nuevo `extras.py`, ejecutado justo después de `icons.py`: 19 texturas estáticas en Aurora Pack
+  (4 de arco, 6 de ballesta, maza, tótem, 4 capas de flechas, perla y 2 bases del escudo).
+- Importa `cyc`, `mix`, `C`, `hsv`, `P`, `VIVID` y `crystal_px` de `gear.py`, sin modificarlo.
+  Arco y ballesta usan una transformación por color vanilla independiente de la posición/estado para
+  mantener la coherencia al tensar. Comprueba tamaño y canal alpha completo en cada textura.
+- `tipped_arrow_head` queda perla casi neutra: el motor multiplica esa capa por el color de la poción.
+  `tipped_arrow_base` lleva el astil lavanda. Se conservan modelos y tintes vanilla.
+- Referencia comprobada: `atlases/shield_patterns.json` de `misode/mcmeta`, tag `26.3-assets`.
+  Las bases están dentro de `textures/entity/shield/`, añadida a `FOLDERS` de `fetch_ref.py`.
+  Los patrones de estandarte del escudo siguen vanilla; solo se repintan sus dos texturas base.
+- Vista previa antes/después: `previews/extras.png`. Para instalar este cambio basta `dist/Aurora Pack.zip`.
+- Verificado con Python 3.12 y Pillow 11.3.0 en Ubuntu: `validate.py` da `0 errors, 0 warnings`
+  con glslangValidator; la emulación de los 27 menús pasa y dos builds completas dan MD5 idénticos
+  en los cuatro ZIP. MD5 de Aurora Pack: `cd022d54d6d5acfae95bc8941a8d6c51`.
+  Sus archivos anteriores son idénticos byte a byte; solo añade las 19 texturas. Vista previa revisada.
+- Pendiente de comprobación visual dentro del juego; la lámina no sustituye una prueba del escudo con estandarte.
+
+### Prototipo Aurora Celestial (2026-10-10)
+- El usuario quiere una netherita que no parezca armadura (aureola, cosas sutiles) y lo mismo en oscuro para el
+  diamante. Codex tiene el encargo en `PROMPT_CODEX_AUREOLA.md`; esto es mi prototipo, en un pack aparte para no chocar.
+- `celestial.py`: modelos BASE (sin .properties) para player_/player_slim_/genérico de cada pieza. Cada cara apunta a
+  un texel de color del bloque 8x3 en (0,0) (esquina nunca muestreada); solo las texturas de netherita y diamante de
+  este pack lo pintan, así que en hierro, oro... las piezas son invisibles. Misma geometría para los dos materiales:
+  la paleta de cada textura decide (netherita pastel, diamante oscuro con cuentas 6/7 brillantes).
+- Anillos = segmentos tangentes, cada uno su propio submodelo girado 360/n; al girar el anillo los colores "fluyen".
+  Submodelos con `invertAxis: ""`: todo en espacio vanilla (y abajo, frente -z). Animaciones `ty` (px) y `ry` (rad)
+  con `torad(age * k)`, k en grados por tick que dividen 360 (el GIF de 180 ticks hace bucle).
+- Capa emisiva ETF `<textura>_e.png`: aureola y anillos de la netherita; en el diamante solo las cuentas brillantes.
+- 2ª versión tras verlo en el juego ("el colgante me gusta pero sobresale demasiado, los aros muy mejorables"; también
+  vio la versión de Codex, rama `codex/aurora-aureola`, aros de 0.2 px): aros finos y redondos (24/28/16 segmentos,
+  0.22-0.32 px) con degradado suave de 12 tonos y cuentas brillantes; el colgante pasa a 1 px y pegado al pecho
+  (sobresale ~1.6 px en vez de ~3.5), con las motas girando en el plano frontal. Bloque de muestras 8x6 (16 colores).
+- Sin probar en el juego. Puntos a mirar: que la aureola quede centrada y no atraviese la cabeza, el sentido y la
+  velocidad de giro, si el emisivo funciona en la armadura con ETF en 26.3, y que el anillo de cadera no choque
+  con las manos al andar.
+
+### Placas de los títulos claras (2026-10-10)
+- Captura del soporte para pociones: las placas oscuras salían como "franjas gris azulado" vacías. El juego del
+  usuario escribe las etiquetas en el gris oscuro vanilla (0x404040), así que lo del pack de modo oscuro era una
+  suposición equivocada. Las placas pasan a claras (perla con borde del color del tema) y la vista previa escribe
+  los títulos en gris oscuro, como el juego.
+- Después el usuario pidió quitarlas del todo: ya no se dibuja ninguna placa. `label_rects()` (antes `plaque_rects`)
+  solo reserva esas zonas para que no caigan adornos encima. Consecuencia aceptada: en temas oscuros el título se lee
+  poco. Alternativa ofrecida si lo echa de menos: un halo claro suave detrás del texto, sin borde.
+- `menus_xl.py`: los píxeles gris de casilla (139) que el detector no reconoce (casillas unidas a tubos, como las
+  tres botellas del soporte) se pintan como el interior de casilla del tema, no con la rampa de detalles.
+
+- Nada probado aún DENTRO del juego. Siguiente paso recomendado: activar los packs
+  (Aurora Outline, Aurora HUD XL, Aurora Pack, de arriba a abajo), comprobar aura, borde, menús y HUD XL con capturas.
+- Ideas pendientes ofrecidas: ajustar intensidad/velocidad de las animaciones.
+- Limpieza en el PC: sobra el archivo temporal `Aurora_export\ziJhG1Z5`. Las previews antiguas
+  (`preview*.png`, `anim_*.gif`) que hay dentro de la carpeta instalada `Aurora Pack` se pueden borrar.
+
+
+## Cómo usar este paquete en una sesión en la nube (sin acceso al PC)
+1. Descomprime `Aurora_handoff.zip` en el HOME de la sesión (`unzip Aurora_handoff.zip -d ~`).
+   Así quedan exactamente las rutas que usan los scripts:
+   - `~/ref63/assets/minecraft/...`  (texturas/shaders vanilla 26.3 de referencia)
+   - `~/mnt/.minecraft/resourcepacks/Aurora Pack/` y `Aurora Outline/` (packs actuales)
+   - `~/work/*.py` (scripts)
+2. `pip install pillow` y ejecuta p.ej. `cd ~/work && python3 gear.py`.
+3. Para devolver el resultado: comprimir `~/mnt/.minecraft/resourcepacks/Aurora Pack` en .zip y dárselo al
+   usuario, que lo copia a `%APPDATA%\.minecraft\resourcepacks`.
+
+## Rama claude/compassionate-curie-uqx2wu (fusionada con Celestial el 2026-10-18)
+#### Sesión del 2026-10-13: Grimorio, HUD hardcore, huevo y sonidos
 - Nuevos `grimorio.py`, `hardcore.py` y `sonidos.py` (ver README). `fetch_ref.py` baja ahora también
   `blockstates`, `models/block`, `particles`, `sounds.json`, `textures/particle` y `textures/entity/{enchantment,experience}`
   (sparse-checkout en modo no-cone para poder pedir ficheros sueltos).
@@ -75,7 +241,7 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   vez el pack dentro del juego: carga sin errores de modelos, texturas ni JSON.
 - El usuario juega en un mundo propio de un jugador (hardcore, Fabric), no en el servidor.
 
-### Sesión del 2026-10-18: montaje real del usuario
+#### Sesión del 2026-10-18: montaje real del usuario
 - El usuario usa la línea **Aurora Celestial** (rama `claude/kind-goodall-uskil5`): Aurora Pack, Aurora Celestial,
   Aurora EMF, **Aurora HUD XL** (los menús con nubes, uno por menú) y Aurora Outline, con Faithful 64x, Fresh
   Animations (EMF/ETF), Enchanted Books: Re-covered, Enhanced Audio, Blue Netherite, shaders con Iris, etc.
@@ -86,21 +252,9 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   sonidos. Probado en el juego encima de Aurora Pack + HUD XL + Outline de `kind-goodall`:
   `./gradlew runClientGameTest -PauroraPacks=DIR -PauroraOrder="Aurora Pack,Aurora HUD XL,Aurora Outline,Aurora Extras"`.
 
-## Estado / pendiente
-- Probado dentro del juego (2026-10-13): menús, HUD, corazones hardcore, huevo, mesa, yunque y muela del
-  Aurora Pack. Falta probar en el juego: Aurora Outline, la capa/túnica puesta, las auras por rareza en mano
-  y los sonidos (sin audio en la nube).
-- Ideas pendientes ofrecidas: versión EMF/ETF de la túnica con vuelo 3D; ajustar intensidad/velocidad.
-- Limpieza en el PC: sobra el archivo temporal `Aurora_export\ziJhG1Z5`. Las previews antiguas
-  (`preview*.png`, `anim_*.gif`) que hay dentro de la carpeta instalada `Aurora Pack` se pueden borrar.
+#### Fusión con Aurora Celestial (2026-10-18)
+- Los scripts parten de los de `kind-goodall` (Celestial) y añaden `grimorio.py` (solo auras por rareza, libro de la
+  mesa y partículas), `hardcore.py` (solo el huevo) y `sonidos.py`, más el pack `Aurora Extras`.
+- Comprobado: frente a los packs de Celestial solo cambian auras, partículas, sonidos, `items/` de herramientas,
+  huevo, libro de la mesa y el agua quitada. Armaduras, corazones y menús quedan idénticos.
 
-
-## Cómo usar este paquete en una sesión en la nube (sin acceso al PC)
-1. Descomprime `Aurora_handoff.zip` en el HOME de la sesión (`unzip Aurora_handoff.zip -d ~`).
-   Así quedan exactamente las rutas que usan los scripts:
-   - `~/ref63/assets/minecraft/...`  (texturas/shaders vanilla 26.3 de referencia)
-   - `~/mnt/.minecraft/resourcepacks/Aurora Pack/` y `Aurora Outline/` (packs actuales)
-   - `~/work/*.py` (scripts)
-2. `pip install pillow` y ejecuta p.ej. `cd ~/work && python3 gear.py`.
-3. Para devolver el resultado: comprimir `~/mnt/.minecraft/resourcepacks/Aurora Pack` en .zip y dárselo al
-   usuario, que lo copia a `%APPDATA%\.minecraft\resourcepacks`.

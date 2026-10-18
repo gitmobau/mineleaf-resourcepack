@@ -1,4 +1,4 @@
-# Aurora hardcore HUD (hearts, hunger, armor) and the dragon egg trophy.
+# Aurora dragon egg trophy. hearts()/hunger_armor() are kept for reference; the build only runs dragon_egg().
 import os, sys, math, json, colorsys
 from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # build.py runs scripts with -I
@@ -119,13 +119,22 @@ def hunger_armor():
     return out
 
 # ------------------------------------------------------------------ dragon egg
+def galaxy_px(x, y, seed=0, phase=0.0):
+    """deep violet nebula with soft drifting clouds (independent of gear.py)"""
+    n = 0.0
+    for k, (fx, fy, a) in enumerate(((0.35, 0.22, 0.5), (0.7, 0.5, 0.3), (1.3, 1.1, 0.2))):
+        n += a * math.sin(fx * x + fy * y * 1.3 + seed * (k + 1) + phase * 2 * math.pi * (1 if k % 2 else -1))
+    n = 0.5 + 0.5 * n
+    base = mix((18, 10, 40), (72, 36, 120), n)
+    return mix(base, gear.cyc(n * 0.5 + 0.55, gear.VIVID), 0.12 * n)
+
 def dragon_egg(N=24):
     st = Image.new('RGBA', (16, 16 * N))
     for f in range(N):
         ph = f / N
         for y in range(16):
             for x in range(16):
-                c = gear.galaxy_px(x, y, seed=5, scale=1.0, phase=ph)
+                c = galaxy_px(x, y, seed=5, phase=ph)
                 # two drifting aurora veins
                 for k, (amp, off, th) in enumerate(((2.2, 5.0, 1.1), (1.8, 10.5, 0.9))):
                     cy = off + amp * math.sin((x / 16 + ph + k * 0.4) * 2 * math.pi)
@@ -143,36 +152,16 @@ def dragon_egg(N=24):
     return st
 
 # ------------------------------------------------------------------ preview
-def preview(hs, ha, egg):
-    sheet = Image.new('RGBA', (900, 420), (60, 52, 84, 255))
-    order = ['', 'poisoned_', 'withered_', 'frozen_', 'absorbing_']
-    for row, hc in enumerate(('', 'hardcore_')):
-        for i, s in enumerate(order):
-            x0 = 10 + i * 175; y0 = 10 + row * 70
-            cont = hs['container' + ('_hardcore' if hc else '')]
-            for k in range(4):
-                fr = cont.copy()
-                key = s + hc + ('half' if k == 3 else 'full')
-                fr.alpha_composite(hs[key].crop((0, 0, 9, 9)))
-                sheet.alpha_composite(fr.resize((36, 36), Image.NEAREST), (x0 + k * 40, y0))
-    for i, n in enumerate(['food_full', 'food_half', 'food_empty', 'food_full_hunger', 'armor_full', 'armor_half', 'armor_empty']):
-        sheet.alpha_composite(ha[n].resize((36, 36), Image.NEAREST), (10 + i * 44, 160))
-    for k in range(4):
-        sheet.alpha_composite(egg.crop((0, k * 6 * 16, 16, k * 6 * 16 + 16)).resize((96, 96), Image.NEAREST), (10 + k * 110, 220))
-    sheet.save(PREVIEWS + '/preview_hardcore.png')
+def preview(egg):
     frames = []
     for f in range(24):
-        g = Image.new('RGBA', (430, 130), (60, 52, 84, 255))
-        for k in range(10):
-            fr = hs['container_hardcore'].copy()
-            fr.alpha_composite(hs['hardcore_full'].crop((0, (f % 12) * 9, 9, (f % 12) * 9 + 9)))
-            g.alpha_composite(fr.resize((27, 27), Image.NEAREST), (10 + k * 24, 10))
-        g.alpha_composite(egg.crop((0, f * 16, 16, f * 16 + 16)).resize((80, 80), Image.NEAREST), (300, 10))
+        g = Image.new('RGBA', (110, 110), (60, 52, 84, 255))
+        g.alpha_composite(egg.crop((0, f * 16, 16, f * 16 + 16)).resize((96, 96), Image.NEAREST), (7, 7))
         frames.append(g.convert('RGB'))
-    frames[0].save(PREVIEWS + '/anim_hardcore.gif', save_all=True, append_images=frames[1:], duration=150, loop=0)
+    frames[0].save(PREVIEWS + '/anim_huevo.gif', save_all=True, append_images=frames[1:], duration=150, loop=0)
 
 if __name__ == '__main__':
-    hs = hearts(); ha = hunger_armor(); egg = dragon_egg()
+    egg = dragon_egg()      # hearts()/hunger_armor() are left out: icons.py already styles the HUD
     os.makedirs(PREVIEWS, exist_ok=True)
-    preview(hs, ha, egg)
+    preview(egg)
     print('ok')

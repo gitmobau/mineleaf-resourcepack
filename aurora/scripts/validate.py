@@ -1,13 +1,14 @@
 # Static validation of the Aurora packs against the vanilla 26.3 reference (~/ref63).
 # Checks: JSON syntax, animation frame layout, nine-slice sizes, model/texture references,
-# item model definitions, sounds, equipment layers and (if glslangValidator exists) core shaders.
+# item model definitions, equipment layers and (if glslangValidator exists) core shaders.
 import os, sys, json, glob, shutil, subprocess, tempfile, re
 from PIL import Image
 
 HOME = os.path.expanduser('~')
 REF = os.environ.get('AURORA_REF', HOME + '/ref63') + '/assets/minecraft/'
 RP = os.environ.get('AURORA_RP', HOME + '/mnt/.minecraft/resourcepacks') + '/'
-PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora Extras']
+PACKS = [RP + 'Aurora Pack', RP + 'Aurora Outline', RP + 'Aurora HUD XL', RP + 'Aurora EMF', RP + 'Aurora Celestial',
+         RP + 'Aurora Extras']
 errors, warns = [], []
 # every model id referenced by a vanilla item definition is known to exist in the jar
 VANILLA_MODELS = set(re.findall(r'"model": "(minecraft:[^"]+)"',
@@ -23,6 +24,21 @@ def exists_tex(pack, path):
     ns, p = rid(path)
     return os.path.exists('%s/assets/%s/textures/%s.png' % (pack, ns, p)) or \
         (ns == 'minecraft' and os.path.exists(REF + 'textures/%s.png' % p))
+
+MARK, SHIFT = 167, 168   # Aurora HUD XL corner markers, see hud_xl.py / menus_xl.py / position_tex_color.vsh
+
+def oversize_pads(im, fw, fh):
+    """(left, top, right, bottom) if every frame carries consistent corner markers, else None"""
+    im = im.convert('RGBA'); pads = None
+    for fy in range(0, im.height, fh):
+        for fx in range(0, im.width, fw):
+            c = [im.getpixel(p) for p in ((fx, fy), (fx + fw - 1, fy), (fx, fy + fh - 1), (fx + fw - 1, fy + fh - 1))]
+            if any(q[2] != MARK or q[3] != i + 1 for i, q in enumerate(c)): return None
+            if c[0][0] != c[2][0] or c[1][0] != c[3][0] or c[0][1] != c[1][1] or c[2][1] != c[3][1]: return None
+            p = (c[0][0], c[0][1], c[1][0], c[2][1])
+            if pads not in (None, p): return None
+            pads = p
+    return pads
 
 def frame_size(meta, w, h):
     fw, fh = meta.get('width'), meta.get('height')
@@ -70,7 +86,15 @@ for pack in PACKS:
             rfw, rfh = frame_size(ra, rw, rh) if ra is not None else (rw, rh)
             # entity/misc textures may be any size; gui sprites & items must keep their aspect
             if rel.startswith('gui/') and (fw, fh) != (rfw, rfh):
-                err('%s: frame %dx%d differs from vanilla %dx%d' % (rel, fw, fh, rfw, rfh))
+                pads = oversize_pads(im, fw, fh) if rel.startswith('gui/sprites/') else None
+                if pads is None:
+                    err('%s: frame %dx%d differs from vanilla %dx%d' % (rel, fw, fh, rfw, rfh))
+                elif (fw, fh) != (rfw + pads[0] + pads[2], rfh + pads[1] + pads[3]):
+                    err('%s: oversized frame %dx%d != vanilla %dx%d + pads %s' % (rel, fw, fh, rfw, rfh, pads))
+                elif 'gui' in rmeta:
+                    err('%s: oversized sprites cannot use gui scaling (%s)' % (rel, rmeta['gui']))
+                elif not os.path.exists(A + 'shaders/core/position_tex_color.vsh'):
+                    err('%s: oversized sprite needs shaders/core/position_tex_color.vsh in the same pack' % rel)
             if rel.startswith('item/') and fw * rfh != fh * rfw:
                 err('%s: aspect differs from vanilla' % rel)
             if 'gui' in rmeta and 'gui' not in meta:
@@ -78,10 +102,23 @@ for pack in PACKS:
         g = meta.get('gui', {}).get('scaling')
         if g and g.get('type') == 'nine_slice' and (g['width'], g['height']) != (fw, fh):
             warn('%s: nine_slice %sx%s vs frame %dx%d' % (rel, g['width'], g['height'], fw, fh))
-        if rel.startswith('gui/container/') and (w, h) != (256, 256):
-            err('%s: container background must stay 256x256' % rel)
+        if rel.startswith('gui/container/') and os.path.exists(refpng) and (w, h) != Image.open(refpng).size:
+            err('%s: container background must keep the vanilla size %s' % (rel, Image.open(refpng).size))
         if rel.startswith('gui/container/') and a is not None:
             err('%s: container backgrounds cannot animate' % rel)
+        if rel.startswith('gui/') and not rel.startswith('gui/sprites/'):
+            # Aurora HUD XL background: every corner marker needs its shift texel right next to it (inward along x)
+            px = im.convert('RGBA').load(); found = False
+            for y in range(h):
+                for x in range(w):
+                    q = px[x, y]
+                    if q[2] != MARK or not 1 <= q[3] <= 4: continue
+                    found = True
+                    sx_ = x + (1 if q[3] in (1, 3) else -1)
+                    s_ = px[sx_, y] if 0 <= sx_ < w else (0, 0, 0, 0)
+                    if s_[2] != SHIFT or s_[3] != q[3]: err('%s: marker at %d,%d without shift texel' % (rel, x, y))
+            if found and not os.path.exists(A + 'shaders/core/position_tex_color.vsh'):
+                err('%s: oversized background needs shaders/core/position_tex_color.vsh in the same pack' % rel)
     # ---- models
     for mj in glob.glob(A + 'models/**/*.json', recursive=True):
         m = json.load(open(mj)); rel = os.path.relpath(mj, A)
@@ -154,6 +191,8 @@ for pack in PACKS:
     if os.path.isdir(sh):
         for f in os.listdir(sh):
             if not os.path.exists(REF + 'shaders/core/' + f): err('shader %s has no vanilla counterpart' % f)
+            elif "Can't moj_import" in open(REF + 'shaders/core/' + f).read() and '#include' in open(sh + f).read():
+                err('shader %s is used during startup and cannot #include' % f)
         if not gv:
             warn('glslangValidator missing: shaders not compiled')
         else:
@@ -173,7 +212,7 @@ for pack in PACKS:
                     with tempfile.NamedTemporaryFile('w', suffix='.' + ('vert' if f.endswith('vsh') else 'frag'), delete=False) as t:
                         t.write('\n'.join(lines))
                     r = subprocess.run([gv, '--target-env', 'vulkan1.2', '--auto-map-locations', '--auto-map-bindings', t.name],
-                                       capture_output=True, text=True)
+                                       capture_output=True, text=True, cwd=tempfile.gettempdir())  # .spv output goes there
                     os.unlink(t.name)
                     if r.returncode: err('shader %s %s:\n%s' % (f, defs, r.stdout[-800:]))
             # vsh outputs must match fsh inputs
@@ -186,6 +225,93 @@ for pack in PACKS:
                 ins = {m[0]: (m[2], m[3]) for m in re.findall(pat % 'in', open(fs).read())}
                 for loc, (ty, nm) in ins.items():
                     if outs.get(loc) != (ty, nm): err('%s: fsh in %s %s@%s not written by vsh' % (base, ty, nm, loc))
+
+# ---- Aurora EMF (Entity Model Features): .jem syntax, part names, UVs on free swatches, .properties -> variant .jem
+# 26.x armour = one model per slot (EMF: <mob>_<slot>.jem, fallback <slot>.jem); each keeps only its own parts
+EMF_PARTS = {'helmet': {'head', 'headwear'}, 'chestplate': {'body', 'left_arm', 'right_arm'},
+             'leggings': {'body', 'left_leg', 'right_leg'}, 'boots': {'left_leg', 'right_leg'},
+             'elytra': {'left_wing', 'right_wing'}}
+cem = RP + 'Aurora EMF/assets/minecraft/emf/cem/'
+if os.path.isdir(cem):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from gear import EMF_SWATCHES
+    # texels sampled by vanilla humanoid armour boxes (u, v, w, h, d): the swatches must stay out of them
+    sampled = set()
+    for (u, v, w_, h_, d) in ((0, 0, 8, 8, 8), (32, 0, 8, 8, 8), (16, 16, 8, 12, 4), (40, 16, 4, 12, 4), (0, 16, 4, 12, 4)):
+        sampled |= {(x, y) for x in range(u + d, u + d + 2 * w_) for y in range(v, v + d)}
+        sampled |= {(x, y) for x in range(u, u + 2 * d + 2 * w_) for y in range(v + d, v + d + h_)}
+    for name, (x0, y0, sw, sh) in EMF_SWATCHES.items():
+        if any((x, y) in sampled for x in range(x0, x0 + sw) for y in range(y0, y0 + sh)):
+            err('EMF swatch %s overlaps texels used by vanilla armour' % name)
+    swatch_rects = [(x0, y0, x0 + sw, y0 + sh) for (x0, y0, sw, sh) in EMF_SWATCHES.values()]
+    for f in sorted(os.listdir(cem)):
+        if 'outer_armor' in f or 'inner_armor' in f:
+            err('EMF %s: pre-1.21.9 armour name, EMF on 26.x uses helmet/chestplate/leggings/boots' % f); continue
+        if f.endswith('.properties'):
+            props = dict(l.split('=', 1) for l in open(cem + f).read().splitlines() if '=' in l and not l.startswith('#'))
+            for k, val in props.items():
+                if k.startswith('models.'):
+                    for n in val.split():
+                        if n != '1' and not os.path.exists(cem + f[:-11] + n + '.jem'): err('EMF %s: variant %s.jem missing' % (f, f[:-11] + n))
+            continue
+        if not f.endswith('.jem'): continue
+        j = json.load(open(cem + f))
+        kind = next((k for k in EMF_PARTS if f.startswith(k) or ('_' + k) in f), None)
+        if kind is None: err('EMF %s: unknown model' % f); continue
+        tw, th = j.get('textureSize', [64, 32])
+        for mdl in j['models']:
+            if mdl.get('part') not in EMF_PARTS[kind]: err('EMF %s: unknown part %s' % (f, mdl.get('part')))
+            for b in mdl.get('boxes', []):
+                if len(b.get('coordinates', [])) != 6: err('EMF %s: box without 6 coordinates' % f)
+                for key in ('uvNorth', 'uvSouth', 'uvEast', 'uvWest', 'uvUp', 'uvDown'):
+                    r = b.get(key)
+                    if r is None: err('EMF %s: box without %s' % (f, key)); continue
+                    if not (0 <= min(r[0], r[2]) and max(r[0], r[2]) <= tw and 0 <= min(r[1], r[3]) and max(r[1], r[3]) <= th):
+                        err('EMF %s: %s outside the texture' % (f, key))
+                    if kind != 'elytra' and not any(a <= min(r[0], r[2]) and max(r[0], r[2]) <= c and bb <= min(r[1], r[3]) and max(r[1], r[3]) <= d_
+                                                     for (a, bb, c, d_) in swatch_rects):
+                        err('EMF %s: %s %s is not on a material swatch' % (f, key, r))
+            for anim in mdl.get('animations', []):
+                for k in anim:
+                    if k.split('.')[0] not in EMF_PARTS[kind]: err('EMF %s: animation of unknown part %s' % (f, k))
+
+# ---- Aurora Celestial: nested submodels, every face on the colour swatch block, animations name existing parts
+for cpack in [RP + 'Aurora Celestial/']:
+  ccem = cpack + 'assets/minecraft/emf/cem/'
+  if os.path.isdir(ccem):
+      from celestial import SW, SW2
+      sw_rects = [(SW[0], SW[1], SW[0] + 8, SW[1] + 6), (SW2[0], SW2[1], SW2[0] + 8, SW2[1] + 3)]
+      for r_ in sw_rects:
+          if any((x, y) in sampled for x in range(r_[0], r_[2]) for y in range(r_[1], r_[3])):
+              err('Celestial swatches overlap texels used by vanilla armour')
+      for f in sorted(os.listdir(ccem)):
+          if not f.endswith('.jem'): err('Celestial: unexpected file %s' % f); continue
+          j = json.load(open(ccem + f))
+          kind = next((k for k in EMF_PARTS if f.startswith(k) or ('_' + k) in f), None)
+          if kind is None: err('Celestial %s: unknown model' % f); continue
+          def walk(m, ids):
+              if m.get('id') in ids: err('Celestial %s: duplicate id %s' % (f, m.get('id')))
+              ids.add(m.get('id'))
+              for b in m.get('boxes', []):
+                  if len(b.get('coordinates', [])) != 6: err('Celestial %s: box without 6 coordinates' % f)
+                  for key in ('uvNorth', 'uvSouth', 'uvEast', 'uvWest', 'uvUp', 'uvDown'):
+                      r = b.get(key)
+                      if r is None or not any(q[0] <= min(r[0], r[2]) and max(r[0], r[2]) <= q[2]
+                                              and q[1] <= min(r[1], r[3]) and max(r[1], r[3]) <= q[3] for q in sw_rects):
+                          err('Celestial %s: %s %s is not on the swatch block' % (f, key, r))
+              for sm in m.get('submodels', []): walk(sm, ids)
+          for mdl in j['models']:
+              if mdl.get('part') not in EMF_PARTS[kind]: err('Celestial %s: unknown part %s' % (f, mdl.get('part')))
+              ids = set(); walk(mdl, ids)
+              for anim in mdl.get('animations', []):
+                  for k in anim:
+                      if k.split('.')[0] not in ids: err('Celestial %s: animation of unknown part %s' % (f, k))
+      for mat in ('netherite', 'diamond'):
+          for layer in ('humanoid', 'humanoid_leggings'):
+              t = cpack + 'assets/minecraft/textures/entity/equipment/%s/%s' % (layer, mat)
+              for suf in ('.png', '_e.png'):
+                  if not os.path.exists(t + suf): err('Celestial: missing %s%s' % (t, suf))
+                  elif Image.open(t + suf).size != (64, 32): err('Celestial: %s%s is not 64x32' % (t, suf))
 
 for w in warns: print('WARN ', w)
 for e in errors: print('ERROR', e)
