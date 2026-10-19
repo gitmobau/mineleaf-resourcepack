@@ -170,8 +170,8 @@ def animate(base, head, N=16, ft=2, seed=0):
     return strip, shine_meta(sweep, N - 1, ft=ft, seed=seed)
 
 def aura(base, N=16):
-    """24x24 animated halo around a 16x16 silhouette (offset 4): a soft pastel glow hugging the outline (about 2 px),
-    colours drifting slowly round it and two small sparks. Interpolated, so it flows instead of blinking."""
+    """24x24 animated halo ring around a 16x16 silhouette (offset 4): rainbow colours flowing round it, a bright inner
+    band fading outwards and three white sparks. (The first version: the user preferred it to a softer 2 px halo.)"""
     W = 24
     sil = [[False] * W for _ in range(W)]
     for y in range(16):
@@ -186,24 +186,25 @@ def aura(base, N=16):
             if sil[x][y]:
                 continue
             d = min(math.hypot(x - a, y - b) for a, b in pts)
-            if d <= 2.3:
+            if d <= 3.6:
                 dist[(x, y)] = d
-    ring = sorted([k for k, d in dist.items() if 1.3 < d <= 2.3], key=lambda k: math.atan2(k[1] - cy, k[0] - cx))
-    pal = [mix(a, b, 0.5) for a, b in zip(P, VIVID)]
+    ring2 = sorted([k for k, d in dist.items() if 1.6 < d <= 2.6], key=lambda k: math.atan2(k[1] - cy, k[0] - cx))
     strip = Image.new('RGBA', (W, W * N))
     for f in range(N):
         ph = f / N
-        pulse = 0.85 + 0.15 * math.cos(ph * 2 * math.pi)
+        pulse = 0.7 + 0.3 * math.sin(ph * 2 * math.pi)
         for (x, y), d in dist.items():
             ang = math.atan2(y - cy, x - cx) / (2 * math.pi)
-            col = mix(cyc(ang + ph, pal), WHITE, 0.25 if d <= 1.05 else 0.0)
-            a = 165 * math.exp(-(d - 1) * 1.15)
+            col = cyc(ang + ph, VIVID)
+            if d <= 1.5:   a = 215; col = mix(col, WHITE, 0.35)
+            elif d <= 2.6: a = 135
+            else:          a = 55
             strip.putpixel((x, f * W + y), C(col, a * pulse))
-        for k in range(2):
-            if ring:
-                x, y = ring[int((ph + k / 2) * len(ring)) % len(ring)]
-                strip.putpixel((x, f * W + y), C(mix(strip.getpixel((x, f * W + y)), WHITE, 0.55), 150))
-    return strip, {"animation": {"frametime": 3, "interpolate": True}}
+        for k in range(3):
+            if ring2:
+                x, y = ring2[int((ph + k / 3) * len(ring2)) % len(ring2)]
+                strip.putpixel((x, f * W + y), C(WHITE, 255))
+    return strip, {"animation": {"frametime": 2}}
 
 def aura_model(name):
     tex = "minecraft:item/aurora/aura_" + name

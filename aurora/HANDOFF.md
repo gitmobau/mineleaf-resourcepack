@@ -267,3 +267,11 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   `previews/juego/`.
 - Pendiente de comprobar en el juego del usuario: volumen de los sonidos (subir `TARGET['enchant']` si el de encantar
   queda bajo) y Celestial con EMF real. No activar Aurora EMF y Aurora Celestial a la vez.
+
+#### Vuelta atrás pedida por el usuario (2026-10-19)
+- Prefiere la primera versión de: el aura de las herramientas (`gear.aura` y los niveles de `grimorio.py`; se mantiene
+  que solo salgan como icono y los predicados `{"min": 5}`), el gato de Celestial (posición, tamaño 1,25, patas, cola
+  y brillo) y las nubes (anillo de 8 bolitas en cada pie). Comprobado: son idénticos píxel a píxel / pieza a pieza a
+  los de 8c41ae2.
+- Se queda con lo nuevo de la aureola, la mochila y la cinta.
+- No quiere otra armadura: Aurora EMF ya no se mete en `dist/` (la carpeta se sigue generando).

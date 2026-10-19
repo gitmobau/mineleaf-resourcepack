@@ -16,85 +16,58 @@ def ref(rel):
     return Image.open(REF + 'textures/' + rel).convert('RGBA')
 
 # ------------------------------------------------------------------ rarity auras
-# normal aura (gear.py) -> "rare": a thin gold ring with Mending -> "legendary": a thin pastel-rainbow ring with a soft
-# glow and star twinkles with Mending + Unbreaking III + Sharpness/Smite/Bane V (swords, spears) or Efficiency V.
-# The ring floats one pixel away from the item (the Enchantment Outlines mod draws its outline right on the edge).
+# normal aura (gear.py) -> "rare": a gold ring with Mending -> "legendary": a wider rainbow ring with more sparks with
+# Mending + Unbreaking III + Sharpness/Smite/Bane V (swords, spears) or Efficiency V.
 # Auras are only shown where the item is an icon: inventory/hotbar (gui), item frames (fixed) and shelves (on_shelf).
 ICON_CONTEXTS = ['gui', 'fixed', 'on_shelf']
-N, FT = 32, 3                      # 32 frames x 3 ticks = 4.8 s per loop: slow and calm
+N, FT = 16, 2                      # 16 frames x 2 ticks = 1.6 s per loop (the first version's speed)
 W, OFF = 24, 4                     # 24x24 plane around the 16x16 item (same geometry as the aura of gear.py)
 GOLD = [(255, 214, 110), (255, 236, 160), (246, 190, 96), (255, 226, 132)]
-PASTEL = [(120, 214, 255), (170, 156, 255), (226, 146, 250), (255, 150, 206), (255, 196, 146), (255, 232, 140),
-          (166, 244, 170), (120, 236, 220)]
-STAR = (255, 248, 222)
 
 def cyc(t, pal):
     return gear.cyc(t, pal)
 
-def field(base):
-    """distance from each free texel of the 24x24 plane to the item silhouette, and each texel's angle"""
-    sil = {(x + OFF, y + OFF) for y in range(16) for x in range(16) if base.getpixel((x, y))[3]}
-    cx = sum(p[0] for p in sil) / len(sil); cy = sum(p[1] for p in sil) / len(sil)
-    dist, ang = {}, {}
-    for y in range(W):
-        for x in range(W):
-            if (x, y) in sil: continue
-            d = min(math.hypot(x - a, y - b) for a, b in sil)
-            if d <= 3.3:
-                dist[(x, y)] = d
-                ang[(x, y)] = (math.atan2(y - cy, x - cx) / (2 * math.pi)) % 1.0
-    return dist, ang
-
-def adist(a, b):
-    d = abs(a - b) % 1.0
-    return min(d, 1 - d)
-
-def star_spots(dist, ang, n, phase0):
-    """n twinkle spots spread around the ring, just outside it (deterministic)"""
-    cand = sorted((p for p, d in dist.items() if 2.3 < d <= 3.1), key=lambda p: (ang[p], p))
-    spots = []
-    for k in range(n):
-        t = (phase0 + k / n) % 1.0
-        spots.append(min(cand, key=lambda p: (adist(ang[p], t), p)))
-    return spots
+# The tier look itself is the first version (the user preferred it): a wide ring of colour flowing round the item,
+# brighter next to it, with white sparks running round. Only where it shows (icons only) and the predicates changed.
+RARE = [(255, 230, 140), (255, 205, 160), (255, 245, 190), (255, 220, 120), (255, 252, 225)]          # gold
+LEGEND = [(255, 120, 220), (130, 220, 255), (255, 240, 140), (170, 140, 255), (120, 255, 200), (255, 255, 255)]
+TIERS = {'rare': dict(pal=RARE, sparks=4, alpha=(240, 170, 75)),
+         'legend': dict(pal=LEGEND, reach=4.4, sparks=6, speed=2, alpha=(235, 165, 80))}
 
 def aura_tier(base, kind):
-    dist, ang = field(base)
-    legend = kind == 'legend'
+    return _aura_tier(base, **TIERS[kind])
+
+def _aura_tier(base, pal, N=N, reach=3.6, sparks=3, speed=1, alpha=(215, 135, 55)):
+    sil = [[False] * W for _ in range(W)]
+    for y in range(16):
+        for x in range(16):
+            if base.getpixel((x, y))[3]:
+                sil[x + OFF][y + OFF] = True
+    pts = [(x, y) for y in range(W) for x in range(W) if sil[x][y]]
+    cx = sum(p[0] for p in pts) / len(pts); cy = sum(p[1] for p in pts) / len(pts)
+    dist = {}
+    for y in range(W):
+        for x in range(W):
+            if not sil[x][y]:
+                d = min(math.hypot(x - a, y - b) for a, b in pts)
+                if d <= reach:
+                    dist[(x, y)] = d
+    ring = sorted([k for k, d in dist.items() if 1.6 < d <= reach], key=lambda k: math.atan2(k[1] - cy, k[0] - cx))
     strip = Image.new('RGBA', (W, W * N))
-    spots = star_spots(dist, ang, 3 if legend else 2, 0.12 if legend else 0.3)
     for f in range(N):
         ph = f / N
-        breath = 0.9 + 0.1 * math.cos(ph * 2 * math.pi)
-        fr = Image.new('RGBA', (W, W))
-        for p, d in dist.items():
-            a = ang[p]
-            if legend:
-                col = cyc(a - ph, PASTEL)                       # the rainbow flows slowly around the item
-            else:
-                col = cyc(a * 2 + ph * 0.5, GOLD)
-            glint = max(0.0, 1 - adist(a, ph) / 0.12)           # one soft light travelling around the ring
-            if 1.5 < d <= 2.3:                                  # the ring: 1 px line, 1 px away from the item
-                al = (175 if legend else 165) + 90 * glint
-                col = mix(col, WHITE, (0.12 if legend else 0.04) + 0.7 * glint)
-            elif d <= 1.5:                                      # faint fill between item and ring
-                al = (46 if legend else 34) + 40 * glint
-                col = mix(col, WHITE, 0.35)
-            else:                                               # soft outer glow
-                al = (40 if legend else 0) * (1 - (d - 2.3) / 1.0)
-            if al > 0:
-                fr.putpixel(p, C(col, al * breath))
-        for k, (x, y) in enumerate(spots):                      # twinkles: fade in and out, one after another
-            t = (ph - k / len(spots)) % 1.0
-            if t < 0.2:
-                s = math.sin(t / 0.2 * math.pi)
-                fr.putpixel((x, y), C(mix(STAR, WHITE, s), 120 + 135 * s))
-                if legend and s > 0.6:                          # tiny 4-point star at the peak
-                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                        q = (x + dx, y + dy)
-                        if 0 <= q[0] < W and 0 <= q[1] < W and q in dist and dist[q] > 1.5:
-                            fr.putpixel(q, C(STAR, 110 * s))
-        strip.paste(fr, (0, f * W))
+        pulse = 0.72 + 0.28 * math.sin(ph * 2 * math.pi)
+        for (x, y), d in dist.items():
+            ang = math.atan2(y - cy, x - cx) / (2 * math.pi)
+            col = cyc(ang + ph * speed, pal)
+            if d <= 1.5:   a = alpha[0]; col = mix(col, WHITE, 0.35)
+            elif d <= 2.6: a = alpha[1]
+            else:          a = alpha[2]
+            strip.putpixel((x, f * W + y), C(col, a * pulse))
+        for k in range(sparks):
+            if ring:
+                x, y = ring[int((ph * speed + k / sparks) * len(ring)) % len(ring)]
+                strip.putpixel((x, f * W + y), C(WHITE, 255))
     return strip, {"animation": {"frametime": FT}}
 
 def legendary_pred(tool):

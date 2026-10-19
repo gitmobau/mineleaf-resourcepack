@@ -48,7 +48,7 @@ if not args.no_zip:
     dist = os.path.join(ROOT, 'dist'); os.makedirs(dist, exist_ok=True)
     for old in tuple('Aurora Celestial %d.zip' % v for v in range(1, 5)):   # old prototypes
         if os.path.exists(os.path.join(dist, old)): os.remove(os.path.join(dist, old))
-    for name in ('Aurora Pack', 'Aurora Outline', 'Aurora HUD XL', 'Aurora EMF', 'Aurora Celestial', 'Aurora Extras'):
+    for name in ('Aurora Pack', 'Aurora Outline', 'Aurora HUD XL', 'Aurora Celestial', 'Aurora Extras'):
         src = os.path.join(PACKS, name); out = os.path.join(dist, name + '.zip')
         with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
             for base, dirs, files in sorted(os.walk(src)):

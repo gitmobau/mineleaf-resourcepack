@@ -5,11 +5,11 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
 
 | Carpeta | Qué hay |
 |---|---|
-| `dist/` | **Los zips listos para instalar**: `Aurora Pack.zip`, `Aurora Outline.zip`, `Aurora HUD XL.zip`, `Aurora EMF.zip`, `Aurora Celestial.zip` y `Aurora Extras.zip` |
+| `dist/` | **Los zips listos para instalar**: `Aurora Pack.zip`, `Aurora Outline.zip`, `Aurora HUD XL.zip`, `Aurora Celestial.zip` y `Aurora Extras.zip` |
 | `packs/Aurora Pack/` | Pack principal. Se genera entero con los scripts (no editar a mano) |
 | `packs/Aurora Outline/` | Borde de bloque neón (core shader `rendertype_lines`). Escrito a mano |
 | `packs/Aurora HUD XL/` | Opcional: marcos del HUD y menús temáticos que sobresalen de su tamaño vanilla. Texturas generadas por `hud_xl.py` y `menus_xl.py` + core shader `position_tex_color` escrito a mano |
-| `packs/Aurora EMF/` | Opcional, necesita los mods **Entity Model Features** y **Entity Texture Features**: armadura de netherita en 3D (cresta y alas en el casco, joya en la frente y en el pecho, hombreras y faldones de láminas, cinturón, rodilleras, punteras). Generado por `emf.py` |
+| `packs/Aurora EMF/` | Ya no se reparte (el usuario usa Aurora Celestial); se genera porque `celestial.py` usa su renderizador. Necesita los mods **Entity Model Features** y **Entity Texture Features**: armadura de netherita en 3D (cresta y alas en el casco, joya en la frente y en el pecho, hombreras y faldones de láminas, cinturón, rodilleras, punteras). Generado por `emf.py` |
 | `packs/Aurora Celestial/` | Opcional (EMF + ETF), **en lugar de** Aurora EMF: netherita y diamante que no parecen armadura. Aureola doble con destellos; un gato que viaja en su mochila con cara de gato, se ha subido a tu hombro izquierdo, asoma la cabeza mirando alrededor y de vez en cuando se queda dormido; cinturón de cinta con lazo y nubes esponjosas alrededor de los pies. Netherita: gato blanco y tonos pastel; diamante: gato negro con ojos que brillan. Generado por `celestial.py` |
 | `scripts/` | Generadores en Python + Pillow, validador y `build.py` |
 | `packs/Aurora Extras/` | Solo lo nuevo: auras por rareza, huevo del dragón, letras mágicas, libro de la mesa y sonidos. Va **encima de todo** y no toca agua, corazones, menús ni armaduras. Lo monta `build.py` copiando de `Aurora Pack` |
@@ -21,8 +21,8 @@ Formato de resource pack 97 (`min_format` 84 / `max_format` 97).
 
 ## Instalar
 1. Copia los zips de `dist/` a `%APPDATA%\.minecraft\resourcepacks`.
-2. En el juego, actívalos en este orden (de arriba a abajo): **Aurora Extras**, **Aurora Celestial** (o **Aurora EMF**, nunca los dos a la vez), **Aurora Outline**, **Aurora HUD XL**, **Aurora Pack**.
-   Aurora EMF solo hace algo con los mods Entity Model Features + Entity Texture Features instalados (Fabric o NeoForge 26.3).
+2. En el juego, actívalos en este orden (de arriba a abajo): **Aurora Extras**, **Aurora Celestial**, **Aurora Outline**, **Aurora HUD XL**, **Aurora Pack**.
+   Aurora Celestial solo hace algo con los mods Entity Model Features + Entity Texture Features instalados (Fabric o NeoForge 26.3).
    Aurora HUD XL es opcional: si los marcos salen aplastados o raros, desactívalo y vuelves al HUD normal de Aurora.
 
 ## Regenerar
@@ -144,4 +144,8 @@ con Aurora Pack + HUD XL + Outline + Extras) en `previews/juego/`.
 - HUD: corazones sin arcoíris, un degradado suave por estado; hardcore con marcas en ciruela.
 - Menús: casillas en tono medio para que se lean los objetos; menos ruido en los temas.
 - Pantallas, armas, extras (auras solo como icono, huevo con aurora), sonidos al volumen vanilla.
-- Celestial/EMF: nada atraviesa el cuerpo en las poses vanilla y el brillo queda solo en la aureola.
+- Celestial: aureola, mochila y cinta nuevas (más finas y sin atravesar el cuerpo).
+
+Después, a petición del usuario, vuelven a la primera versión: el aura de las herramientas (normal, dorada y
+legendaria; siguen saliendo solo como icono), el gato de Celestial (y su brillo) y las nubes, un anillo en cada pie.
+Aurora EMF deja de ir en `dist/`.

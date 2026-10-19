@@ -9,18 +9,16 @@
 # - The models are base models (no .properties): every face samples a colour swatch that only the Aurora Celestial
 #   netherite/diamond textures paint, in texels no vanilla armour box uses. Other armour textures are transparent
 #   there, so on iron, gold... the extra pieces are simply invisible.
-# - <texture>_e.png = ETF emissive layer. Only the halo (and, on diamond, the cat's eyes and the bow knot) glow, and
-#   softly (partial alpha): with shaders a whole glowing cat or glowing clouds looked like neon.
+# - <texture>_e.png = ETF emissive layer. The halo glows softly (partial alpha); the cat and the clouds glow as in
+#   the first version (the user preferred them); the backpack and the sash do not glow.
 #
 # 2026-10 polish ("más elegante, más simple, que nada atraviese el cuerpo"): poses checked against 26.3's
 # HumanoidModel.setupAnim with the renderer in emf.py (walk at sprint swing, sneak, sit, head turned 45 degrees):
-# - the cat sits where vanilla puts a shoulder parrot (x ~6.4-7) and 0.8 px higher, so arm swings no longer go
-#   through its belly and turning the head only grazes it at the extreme;
 # - the sash is higher (y 8.6-9.6: a sitting player's thighs reach y 10) and its tails are short (a long tail on the
 #   front of the hip is crossed by the thigh at every step);
-# - the clouds no longer ring the inner side of each foot (the two feet's clouds went through each other and
-#   through the other leg when walking); smaller puffs;
 # - the halo: two clearly separate thin rings, two small sparkles instead of four, slower spin, no gold buckles.
+# Afterwards the user asked for the previous cat and clouds back (a full ring of clouds round each foot): those two
+# are the first version again; halo, backpack and sash keep the polish.
 #
 # EMF semantics used (EMFPartData / EMFModelPartCustom): a custom part is a child of the vanilla part (attach) or of
 # its parent submodel; translate = its pivot offset, rotate = degrees, applied like vanilla ModelPart (rotationZYX);
@@ -66,11 +64,12 @@ PALETTES['diamond'] += [ramp((44, 38, 62), 0.3, 0.3, (8, 4, 16)), ramp((72, 62, 
                         ramp((130, 255, 205), 0.35, 0.2), ramp((255, 150, 200), 0.3, 0.2),
                         ramp((76, 44, 118), 0.3, 0.35, (8, 4, 16)), ramp((116, 74, 166), 0.3, 0.3, (8, 4, 16)),
                         ramp((255, 210, 120), 0.4, 0.2), ramp((235, 225, 255), 0.2, 0.15)]
-# colour index -> emissive alpha (ETF _e layer). Partial alpha = a softer glow (with shaders too); only the halo,
-# plus the diamond cat's eyes and knot. Cat, bag, sash and clouds do not glow any more.
+# colour index -> emissive alpha (ETF _e layer). Partial alpha = a softer glow (with shaders too) on the halo; the
+# cat (netherite: the whole cat, diamond: its eyes) and the clouds glow fully, as in the first version.
 HALO_GLOW = 150
-GLOW = {'netherite': {**{i: HALO_GLOW for i in range(NGRAD)}, 12: 190, 13: 230},
-        'diamond': {12: 190, 13: 230, 18: 220}}
+GLOW = {'netherite': {**{i: HALO_GLOW for i in range(NGRAD)}, 12: 190, 13: 230,
+                     15: 255, 16: 255, 17: 255, 19: 255, 23: 255},       # cat and clouds: as before (user's pick)
+        'diamond': {12: 190, 13: 230, 18: 255}}
 
 def texel(idx, row):
     if idx >= 16:
@@ -164,8 +163,6 @@ def scaled(part, k, root=True):
     out['submodels'] = [scaled(sp, k, False) for sp in part['submodels']]
     return out
 
-CAT_X = 6.9          # vanilla draws a shoulder parrot at x 6.4; a bit further out, the head only grazes it at 45 degrees
-CAT_LIFT = -0.8      # belly 0.8 px above the shoulder: the top of a swinging arm rises up to ~0.8 px
 BAG_Y = 5.6          # backpack a little lower: when sneaking the head drops 4.2 px and its back reached the bag's ears
 
 def chestplate():
@@ -181,16 +178,16 @@ def chestplate():
     bag = dict(scaled(bag, 0.9), translate=bag['translate'])
     eyes_open = sub('cat_eyes', boxes=[box((-1.05, -1.75, -1.5), (0.55, 0.55, 0.12), EYE), box((0.5, -1.75, -1.5), (0.55, 0.55, 0.12), EYE)])
     eyes_shut = sub('cat_sleepy', boxes=[box((-1.1, -1.5, -1.5), (0.6, 0.15, 0.12), EYE), box((0.5, -1.5, -1.5), (0.6, 0.15, 0.12), EYE)])
-    head = sub('cat_head', translate=(CAT_X + 0.2, CAT_LIFT - 0.9, -1.8), subs=[eyes_open, eyes_shut], boxes=cat_head())
-    tail = sub('cat_tail', translate=(CAT_X, CAT_LIFT - 1.0, 3.6), rotate=(-70, 0, 0),     # hanging behind the shoulder
+    head = sub('cat_head', translate=(6.3, -0.8, -1.7), subs=[eyes_open, eyes_shut], boxes=cat_head())
+    tail = sub('cat_tail', translate=(6.1, -0.9, 3.3), rotate=(-70, 0, 0),     # hanging down behind the shoulder
                boxes=[box((-0.3, -0.3, 0), (0.6, 0.6, 2.8), FUR), box((-0.3, -0.3, 2.8), (0.6, 0.6, 1.1), PATCH)])
-    body = sub('cat_body', translate=(CAT_X, CAT_LIFT, 0),
+    body = sub('cat_body', translate=(6.1, 0.1, 0),
                boxes=[box((-1.1, -2.0, -1.4), (2.2, 2.0, 4.6), FUR),                 # lying on the shoulder
                       box((-1.3, -1.8, 1.7), (2.6, 1.8, 1.6), FUR),                  # haunches over the back
                       box((-0.75, -2.05, -0.6), (1.5, 0.1, 2.2), PATCH),             # a patch on its back
-                      box((-0.95, -0.75, -2.05), (0.65, 0.75, 0.6), FUR), box((0.3, -0.75, -2.05), (0.65, 0.75, 0.6), FUR)])
-    nap, awake = 'sin(torad(age * 2)) > 0.9', 'sin(torad(age * 2)) <= 0.9'   # dozes off for a while every 18 s
-    body, head, tail = (dict(scaled(p_, 1.1), translate=p_['translate']) for p_ in (body, head, tail))
+                      box((-0.95, -0.6, -2.0), (0.65, 1.1, 0.65), FUR), box((0.3, -0.6, -2.0), (0.65, 1.1, 0.65), FUR)])
+    nap, awake = 'sin(torad(age * 2)) > 0.9', 'sin(torad(age * 2)) <= 0.9'   # dozes off for a while every 9 s
+    body, head, tail = (dict(scaled(p_, 1.25), translate=p_['translate']) for p_ in (body, head, tail))
     return [top('body', 'cel_body', [bag, sub('straps', boxes=straps()), body, head, tail], {
         'bag.ty': '%g + sin(torad(age * 4)) * 0.08' % BAG_Y,
         'cat_body.sy': '1 + sin(torad(age * 4)) * 0.04',
@@ -198,7 +195,7 @@ def chestplate():
         'cat_head.rx': 'torad(if(%s, 12, 0))' % nap,
         'cat_eyes.visible': awake,
         'cat_sleepy.visible': nap,
-        'cat_tail.rz': 'torad(sin(torad(age * 4)) * 12)'})]
+        'cat_tail.rz': 'torad(sin(torad(age * 6)) * 18)'})]
 
 # ---- leggings: ribbon sash with a bow on the left hip
 RIBBON, RIB_SHADE, KNOT = 20, 19, 12
@@ -230,22 +227,19 @@ def cloud_blob(r):
             box((-0.75 * r, -0.95 * r, -0.75 * r), (1.5 * r, 1.6 * r, 1.5 * r), CLOUD_BODY),
             box((-0.85 * r, 0.45 * r, -0.85 * r), (1.7 * r, 0.25 * r, 1.7 * r), CLOUD_UNDER)]
 
-# puffs round one foot: (outwards, z, radius) in the leg's space. Nothing reaches past 1.8 px on the inner side: the
-# other leg's inner face is there, and the two legs swing past each other when walking.
-PUFFS = [(-0.55, -2.75, 0.95), (1.0, -2.7, 1.1), (2.45, -1.45, 1.0), (2.75, 0.25, 1.2),
-         (2.3, 1.9, 1.0), (0.7, 2.75, 1.05), (-0.75, 2.7, 0.85)]
-
 def boots():
-    """a cuff of round puffs round the front, outer side and back of each foot, as if stepping out of a cloud;
-    every puff bobs on its own"""
+    """a ring of round puffs round each foot, as if walking on a cloud; every puff bobs on its own (the previous
+    clouds: the user prefers one separate ring per foot)"""
     out = []
     for side, o in (('right', -1), ('left', 1)):
         subs, anims = [], {}
-        for k, (w, z, r) in enumerate(PUFFS):
-            x, y = o * w, round(12.1 - 0.7 * r, 3)              # underside 0.1 px into the ground
+        for k in range(8):
+            a = math.radians(k * 45 + 22.5)
+            r = (1.4, 0.95, 1.25, 0.85)[k % 4] * (1.15 if k in (0, 7) else 1.0)    # bumpy, biggest at the front
+            x, z, y = 3.0 * math.sin(a) * -1, -3.0 * math.cos(a), 11.7 - (0.35 if k % 2 else 0)
             pid = 'cloud_%s_%d' % (side, k)
-            subs.append(sub(pid, translate=(x, y, z), boxes=cloud_blob(r)))
-            anims[pid + '.ty'] = '%g + sin(torad(age * 4 + %d)) * 0.15' % (y, k * 51 + (0 if o < 0 else 90))
+            subs.append(sub(pid, translate=(round(x, 3), y, round(z, 3)), boxes=cloud_blob(r)))
+            anims[pid + '.ty'] = '%g + sin(torad(age * 4 + %d)) * 0.2' % (y, k * 45 + (0 if o < 0 else 90))
         out.append(top('%s_leg' % side, 'cel_%s_leg' % side, subs, anims))
     return out
 
