@@ -275,3 +275,8 @@ Todo vive ahora en `gitmobau/mineleaf-resourcepack`, carpeta `aurora/` (ver `aur
   los de 8c41ae2.
 - Se queda con lo nuevo de la aureola, la mochila y la cinta.
 - No quiere otra armadura: Aurora EMF ya no se mete en `dist/` (la carpeta se sigue generando).
+
+#### Aurora Guía 1.2.1: sin Espinas (2026-10-19)
+- Al usuario no le gusta Espinas: el mod la trata como las maldiciones (`McAnvil.unwanted`). No sale en "Le falta",
+  no cuenta para "Encantamientos completos" y el plan del yunque nunca usa un libro que la lleve.
+- Comprobado en el juego: las botas de la captura `04_tooltip_botas_mayus` ya no piden Espinas III.

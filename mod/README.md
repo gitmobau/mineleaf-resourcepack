@@ -6,7 +6,7 @@ objetos ni reglas, así que no alteran ninguna mecánica vanilla.
 | Qué | Dónde | Detalle |
 |---|---|---|
 | **Yunque inteligente** | Panel a la derecha del yunque (con el fondo de los tooltips del pack) | Aviso si **al revés** sale más barato (mismo resultado, contando la durabilidad), penalización con la que queda el resultado y el **orden más barato** para ponerle los libros útiles que llevas en el inventario (hasta 8) y el que tengas en el yunque. Deja fuera los libros que no aportan, los que no caben por debajo de 40 y, entre alternativas (Filo / Castigo), la de uso general o **la que hayas puesto en el yunque**. Dice cuántos niveles te faltan. |
-| **Lo que le falta** | Tooltip | Penalización de yunque (solo si ya ha pasado por uno). En objetos encantados: "✦ Encantamientos completos" o "Mayús: le faltan N"; con **Mayús**, la lista (también en objetos sin encantar). Los que se excluyen entre sí salen como alternativas ("A / B"); sin maldiciones. |
+| **Lo que le falta** | Tooltip | Penalización de yunque (solo si ya ha pasado por uno). En objetos encantados: "✦ Encantamientos completos" o "Mayús: le faltan N"; con **Mayús**, la lista (también en objetos sin encantar). Los que se excluyen entre sí salen como alternativas ("A / B"); sin maldiciones ni Espinas. |
 
 Capturas hechas dentro del juego real con `runClientGameTest`: [`previews/`](previews/).
 
@@ -15,7 +15,7 @@ y unas líneas en los tooltips.
 
 ## Instalar
 1. Fabric Loader 0.19.5 o superior para la 26.3 y **Fabric API** 0.162.0+26.3.
-2. Copia `dist/aurora-guia-1.2.0.jar` en `.minecraft/mods`.
+2. Copia `dist/aurora-guia-1.2.1.jar` en `.minecraft/mods`.
 
 ## Compilar
 Necesita JDK 25.

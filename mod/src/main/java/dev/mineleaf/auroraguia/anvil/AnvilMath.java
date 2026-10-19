@@ -29,7 +29,7 @@ public final class AnvilMath {
 		/** Enchantment.areCompatible: false for the same enchantment, like the game. */
 		boolean areCompatible(String a, String b);
 
-		/** Curses never count as an improvement. */
+		/** Curses (and anything else the player does not want, like Thorns) never count as an improvement. */
 		default boolean isCurse(String enchantment) {
 			return false;
 		}

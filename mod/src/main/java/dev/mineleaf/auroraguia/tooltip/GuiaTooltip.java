@@ -82,12 +82,12 @@ public final class GuiaTooltip {
 	}
 
 	/**
-	 * Enchantments the item supports that it does not have at max level. Curses are left out. Enchantments
+	 * Enchantments the item supports that it does not have at max level. Curses and Thorns are left out. Enchantments
 	 * that clash with one it already has are left out; the ones that clash with each other are shown as
 	 * alternatives ("A / B").
 	 */
 	private static Missing compute(ItemStack stack, Map<String, Holder<Enchantment>> reg) {
-		if (reg.values().stream().noneMatch(h -> !h.is(net.minecraft.tags.EnchantmentTags.CURSE) && h.value().canEnchant(stack))) {
+		if (reg.values().stream().noneMatch(h -> !McAnvil.unwanted(h) && h.value().canEnchant(stack))) {
 			return null;
 		}
 		ItemEnchantments have = EnchantmentHelper.getEnchantmentsForCrafting(stack);

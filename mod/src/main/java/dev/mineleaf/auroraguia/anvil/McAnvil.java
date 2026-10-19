@@ -19,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 
 /** Builds {@link AnvilMath} inputs from real item stacks and the synced enchantment registry. */
@@ -74,11 +75,19 @@ public final class McAnvil {
 		return c;
 	}
 
-	/** Enchantments (no curses) that {@code stack} could still get or raise, ignoring ones that clash with what it has. */
+	/**
+	 * Enchantments the guide never asks for: curses, and Thorns (it wears the armour down and the player does not
+	 * want it). They are never "missing" and the anvil plan never adds them.
+	 */
+	public static boolean unwanted(Holder<Enchantment> h) {
+		return h.is(EnchantmentTags.CURSE) || h.is(Enchantments.THORNS);
+	}
+
+	/** Enchantments (none of the unwanted ones) that {@code stack} could still get or raise, ignoring ones that clash with what it has. */
 	public static List<Holder<Enchantment>> improvable(ItemStack stack, Map<String, Holder<Enchantment>> reg) {
 		ItemEnchantments have = EnchantmentHelper.getEnchantmentsForCrafting(stack);
 		return reg.values().stream()
-			.filter(h -> !h.is(EnchantmentTags.CURSE) && h.value().canEnchant(stack))
+			.filter(h -> !unwanted(h) && h.value().canEnchant(stack))
 			.filter(h -> {
 				int lvl = have.getLevel(h);
 				return lvl > 0 ? lvl < h.value().getMaxLevel() : have.keySet().stream().allMatch(o -> Enchantment.areCompatible(h, o));
@@ -117,7 +126,7 @@ public final class McAnvil {
 			@Override
 			public boolean isCurse(String e) {
 				Holder<Enchantment> h = reg.get(e);
-				return h != null && h.is(EnchantmentTags.CURSE);
+				return h != null && unwanted(h);           // never put on, never counted
 			}
 		};
 	}
